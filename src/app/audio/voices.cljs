@@ -122,12 +122,14 @@
     (let [t (or time (tone/now))
           d (or dur "16n")
           v (or vel 0.85)]
-      (if (sequential? note)
-        (if (instance? tone/PolySynth inst)
-          (.triggerAttackRelease inst (clj->js note) d t v)
-          (doseq [n note]
-            (.triggerAttackRelease inst n d t v)))
-        (.triggerAttackRelease inst note d t v)))))
+      (try
+        (if (sequential? note)
+          (if (instance? tone/PolySynth inst)
+            (.triggerAttackRelease inst (clj->js note) d t v)
+            (doseq [n note]
+              (.triggerAttackRelease inst n d t v)))
+          (.triggerAttackRelease inst note d t v))
+        (catch js/Object _)))))
 
 (defn- trigger-drum-hit!
   [^js node note dur time vel]
@@ -135,9 +137,11 @@
     (let [t (or time (tone/now))
           d (or dur "16n")
           v (or vel 1.0)]
-      (if (and note (not (instance? tone/NoiseSynth node)))
-        (.triggerAttackRelease node note d t v)
-        (.triggerAttackRelease node d t v)))))
+      (try
+        (if (and note (not (instance? tone/NoiseSynth node)))
+          (.triggerAttackRelease node note d t v)
+          (.triggerAttackRelease node d t v))
+        (catch js/Object _)))))
 
 (defn- trigger-drum!
   "Triggers layered drum voices from the declarative drum-voices map."
