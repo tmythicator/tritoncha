@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+
+:root {
+  --bg-color: #080812;
+  --accent-neon: #00ffcc;
+  --accent-pink: #ff007f;
+  --accent-blue: #00aaff;
+  --text-main: #e0e0ff;
+  --hud-bg: rgba(12, 12, 28, 0.75);
+  --hud-border: rgba(0, 255, 204, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: 'Fira Code', monospace;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
+
+.minimal-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 24px;
+  transition: opacity 0.3s ease;
+  user-select: none;
+}
+
+.minimal-hud.hidden {
+  opacity: 0;
+}
+
+.hud-top, .hud-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hud-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff0055;
+  box-shadow: 0 0 8px #ff0055;
+  transition: all 0.2s ease;
+}
+
+.pulse-dot.active {
+  background: var(--accent-neon);
+  box-shadow: 0 0 12px var(--accent-neon);
+}
+
+.brand-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  opacity: 0.85;
+}
+
+.hud-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--accent-neon);
+}
+
+.hud-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.loop-tags {
+  display: flex;
+  gap: 6px;
+}
+
+.loop-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  color: var(--accent-neon);
+  background: rgba(0, 255, 204, 0.1);
+  text-transform: uppercase;
+}
+
+.loop-tag.muted {
+  border-color: rgba(255, 0, 127, 0.3);
+  color: var(--accent-pink);
+  background: rgba(255, 0, 127, 0.1);
+  opacity: 0.6;
+}
+
+#status-hint {
+  animation: breathe 2.5s infinite ease-in-out;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+.hud-bottom {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.repl-guide code {
+  color: var(--accent-neon);
+  opacity: 0.7;
+  font-size: 11px;
+}
+
+.hud-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  font-size: 10px;
+}
+
+.hud-by {
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.5px;
+}
+
+.hud-link {
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  transition: all 0.2s ease;
+}
+
+.hud-link:hover {
+  color: var(--accent-neon);
+  border-color: rgba(0, 255, 204, 0.4);
+  background: rgba(0, 255, 204, 0.08);
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+}
+
+.hotkey-hints {
+  display: flex;
+  gap: 12px;
+}
+
+.hotkey-hints span {
+  opacity: 0.6;
+}

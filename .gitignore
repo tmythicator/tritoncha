@@ -1,0 +1,25 @@
+# Dependencies & Node
+/node_modules/
+/.pnpm-store/
+/pnpm-debug.log*
+
+# Clojure & Shadow-CLJS build artifacts
+/.shadow-cljs/
+/.cpcache/
+/.nrepl-port
+/.clj-kondo/.cache/
+/.lsp/
+/public/js/
+
+# Nix & Direnv
+/.direnv/
+/result
+/result-*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/

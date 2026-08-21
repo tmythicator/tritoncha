@@ -1,0 +1,17 @@
+{:source-paths ["src"]
+ :dependencies
+ [[reagent "1.2.0"]
+  [cider/cider-nrepl "0.62.2"]
+  [cider/piggieback "0.7.0"]]
+
+ :dev-http {3000 "public"}
+ :nrepl {:middleware [cider.piggieback/wrap-cljs-repl]}
+
+ :builds
+ {:app {:target :browser
+        :output-dir "public/js"
+        :asset-path "/js"
+        :modules {:main {:init-fn app.core/init!}}
+        :js-options {:resolve-mode :npm}
+        :compiler-options {:output-feature :es6}
+        :after-load app.core/reload!}}}
