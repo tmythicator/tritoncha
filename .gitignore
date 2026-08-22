@@ -10,6 +10,7 @@
 /.clj-kondo/.cache/
 /.lsp/
 /public/js/
+/target/
 
 # Nix & Direnv
 /.direnv/
