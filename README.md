@@ -1,16 +1,35 @@
 # Tritoncha
 
-Live-coding music and 3D WebGL visuals studio built with ClojureScript, Tone.js, and Three.js directly in your browser.
+In-browser live-coding studio for synthesized music ([`Tone.js`](https://github.com/Tonejs/Tone.js/)) and reactive 3D WebGL visuals ([`Three.js`](https://github.com/mrdoob/three.js/)), controlled live from your editor via a ClojureScript REPL (e.g. Emacs + [`CIDER`](https://github.com/clojure-emacs/cider)).
 
-> **What is Tritoncha?**
-> **Tritoncha** is the synergy of 3D visual rendering (**Three.js**) and real-time sound synthesis (**Tone.js**).
+---
+
+## What is Tritoncha?
+
+Tritoncha is a self-contained live-coding instrument for Algorave performances and jamming.
+
+You write ClojureScript in your editor, send lines to the REPL and the browser makes real-time sound and 3D graphics at the same time.
+
+### Q&A
+
+Q: **Is it like TidalCycles, Sonic Pi or Overtone?**  
+A: Similar in spirit, but runs entirely in the browser. Tools like TidalCycles and Sonic Pi require installing SuperCollider (`scsynth`), configuring audio servers and connecting external visualizers. With Tritoncha, there is no SuperCollider or background audio daemon setup. You just open the page, connect your REPL and start playing.
+
+Q: **Is it a WebDAW?**  
+A: It has synths, effects, and mixing buses like a DAW, but you control them with code instead of mouse clicks on a static timeline. You sequence notes with scale degrees (`d`), chords, drum patterns (`pat!`) and Euclidean rhythms (`euc!`) live in the REPL while the music is running.
+
+Q: **How do the 3D visuals react to the audio?**  
+A: Direct state sharing with zero delay. It does not just listen to microphone input. Every kick hit, snare, and bass envelope directly triggers visual pulses in Three.js on every animation frame.
+
+Q: **Does it work offline?**  
+A: Yes, 100%. No internet connection, cloud services or external plugins are required. Everything is compiled into static JavaScript.
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Enter the environment (Node.js, Clojure, pnpm)
+# 1. Enter the dev environment
 nix develop
 # (or simply `direnv allow` if you use direnv)
 
@@ -24,21 +43,21 @@ Open [http://localhost:3000](http://localhost:3000) and click anywhere on the pa
 
 ## Interactive Tutorial & REPL Workflow
 
-The fastest and most fun way to explore Tritoncha is through the interactive tutorial:
+The fastest way to learn Tritoncha is through the interactive tutorial:
 
 **Open [`src/app/demo/tutorial.cljs`](src/app/demo/tutorial.cljs)**
 
 It guides you step-by-step through:
 
-- Building basslines with scale degrees (`d`) and live drums (`pat!`, `euc!`)
+- Making basslines with scale degrees (`d`) and live drums (`pat!`, `euc!`)
 - Sound design and auditioning custom synthesizers (`definst!`, `demo!`)
 - Custom audio routing and effects chains (`defrouting!`)
-- Modal harmony, progressions, live key modulation (`mod-all!`, `tr-all!`)
+- Modal harmony, progressions and live key modulation (`mod-all!`, `tr-all!`)
 - Composing full track arrangements and live performance tricks
 
 ### Recommended Setup
 
-For the best experience, use an editor with strong **REPL-Driven Development (RDD)** support:
+For the best experience, use an editor with strong REPL-Driven Development (RDD) support:
 
 - **Emacs + CIDER** (Recommended): Open `src/app/live/jam.cljs` or `src/app/demo/tutorial.cljs` and run `M-x cider-connect-cljs` (select `shadow` -> `:app`). Evaluate expressions directly with `C-c C-e` or `C-c C-c`.
 - **VSCode + Calva**: Connect to the running Shadow-CLJS build `:app`.
@@ -71,9 +90,10 @@ For the best experience, use an editor with strong **REPL-Driven Development (RD
 ;; Mixer + Transitions
 (m! :kick :snare)         ;; Mute drums
 (u! :kick :snare)         ;; Unmute drums
-(sw! 400 5500 4)          ;; 4s opening lowpass filter sweep
+(f! 450)                  ;; Set lowpass filter cutoff
+(sw! 400 5500 4)          ;; 4-second opening filter sweep into the drop
 (s!)                      ;; Dub laser siren
-(drop!)                   ;; Seismic sub drop
+(drop!)                   ;; Seismic sub-bass drop
 
 ;; Live Drummer Controls
 (undrum!)                 ;; Mute all drum loops, keep bass, chords + click
@@ -90,11 +110,11 @@ For the best experience, use an editor with strong **REPL-Driven Development (RD
 
 ## Project Layout
 
-- **`src/app/demo/tutorial.cljs`** — Interactive masterclass tutorial
-- **`src/app/live/jam.cljs`** — Live performance scratchpad for fast jams
-- **`src/app/custom/`** — Your sandbox for custom synths, tracks, and audio routing topologies
-- **`src/app/lib/`** — Built-in synths, tracks catalog, and default DSP bus graph
-- **`src/app/audio/` + `visuals/`** — WebAudio synthesis engine and Three.js WebGL visual engine
+- `src/app/demo/tutorial.cljs` Interactive masterclass tutorial
+- `src/app/live/jam.cljs` Live performance scratchpad for fast jams
+- `src/app/custom/` Your sandbox for custom synths, tracks and audio routings
+- `src/app/lib/` Built-in synths, tracks catalog and default bus routing
+- `src/app/audio/` + `visuals/` WebAudio synthesis engine and Three.js WebGL visual engine
 
 ---
 
