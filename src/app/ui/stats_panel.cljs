@@ -27,10 +27,7 @@
                          (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
                          "0.000 ms (calibrated)"))
         tracks-map   @active-tracks
-        active-count (count tracks-map)
-        perf         (.-memory js/window.performance)
-        heap-used    (when perf (.toFixed (/ (.-usedJSHeapSize perf) 1048576) 1))
-        heap-total   (when perf (.toFixed (/ (.-totalJSHeapSize perf) 1048576) 1))]
+        active-count (count tracks-map)]
     [:div.neo-stats-card
      [:div.neo-header
       [:div.neo-title
@@ -51,8 +48,7 @@
        [:div.neo-item [:span.neo-k "Base Latency: "] [:span.neo-v (if base-lat (str (.toFixed base-lat 2) "ms") "N/A")]]
        [:div.neo-item [:span.neo-k "Transport: "] [:span.neo-v (str (str/upper-case transport-st) " @ " bpm-val " BPM")]]
        [:div.neo-item [:span.neo-k "Position: "] [:span.neo-v (or pos "0:0:0")]]
-       [:div.neo-item [:span.neo-k "Latency Hint: "] [:span.neo-v (or latency-hint "playback")]]
-       [:div.neo-item [:span.neo-k "JS Heap Memory: "] [:span.neo-v (if perf (str heap-used "/" heap-total " MB") "N/A")]]]
+       [:div.neo-item [:span.neo-k "Latency Hint: "] [:span.neo-v (or latency-hint "playback")]]]
 
       [:div.neo-section-label (str "# ACTIVE LOOPS (" active-count ")")]
       (if (empty? tracks-map)
