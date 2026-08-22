@@ -30,7 +30,7 @@
   []
   (resume-audio-context!)
   (when-not @tone-ctx
-    (set! (.. tone -context -lookAhead) 0.2)
+    (set! (.. tone -context -lookAhead) 0.25)
     (set! (.. tone -context -latencyHint) "playback")
 
     (let [busses      (routing/build-graph!)
