@@ -70,3 +70,30 @@
         (set! (.-channelInterpretation node) "speakers"))
       (catch js/Object _)))
   node)
+
+(defn css-var
+  "Reads a CSS custom property from the DOM :root in style.css.
+  Examples: (css-var \"--cyan\") -> \"#00e5ff\", (css-var \"--bg-black\" \"#000000\")."
+  ([var-name] (css-var var-name nil))
+  ([var-name fallback]
+   (if (exists? js/document)
+     (let [val (-> (js/getComputedStyle (.-documentElement js/document))
+                   (.getPropertyValue var-name)
+                   .trim)]
+       (if (seq val) val fallback))
+     fallback)))
+
+(defn colors
+  "Reads live CSS theme colors directly from :root in style.css.
+  Examples: (colors) -> {:cyan \"#00e5ff\" ...}, (colors :cyan) -> \"#00e5ff\"."
+  ([]
+   {:black  (css-var "--bg-black" "#000000")
+    :white  (css-var "--text-white" "#ffffff")
+    :cyan   (css-var "--cyan" "#00e5ff")
+    :green  (css-var "--green" "#00ff88")
+    :pink   (css-var "--pink" "#ff007f")
+    :purple (css-var "--purple" "#c77dff")
+    :amber  (css-var "--amber" "#ffaa00")
+    :blue   (css-var "--blue" "#0088ff")})
+  ([k]
+   (get (colors) k (css-var (str "--" (name k)) "#00e5ff"))))

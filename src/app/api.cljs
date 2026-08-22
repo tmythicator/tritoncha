@@ -10,6 +10,7 @@
             [app.audio.routing :as routing]
             [app.audio.tracker :as tracker]
             [app.audio.fx :as fx]
+            [app.ui.hud :as hud]
             [app.visuals.engine :as visuals]))
 
 ;; Generative + Math Utilities
@@ -18,6 +19,7 @@
 (def prob? utils/prob)
 (def lerp utils/lerp)
 (def clamp utils/clamp)
+(def css-var utils/css-var)
 
 ;; Transport + Track Orchestration
 (def tracks tracker/all-tracks)
@@ -45,6 +47,10 @@
 
 ;; Engine + Diagnostics
 (def stat engine/audio-status)
+(def stats! hud/toggle-stats!)
+(def toggle-stats! hud/toggle-stats!)
+(def hud! hud/toggle-hud!)
+(def toggle-hud! hud/toggle-hud!)
 
 ;; DSP FX + Audio Automations
 (def set-filter-cutoff! fx/set-filter-cutoff!)
@@ -108,6 +114,7 @@
 (def toggle-wireframe! visuals/toggle-wireframe!)
 (def w! visuals/toggle-wireframe!)
 (def pulse! state/pulse!)
+(def colors utils/colors)
 
 ;; Music Theory + Live Modulation
 (def _ theory/_)
