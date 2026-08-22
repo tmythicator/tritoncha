@@ -67,9 +67,17 @@
     (enforce-stereo-mode! node)
     node))
 
+(defn instrument-bus
+  "Returns the target mixer bus keyword (:drums, :bass, :space, :direct) for any instrument."
+  [inst-key]
+  (let [kw (keyword inst-key)]
+    (if (contains? (all-drum-keys) kw)
+      :drums
+      (let [spec (resolve-instrument-spec kw)]
+        (or (:bus spec) :master)))))
+
 (defn- synth-bus-target [inst-key busses]
-  (let [spec (resolve-instrument-spec (keyword inst-key))
-        bus-type (or (:bus spec) :master)]
+  (let [bus-type (instrument-bus inst-key)]
     (case bus-type
       :drums  (:drum-bus busses)
       :bass   (:bass-bus busses)
