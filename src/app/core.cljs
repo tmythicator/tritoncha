@@ -1,14 +1,14 @@
 (ns app.core
   (:require ["three" :as three]
             ["tone" :as tone]
-            [app.state :refer [state three-ctx]]
+            [app.state :refer [state tone-ctx three-ctx events-bound?]]
             [app.audio.engine :refer [init-audio!]]
             [app.visuals.engine :refer [init-three! render-loop! set-geometry! toggle-wireframe!]]
             [app.audio.looper :refer [toggle-click!]]
             [app.audio.mixer :refer [stop! toggle-bus! undrum! redrum!]]
             [app.audio.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
             [app.audio.tracker :refer [play-preset!]]
-            [app.ui.hud :refer [render-ui! toggle-hud!]]
+            [app.ui.hud :refer [render-ui! toggle-hud! toggle-stats!]]
             [app.lib.instruments]
             [app.lib.tracks]
             [app.lib.routes]
@@ -31,49 +31,71 @@
                  (get geoms (mod (inc (if (neg? idx) 0 idx)) (count geoms))))]
     (set-geometry! next-g)))
 
-(defn bind-ui! []
-  ;; Silently unlock and resume WebAudio context on first user interaction without auto-playing tracks
-  (.addEventListener js/window "pointerdown"
-                     (fn []
-                       (init-audio!)
-                       (when-let [ctx (.-context tone)]
-                         (when (not= (.-state ctx) "running")
-                           (try (.resume ctx) (catch js/Object _))))))
+(defn- handle-visibility-change!
+  "Adjusts WebAudio lookahead buffer when the tab is backgrounded to prevent x-runs."
+  []
+  (when-let [ctx (when @tone-ctx (.-context tone))]
+    (if (.-hidden js/document)
+      (set! (.-lookAhead ctx) 0.45)
+      (set! (.-lookAhead ctx) 0.25))))
 
-  (.addEventListener js/window "keydown"
-                     (fn [^js e]
-                       (let [k (.-key e)]
-                         (case k
-                           " " (do (.preventDefault e) (toggle-play!))
-                           "1" (play-preset! :roller)
-                           "2" (play-preset! :sub-roller)
-                           "3" (play-preset! :acid-roller)
-                           "4" (play-preset! :ambient-drift)
-                           ("c" "C") (toggle-click!)
-                           ("d" "D") (toggle-bus! :drums)
-                           ("u" "U") (undrum!)
-                           ("r" "R") (redrum!)
-                           ("s" "S") (trigger-dub-siren!)
-                           ("b" "B") (trigger-sub-drop!)
-                           ("g" "G") (cycle-geometry!)
-                           ("w" "W") (toggle-wireframe!)
-                           ("h" "H") (toggle-hud!)
-                           nil))))
+(defn- handle-pointer-down!
+  "Silently unlocks and resumes the WebAudio context on first user interaction."
+  []
+  (init-audio!)
+  (when-let [ctx (.-context tone)]
+    (when (not= (.-state ctx) "running")
+      (try (.resume ctx) (catch js/Object _)))))
 
-  (.addEventListener js/window "resize"
-                     (fn []
-                       (when-let [{:keys [^js camera ^js renderer]} @three-ctx]
-                         (let [w (.-innerWidth js/window) h (.-innerHeight js/window)]
-                           (set! (.-aspect camera) (/ w h))
-                           (.updateProjectionMatrix camera)
-                           (.setSize renderer w h))))))
+(defn- handle-key-down!
+  "Global hotkey dispatcher for performance controls, presets, and HUD overlays."
+  [^js e]
+  (let [k (.-key e)]
+    (case k
+      " " (do (.preventDefault e) (toggle-play!))
+      "1" (play-preset! :roller)
+      "2" (play-preset! :sub-roller)
+      "3" (play-preset! :acid-roller)
+      "4" (play-preset! :ambient-drift)
+      ("c" "C") (toggle-click!)
+      ("d" "D") (toggle-bus! :drums)
+      ("u" "U") (undrum!)
+      ("r" "R") (redrum!)
+      ("s" "S") (trigger-dub-siren!)
+      ("b" "B") (trigger-sub-drop!)
+      ("g" "G") (cycle-geometry!)
+      ("w" "W") (toggle-wireframe!)
+      ("h" "H") (toggle-hud!)
+      ("i" "I") (toggle-stats!)
+      ("Escape" "Esc") (when (:stats-visible? @state) (toggle-stats!))
+      nil)))
+
+(defn- handle-window-resize!
+  "Adapts Three.js camera aspect ratio and renderer viewport to window size changes."
+  []
+  (when-let [{:keys [^js camera ^js renderer]} @three-ctx]
+    (let [w (.-innerWidth js/window)
+          h (.-innerHeight js/window)]
+      (set! (.-aspect camera) (/ w h))
+      (.updateProjectionMatrix camera)
+      (.setSize renderer w h))))
+
+(defn- bind-events!
+  "Registers browser event listeners guarded by events-bound? atom to prevent hot-reload duplicates."
+  []
+  (when-not @events-bound?
+    (reset! events-bound? true)
+    (.addEventListener js/document "visibilitychange" handle-visibility-change!)
+    (.addEventListener js/window "pointerdown" handle-pointer-down!)
+    (.addEventListener js/window "keydown" handle-key-down!)
+    (.addEventListener js/window "resize" handle-window-resize!)))
 
 (defn ^:export init! []
   (js/console.log "Initializing Tritoncha Live Studio...")
   (render-ui!)
   (init-three!)
   (render-loop!)
-  (bind-ui!)
+  (bind-events!)
   (js/console.log "Audio + WebGL Engines Ready. Connect REPL or evaluate live in app.live.jam."))
 
 (defn ^:export reload! []

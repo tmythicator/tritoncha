@@ -2,7 +2,7 @@
   "WebAudio context initialization and engine diagnostics."
   (:require ["tone" :as tone]
             [clojure.string :as str]
-            [app.state :refer [state tone-ctx last-clock-sample]]
+            [app.state :refer [state tone-ctx last-clock-sample active-tracks]]
             [app.audio.voices :as voices]
             [app.audio.routing :as routing]))
 
@@ -30,7 +30,7 @@
   []
   (resume-audio-context!)
   (when-not @tone-ctx
-    (set! (.. tone -context -lookAhead) 0.2)
+    (set! (.. tone -context -lookAhead) 0.25)
     (set! (.. tone -context -latencyHint) "playback")
 
     (let [busses      (routing/build-graph!)
@@ -38,49 +38,67 @@
       (reset! tone-ctx (merge busses
                               instruments
                               {:drums-muted?   (atom false)
-                               :click-enabled? (atom false)
-                               :loops          (atom [])}))))
+                               :click-enabled? (atom false)}))))
   (swap! state assoc :active? true))
+
+(defn- format-track-summary [tracks]
+  (if (empty? tracks)
+    "0 (idle)"
+    (let [n (count tracks)
+          details (for [[kw info] tracks]
+                    (let [muted?  (boolean @(:muted? info))
+                          solo?   (boolean @(:solo? info))
+                          pat     @(:pattern info)
+                          step    (or (:step pat) "16n")
+                          inst    (or (:inst pat) kw)
+                          status  (cond solo? "[SOLO]" muted? "[MUTED]" :else "live")]
+                      (str (name kw) " (" (name inst) ", " step ", " status ")")))]
+      (str n " active -> [" (str/join ", " details) "]"))))
 
 (defn audio-status
   "Print WebAudio context status, loop count, latency and clock drift."
   []
-  (let [ctx (when @tone-ctx (.-context tone))
-        transport (.-Transport tone)
-        active-loops (count (if-let [{:keys [loops]} @tone-ctx] @loops []))
-        perf (.-memory js/window.performance)
-        raw-ctx (when ctx (.-rawContext ctx))
-        base-lat (when (and raw-ctx (number? (.-baseLatency raw-ctx))) (* 1000 (.-baseLatency raw-ctx)))
-        tone-now (tone/now)
-        sys-now  (/ (.now js/performance) 1000)
-        drift (if-let [{:keys [t-tone t-sys]} @last-clock-sample]
-                (let [dt-tone (- tone-now t-tone)
-                      dt-sys  (- sys-now t-sys)
-                      d-ms    (* 1000 (- dt-tone dt-sys))]
-                  (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
-                  (str (if (pos? d-ms) "+" "") (.toFixed d-ms 3) " ms"))
-                (do
-                  (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
-                  "0.000 ms (calibrated)"))]
+  (let [ctx          (when @tone-ctx (.-context tone))
+        transport    (.-Transport tone)
+        tracks-map   @active-tracks
+        active-count (count tracks-map)
+        tracks-desc  (format-track-summary tracks-map)
+        raw-ctx      (when ctx (.-rawContext ctx))
+        sample-rate  (when raw-ctx (.-sampleRate raw-ctx))
+        base-lat     (when (and raw-ctx (number? (.-baseLatency raw-ctx))) (* 1000 (.-baseLatency raw-ctx)))
+        pos          (when transport (str (.-position transport)))
+        tone-now     (tone/now)
+        sys-now      (/ (.now js/performance) 1000)
+        drift        (if-let [{:keys [t-tone t-sys]} @last-clock-sample]
+                       (let [dt-tone (- tone-now t-tone)
+                             dt-sys  (- sys-now t-sys)
+                             d-ms    (* 1000 (- dt-tone dt-sys))]
+                         (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
+                         (str (if (pos? d-ms) "+" "") (.toFixed d-ms 3) " ms"))
+                       (do
+                         (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
+                         "0.000 ms (calibrated)"))]
     (js/console.log
      (str/join "\n"
                ["--- WebAudio Engine Diagnostics ---"
                 (str "State:          " (if ctx (.-state ctx) "uninitialized"))
-                (str "Hardware Clock: " (if (number? tone-now) (.toFixed tone-now 4) "N/A") " s")
+                (str "Sample Rate:    " (if sample-rate (str sample-rate " Hz") "N/A"))
+                (str "Hardware Clock: " (if (number? tone-now) (str (.toFixed tone-now 4) " s") "N/A"))
                 (str "Clock Drift:    " drift)
                 (str "Base Latency:   " (if base-lat (str (.toFixed base-lat 2) " ms") "unavailable"))
                 (str "Lookahead:      " (if ctx (str (* 1000 (.-lookAhead ctx)) " ms") "N/A"))
                 (str "Latency Hint:   " (if ctx (.-latencyHint ctx) "N/A"))
-                (str "Transport BPM:  " (if transport (.. transport -bpm -value) "N/A"))
-                (str "Active Loops:   " active-loops)
-                (str "JS Heap Memory: "
-                     (if perf
-                       (str (.toFixed (/ (.-usedJSHeapSize perf) 1048576) 2) " MB / "
-                            (.toFixed (/ (.-totalJSHeapSize perf) 1048576) 2) " MB")
-                       "performance.memory unavailable"))
+                (str "Transport:      " (if transport (str (if (= (.-state transport) "started") "RUNNING" "STOPPED")
+                                                           " @ " (.. transport -bpm -value) " BPM (Pos: " pos ")") "N/A"))
+                (str "Active Loops:   " tracks-desc)
                 "-----------------------------------"]))
     {:state        (if ctx (.-state ctx) :uninitialized)
+     :sample-rate  sample-rate
      :clock        tone-now
      :clock-drift  drift
      :base-latency base-lat
-     :active-loops active-loops}))
+     :lookahead    (when ctx (* 1000 (.-lookAhead ctx)))
+     :bpm          (when transport (.. transport -bpm -value))
+     :position     pos
+     :active-loops active-count
+     :tracks       (keys tracks-map)}))

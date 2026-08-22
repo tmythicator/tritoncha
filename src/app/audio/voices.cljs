@@ -2,7 +2,7 @@
   "Voice lifecycle, node factory, bus routing and audio trigger dispatcher."
   (:require ["tone" :as tone]
             [app.utils :refer [enforce-stereo-mode!]]
-            [app.state :refer [tone-ctx pulse!]]
+            [app.state :refer [tone-ctx pulse! repl-instruments]]
             [app.lib.instruments :refer [core-instruments drum-voices]]
             [app.custom.instruments :refer [user-instruments]]))
 
@@ -14,8 +14,6 @@
   (set (keys drum-voices)))
 
 ;; Instrument Registry (Built-in + Custom User + REPL Live Instruments)
-
-(defonce repl-instruments (atom {}))
 
 (defn register-instrument!
   "Registers or updates a dynamic user instrument preset in the REPL registry.
@@ -125,7 +123,7 @@
       (try
         (if (sequential? note)
           (if (instance? tone/PolySynth inst)
-            (.triggerAttackRelease inst (clj->js note) d t v)
+            (.triggerAttackRelease inst (to-array note) d t v)
             (doseq [n note]
               (.triggerAttackRelease inst n d t v)))
           (.triggerAttackRelease inst note d t v))

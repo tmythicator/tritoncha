@@ -1,5 +1,6 @@
 (ns app.audio.theory
-  (:require [app.utils :refer [parse-note]]))
+  (:require [app.utils :refer [parse-note]]
+            [app.state :refer [global-key]]))
 
 (def ^:dynamic _
   "Rest placeholder symbol for note vectors.
@@ -213,8 +214,6 @@
                                       (if (= i j) [(get clean i)] [(get clean i) (get clean j)])))
                                   (range (quot (inc n) 2)))))
          clean)))))
-
-(defonce global-key (atom {:root :e :mode :dorian :octave 2}))
 
 (defn set-key!
   "Sets the session global key, mode, and octave.

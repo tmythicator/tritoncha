@@ -1,9 +1,10 @@
 (ns app.audio.tracker
   "Track registry, scene orchestrator, and algorithmic preset launcher."
-  (:require [app.state :refer [state]]
+  (:require [app.state :refer [state repl-tracks]]
             [app.audio.engine :refer [init-audio!]]
+            [app.utils :refer [pattern]]
             [app.audio.theory :refer [set-key! chord d]]
-            [app.audio.looper :refer [loop! stop-loop! pattern]]
+            [app.audio.looper :refer [loop! stop-loop!]]
             [app.audio.mixer :refer [stop! set-bpm!]]
             [app.audio.fx :refer [set-filter-cutoff!]]
             [app.visuals.engine :refer [set-geometry! set-colors!]]
@@ -12,8 +13,6 @@
             [app.audio.voices :refer [reload-instruments! all-drum-keys]]))
 
 ;; Track Registry (Built-in + Custom User + REPL Live Tracks)
-
-(defonce repl-tracks (atom {}))
 
 (defn register-track!
   "Registers or updates a dynamic track in the REPL registry.

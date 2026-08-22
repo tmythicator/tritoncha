@@ -11,6 +11,58 @@
         {:pitch pitch
          :octave (if oct-str (js/parseInt oct-str 10) (or default-oct 3))}))))
 
+(defn euclid
+  "Generates a Euclidean rhythm pattern distributing hits across steps.
+  Examples: (euclid 3 8) -> [true nil nil true nil true nil nil], (euclid 5 16 :kick) -> [:kick nil nil nil :kick ...]."
+  ([hits steps] (euclid hits steps true))
+  ([hits steps hit-val]
+   (let [k (max 0 (min hits steps))]
+     (if (zero? k)
+       (vec (repeat steps nil))
+       (if (= k steps)
+         (vec (repeat steps hit-val))
+         (let [init-ones (mapv (fn [_] [hit-val]) (range k))
+               init-zeros (mapv (fn [_] [nil]) (range (- steps k)))
+               build-pattern (fn step [front back]
+                               (if (empty? back)
+                                 (apply concat front)
+                                 (let [f-count (count front)
+                                       b-count (count back)
+                                       min-count (min f-count b-count)
+                                       paired (mapv (fn [f b] (into (vec f) (vec b)))
+                                                    (subvec front 0 min-count)
+                                                    (subvec back 0 min-count))
+                                       rem-front (when (> f-count min-count) (subvec front min-count))
+                                       rem-back  (when (> b-count min-count) (subvec back min-count))]
+                                   (cond
+                                     (seq rem-front) (step paired rem-front)
+                                     (seq rem-back)  (step paired rem-back)
+                                     :else (apply concat paired)))))]
+           (vec (build-pattern init-ones init-zeros))))))))
+
+(defn pattern
+  "Parses a compact mini-notation string into a pattern vector of drum keywords and rests."
+  [s]
+  (if (sequential? s)
+    (vec s)
+    (let [tokens (str/split (str/trim (str s)) #"\s+")]
+      (mapv (fn [tok]
+              (case tok
+                ("." "_" "~" "-" "0") nil
+                ("x" "1") true
+                "k" :kick
+                "s" :snare
+                ("rs" "sn-rs") :sn-rs
+                ("c" "clk" "sn-clk") :sn-clk
+                ("g" "gh" "sn-gh") :sn-gh
+                ("r" "roll" "sn-roll") :sn-roll
+                ("h" "hh" "hh-c") :hh-c
+                ("o" "oh" "hh-o") :hh-o
+                ("hc" "hh-clk") :hh-clk
+                "b" :bass
+                (keyword tok)))
+            tokens))))
+
 (defn clamp
   "Clamps a numeric value between min and max bounds.
   Examples: (clamp 150 0 100) -> 100, (clamp -5 0 10) -> 0."
@@ -70,3 +122,30 @@
         (set! (.-channelInterpretation node) "speakers"))
       (catch js/Object _)))
   node)
+
+(defn css-var
+  "Reads a CSS custom property from the DOM :root in style.css.
+  Examples: (css-var \"--cyan\") -> \"#00e5ff\", (css-var \"--bg-black\" \"#000000\")."
+  ([var-name] (css-var var-name nil))
+  ([var-name fallback]
+   (if (exists? js/document)
+     (let [val (-> (js/getComputedStyle (.-documentElement js/document))
+                   (.getPropertyValue var-name)
+                   .trim)]
+       (if (seq val) val fallback))
+     fallback)))
+
+(defn colors
+  "Reads live CSS theme colors directly from :root in style.css.
+  Examples: (colors) -> {:cyan \"#00e5ff\" ...}, (colors :cyan) -> \"#00e5ff\"."
+  ([]
+   {:black  (css-var "--bg-black" "#000000")
+    :white  (css-var "--text-white" "#ffffff")
+    :cyan   (css-var "--cyan" "#00e5ff")
+    :green  (css-var "--green" "#00ff88")
+    :pink   (css-var "--pink" "#ff007f")
+    :purple (css-var "--purple" "#c77dff")
+    :amber  (css-var "--amber" "#ffaa00")
+    :blue   (css-var "--blue" "#0088ff")})
+  ([k]
+   (get (colors) k (css-var (str "--" (name k)) "#00e5ff"))))
