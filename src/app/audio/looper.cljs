@@ -1,74 +1,10 @@
 (ns app.audio.looper
-  "Live looper, Euclidean rhythm generator, notation parser and demo previewer."
+  "Live looper, scheduler and modulation engine."
   (:require ["tone" :as tone]
-            [clojure.string :as str]
             [app.state :refer [state tone-ctx active-tracks solo-mode? global-key]]
             [app.audio.engine :refer [init-audio!]]
             [app.audio.voices :as voices]
             [app.audio.theory :as theory]))
-
-(defn euclid
-  "Generates a Euclidean rhythm pattern (Bjorklund algorithm) distributing hits across steps.
-   Returns a vector of booleans or specified hit-val and nils.
-
-   Examples:
-     (euclid 3 8)        => [true nil nil true nil nil true nil]
-     (euclid 5 16 :kick) => [:kick nil nil :kick nil nil :kick nil nil :kick nil nil :kick nil nil nil]"
-  ([hits steps] (euclid hits steps true))
-  ([hits steps hit-val]
-   (let [k (max 0 (min hits steps))]
-     (if (zero? k)
-       (vec (repeat steps nil))
-       (if (= k steps)
-         (vec (repeat steps hit-val))
-         (let [init-ones (mapv (fn [_] [hit-val]) (range k))
-               init-zeros (mapv (fn [_] [nil]) (range (- steps k)))
-               build-pattern (fn step [front back]
-                               (if (empty? back)
-                                 (apply concat front)
-                                 (let [f-count (count front)
-                                       b-count (count back)
-                                       min-count (min f-count b-count)
-                                       paired (mapv (fn [f b] (into (vec f) (vec b)))
-                                                    (subvec front 0 min-count)
-                                                    (subvec back 0 min-count))
-                                       rem-front (when (> f-count min-count) (subvec front min-count))
-                                       rem-back  (when (> b-count min-count) (subvec back min-count))]
-                                   (cond
-                                     (seq rem-front) (step paired rem-front)
-                                     (seq rem-back)  (step paired rem-back)
-                                     :else (apply concat paired)))))]
-           (vec (build-pattern init-ones init-zeros))))))))
-
-(defn pattern
-  "Parses a compact mini-notation string into a pattern vector of drum keywords and rests.
-   Rests: '.' '_' '~' '-' '0' => nil
-   Hits:
-     'k' => :kick, 's' => :snare, 'rs' => :sn-rs, 'c' => :sn-clk, 'g' => :sn-gh, 'r' => :sn-roll
-     'h' => :hh-c, 'o' => :hh-o, 'hc' => :hh-clk, 'b' => :bass
-
-   Example:
-     (pattern \"k . . .  s . . .  . . k .  s . . g\")"
-  [s]
-  (if (sequential? s)
-    (vec s)
-    (let [tokens (str/split (str/trim (str s)) #"\s+")]
-      (mapv (fn [tok]
-              (case tok
-                ("." "_" "~" "-" "0") nil
-                ("x" "1") true
-                "k" :kick
-                "s" :snare
-                ("rs" "sn-rs") :sn-rs
-                ("c" "clk" "sn-clk") :sn-clk
-                ("g" "gh" "sn-gh") :sn-gh
-                ("r" "roll" "sn-roll") :sn-roll
-                ("h" "hh" "hh-c") :hh-c
-                ("o" "oh" "hh-o") :hh-o
-                ("hc" "hh-clk") :hh-clk
-                "b" :bass
-                (keyword tok)))
-            tokens))))
 
 (defn- track-audible? [track-info]
   (let [muted? @(:muted? track-info)
