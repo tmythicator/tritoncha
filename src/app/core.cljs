@@ -3,7 +3,7 @@
             ["tone" :as tone]
             [app.state :refer [state tone-ctx three-ctx events-bound?]]
             [app.audio.engine :refer [init-audio!]]
-            [app.visuals.engine :refer [init-three! render-loop! set-geometry! toggle-wireframe!]]
+            [app.visuals.engine :as engine :refer [init-three! render-loop! toggle-wireframe!]]
             [app.audio.looper :refer [toggle-click!]]
             [app.audio.mixer :refer [stop! toggle-bus! undrum! redrum!]]
             [app.audio.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
@@ -27,12 +27,13 @@
     (stop!)
     (play-preset! (:current-jam @state :roller))))
 
-(defn cycle-geometry! []
-  (let [geoms [:torus-knot :icosahedron :octahedron :box :sphere]
-        cur   (:mesh-type @state)
-        next-g (let [idx (.indexOf (clj->js geoms) (name cur))]
-                 (get geoms (mod (inc (if (neg? idx) 0 idx)) (count geoms))))]
-    (set-geometry! next-g)))
+(defn cycle-scene! []
+  (let [all-keys (vec (keys (engine/all-scenes)))
+        cur      (:current-scene @state :cyber-torus)
+        cur-name (name cur)
+        idx      (or (first (keep-indexed (fn [i k] (when (= (name k) cur-name) i)) all-keys)) 0)
+        next-s   (get all-keys (mod (inc idx) (count all-keys)) :cyber-torus)]
+    (engine/scene! next-s)))
 
 (defn- handle-visibility-change!
   "Adjusts WebAudio lookahead buffer when the tab is backgrounded to prevent x-runs."
@@ -66,7 +67,7 @@
       ("r" "R") (redrum!)
       ("s" "S") (trigger-dub-siren!)
       ("b" "B") (trigger-sub-drop!)
-      ("g" "G") (cycle-geometry!)
+      ("g" "G") (cycle-scene!)
       ("w" "W") (toggle-wireframe!)
       ("h" "H") (toggle-hud!)
       ("i" "I") (toggle-stats!)
