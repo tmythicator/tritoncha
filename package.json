@@ -9,7 +9,7 @@
     "dev": "shadow-cljs watch app",
     "watch": "shadow-cljs watch app",
     "build": "shadow-cljs release app",
-    "check": "shadow-cljs compile app",
+    "compile": "shadow-cljs compile app",
     "lint": "clj-kondo --lint src",
     "clean": "rm -rf .shadow-cljs public/js target"
   },
