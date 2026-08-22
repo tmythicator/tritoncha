@@ -12,11 +12,14 @@
             [app.lib.instruments]
             [app.lib.tracks]
             [app.lib.routes]
+            [app.lib.scenes]
             [app.audio.voices]
             [app.demo.tutorial]
             [app.custom.instruments]
             [app.custom.tracks]
             [app.custom.routes]
+            [app.custom.scenes]
+            [app.api]
             [app.live.jam]))
 
 (defn toggle-play! []

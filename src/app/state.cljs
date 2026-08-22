@@ -9,6 +9,7 @@
            :hud-visible?   true
            :stats-visible? false
            :current-jam    :roller
+           :current-scene  :cyber-torus
            :mesh-type      :torus-knot
            :wireframe?     true
            :bg-color       "#050510"
@@ -30,6 +31,7 @@
 (defonce repl-tracks      (atom {}))
 (defonce repl-instruments (atom {}))
 (defonce repl-routes      (atom {}))
+(defonce repl-scenes      (atom {}))
 
 (defonce events-bound?   (atom false))
 (defonce root-container  (atom nil))
