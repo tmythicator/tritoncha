@@ -1,6 +1,6 @@
 (ns app.ui.hud
   (:require [reagent.dom.client :as rdom]
-            [app.state :refer [state]]
+            [app.state :refer [state root-container]]
             [app.ui.top-bar :refer [top-bar-component]]
             [app.ui.bottom-bar :refer [bottom-bar-component]]
             [app.ui.stats-panel :refer [stats-panel-component]]))
@@ -20,8 +20,6 @@
        [stats-panel-component])
 
      [bottom-bar-component]]))
-
-(defonce root-container (atom nil))
 
 (defn render-ui! []
   (when-let [el (.getElementById js/document "app")]

@@ -2,12 +2,11 @@
   "Declarative WebAudio graph compiler, node factory, and bus routing."
   (:require ["tone" :as tone]
             [app.utils :refer [enforce-stereo-mode!]]
+            [app.state :refer [repl-routes]]
             [app.lib.routes :refer [default-graph core-routes]]
             [app.custom.routes :refer [user-routes]]))
 
 ;; Routing Registry (Built-in + Custom User + REPL Live Routing Graphs)
-
-(defonce repl-routes (atom {}))
 
 (defn register-routing!
   "Registers or updates a dynamic audio routing graph topology in the REPL registry.

@@ -2,14 +2,10 @@
   "Live looper, Euclidean rhythm generator, notation parser and demo previewer."
   (:require ["tone" :as tone]
             [clojure.string :as str]
-            [app.state :refer [state tone-ctx]]
+            [app.state :refer [state tone-ctx active-tracks solo-mode? global-key]]
             [app.audio.engine :refer [init-audio!]]
             [app.audio.voices :as voices]
             [app.audio.theory :as theory]))
-
-;; Active tracks map: {track-key {:seq Tone.Sequence :pattern atom :muted? atom :solo? atom}}
-(defonce active-tracks (atom {}))
-(defonce solo-mode? (atom false))
 
 (defn euclid
   "Generates a Euclidean rhythm pattern (Bjorklund algorithm) distributing hits across steps.
@@ -250,7 +246,7 @@
   Examples: (modulate-all! :f :phrygian), (modulate-all! :d :dorian 1)."
   ([root mode] (modulate-all! root mode 2))
   ([root mode octave]
-   (let [old-root (:root @theory/global-key)
+   (let [old-root (:root @global-key)
          old-midi (or (theory/note->midi (str (name old-root) "3")) 60)
          new-midi (or (theory/note->midi (str (name root) "3")) 60)
          delta-st (- new-midi old-midi)]

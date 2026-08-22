@@ -1,10 +1,9 @@
 (ns app.audio.mixer
   "Audio mixer for tempo, bus routing, track mutes, soloing and volume leveling."
   (:require ["tone" :as tone]
-            [app.state :refer [state tone-ctx]]
+            [app.state :refer [state tone-ctx active-tracks solo-mode?]]
             [app.audio.engine :refer [init-audio!]]
-            [app.audio.voices :as voices]
-            [app.audio.looper :refer [active-tracks solo-mode?]]))
+            [app.audio.voices :as voices]))
 
 (defn set-bpm!
   "Changes the global tempo (BPM) in real time.

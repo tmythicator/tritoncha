@@ -2,7 +2,7 @@
   "WebAudio context initialization and engine diagnostics."
   (:require ["tone" :as tone]
             [clojure.string :as str]
-            [app.state :refer [state tone-ctx last-clock-sample]]
+            [app.state :refer [state tone-ctx last-clock-sample active-tracks]]
             [app.audio.voices :as voices]
             [app.audio.routing :as routing]))
 
@@ -38,8 +38,7 @@
       (reset! tone-ctx (merge busses
                               instruments
                               {:drums-muted?   (atom false)
-                               :click-enabled? (atom false)
-                               :loops          (atom [])}))))
+                               :click-enabled? (atom false)}))))
   (swap! state assoc :active? true))
 
 (defn audio-status
@@ -80,7 +79,12 @@
                        "performance.memory unavailable"))
                 "-----------------------------------"]))
     {:state        (if ctx (.-state ctx) :uninitialized)
+     :sample-rate  sample-rate
      :clock        tone-now
      :clock-drift  drift
      :base-latency base-lat
-     :active-loops active-loops}))
+     :lookahead    (when ctx (* 1000 (.-lookAhead ctx)))
+     :bpm          (when transport (.. transport -bpm -value))
+     :position     pos
+     :active-loops active-count
+     :tracks       (keys tracks-map)}))
