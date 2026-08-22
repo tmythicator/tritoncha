@@ -123,7 +123,7 @@
       (try
         (if (sequential? note)
           (if (instance? tone/PolySynth inst)
-            (.triggerAttackRelease inst (clj->js note) d t v)
+            (.triggerAttackRelease inst (to-array note) d t v)
             (doseq [n note]
               (.triggerAttackRelease inst n d t v)))
           (.triggerAttackRelease inst note d t v))
