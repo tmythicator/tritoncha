@@ -1,8 +1,9 @@
 (ns app.demo.tutorial
   "Interactive masterclass tutorial for Tritoncha: live-coding audio + WebGL 3D visuals, sound design, and track building."
-  (:require [app.api :refer [b! undrum! redrum! c! click! definst! defrouting! deftrack! demo! demo-stop! drop! euc! f! fb!
-                             g! jam! l! m! mod-all! pat! play! refresh! s! so! stat stop! sw! tr-all! u! unso! w! wet!]]
-            [app.audio.theory :refer [_ d chord arp scale set-key! progression transpose oct-shift]]))
+  (:require [app.api :as a :refer [_ arp b! c! chord click! d definst! defrouting! deftrack! demo!
+                                   demo-stop! drop! euc! f! fb! g! jam! l! m! mod-all! oct-shift pat!
+                                   play! progression redrum! refresh! s! scale set-key! so! stat stop!
+                                   sw! tr-all! transpose u! undrum! unso! w! wet!]]))
 
 (comment
   ;; Scale Degrees, Basslines + Live Drums

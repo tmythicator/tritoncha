@@ -1,8 +1,8 @@
 (ns app.live.jam
   "Live performance scratchpad for Emacs CIDER (C-c C-e / C-c C-k)."
-  (:require [app.api :refer [b! undrum! redrum! c! click! drop! euc! f! g! jam! l! m! mod-all!
-                             pat! play! refresh! s! so! stat stop! sw! tr-all! u! unso! w!]]
-            [app.audio.theory :refer [_ d chord arp set-key!]]))
+  (:require [app.api :as a :refer [_ arp b! c! chord click! d drop! euc! f! g! jam! l! m! mod-all!
+                                   pat! play! redrum! refresh! s! set-key! so! stat stop! sw! tr-all!
+                                   u! undrum! unso! w!]]))
 
 (comment
   (play!)
