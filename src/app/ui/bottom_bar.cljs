@@ -1,7 +1,7 @@
 (ns app.ui.bottom-bar)
 
 (defn bottom-bar-component []
-  [:div.hud-bottom
+  [:footer.hud-bottom {:role "contentinfo" :aria-label "Performance shortcuts and author link"}
    [:div.neo-links-group
     [:span.hud-by "by "]
     [:a.neo-link-btn {:href "https://timcha.dev" :target "_blank" :rel "noreferrer"}

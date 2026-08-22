@@ -8,7 +8,7 @@
         {:keys [root mode]} @global-key
         active-loops-map @active-tracks
         active-loops (keys active-loops-map)]
-    [:div.hud-top
+    [:header.hud-top {:role "banner" :aria-label "Studio Status and Controls"}
      [:div.neo-brand-container
       [:div.neo-brand
        [:span.neo-prompt "> "]
@@ -20,6 +20,7 @@
         (str (str/upper-case (name (or root :e))) " " (str/upper-case (name (or mode :dorian))))]
        [:span.neo-badge.badge-jam {:style {:border-color (or mesh-color "#ffffff")}} jam-name]
        [:button.neo-btn-stats {:on-click toggle-stats!
+                               :aria-label (if stats-visible? "Close statistics modal" "Open statistics modal")
                                :class (when stats-visible? "active")}
         (str "STATS " (if stats-visible? "[-]" "[+]"))]]]
 
