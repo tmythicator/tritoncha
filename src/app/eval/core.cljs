@@ -1,4 +1,4 @@
-(ns app.eval
+(ns app.eval.core
   "In-browser CLJS evaluation engine powered by Small Clojure Interpreter (SCI)."
   (:require [sci.core :as sci]
             [app.api :as api]
@@ -91,3 +91,19 @@
         {:ok? true :result res})
       (catch :default e
         {:ok? false :error (or (.-message e) (str e))}))))
+
+(defn run-code
+  "Evaluates code-str and returns a formatted result map {:ok? bool, :target string, :text string}."
+  [code-str]
+  (let [trimmed (str/trim (or code-str ""))
+        display-target (if (> (count trimmed) 45)
+                         (str (subs trimmed 0 42) "...")
+                         trimmed)
+        {:keys [ok? result error]} (eval-code trimmed)]
+    (if ok?
+      {:ok?     true
+       :target  display-target
+       :text    (str "=> " (if (nil? result) ":ok" (pr-str result)))}
+      {:ok?     false
+       :target  display-target
+       :text    (str "Error: " error)})))

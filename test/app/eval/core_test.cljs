@@ -1,4 +1,4 @@
-(ns app.eval-test
+(ns app.eval.core-test
   (:require [cljs.test :refer [deftest is testing]]
             [app.utils :as utils]
             [app.audio.theory :as theory]
