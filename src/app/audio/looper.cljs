@@ -1,6 +1,7 @@
 (ns app.audio.looper
   "Live looper, scheduler and modulation engine."
   (:require ["tone" :as tone]
+            [reagent.core :as r]
             [app.state :refer [audio-state engine-ctx]]
             [app.audio.engine :refer [init-audio!]]
             [app.audio.voices :as voices]
@@ -81,8 +82,8 @@
 
       ;; First-time track instantiation
       (let [pattern-atom (atom pattern-data)
-            muted-atom   (atom false)
-            solo-atom    (atom false)
+            muted-atom   (r/atom false)
+            solo-atom    (r/atom false)
             tr-info      {:pattern pattern-atom
                           :muted?  muted-atom
                           :solo?   solo-atom}
