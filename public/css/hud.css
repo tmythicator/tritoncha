@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Minimal HUD, Top Bar, Bottom Bar, Badges & Chips
+   HUD, Top Bar, Bottom Bar, Badges
    ========================================================================== */
 
 .minimal-hud {
@@ -11,6 +11,8 @@
     flex-direction: column;
     justify-content: space-between;
     padding: var(--hud-padding-y) var(--hud-padding-x);
+    -webkit-user-select: none;
+    -moz-user-select: none;
     user-select: none;
     transition: opacity 0.2s ease;
 
@@ -41,7 +43,7 @@
 .hud-info            { gap: var(--space-xl); font-size: var(--font-size-base); }
 .loop-tags           { gap: var(--space-sm); }
 .neo-links-group     { gap: var(--space-sm); pointer-events: auto; }
-.hotkey-hints        { gap: var(--space-md); font-size: var(--font-size-sm); color: var(--text-dim); }
+.hotkey-hints        { gap: var(--space-md); font-size: var(--font-size-sm); color: var(--text-tertiary); }
 
 .neo-brand {
     display: flex;
@@ -56,7 +58,7 @@
 }
 
 .neo-prompt {
-    color: var(--cyan);
+    color: var(--text-brand);
 }
 
 .neo-badge,
@@ -68,9 +70,9 @@
     font-weight: 500;
     letter-spacing: 0.5px;
     padding: var(--space-2xs) var(--space-sm);
-    border: 1px solid var(--border-dim);
+    border: 1px solid var(--border-subtle);
     background: transparent;
-    color: var(--text-dim);
+    color: var(--text-tertiary);
     text-decoration: none;
     border-radius: var(--radius-sm);
     white-space: nowrap;
@@ -78,14 +80,14 @@
 }
 
 .neo-badge.badge-cyan {
-    border-color: rgba(0, 229, 255, 0.35);
-    color: var(--cyan);
-    background: rgba(0, 229, 255, 0.04);
+    border-color: var(--border-primary-subtle);
+    color: var(--text-brand);
+    background: var(--bg-primary-subtle);
 }
 
 .neo-badge.badge-jam {
-    color: var(--text-white);
-    border-color: var(--border-solid);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
 }
 
 .neo-btn-stats,
@@ -95,22 +97,22 @@
 
     &:hover,
     &.active {
-        color: var(--cyan);
-        border-color: var(--cyan);
-        background: var(--bg-hover-cyan);
+        color: var(--text-brand);
+        border-color: var(--border-primary);
+        background: var(--bg-interactive-hover);
     }
 }
 
 .loop-tag {
     text-transform: uppercase;
-    color: var(--cyan);
-    border-color: rgba(0, 229, 255, 0.3);
-    background: rgba(0, 229, 255, 0.05);
+    color: var(--text-brand);
+    border-color: var(--border-primary-subtle);
+    background: var(--bg-primary-subtle);
 
     &.muted {
-        color: var(--pink);
-        border-color: rgba(255, 0, 127, 0.3);
-        background: rgba(255, 0, 127, 0.05);
+        color: var(--text-danger);
+        border-color: var(--border-danger-subtle);
+        background: var(--bg-danger-subtle);
         opacity: 0.5;
     }
 }
@@ -118,6 +120,6 @@
 .status-hint,
 .hud-by {
     font-size: var(--font-size-sm);
-    color: var(--text-dim);
+    color: var(--text-tertiary);
     white-space: nowrap;
 }

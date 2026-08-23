@@ -3,69 +3,124 @@
    ========================================================================== */
 
 :root {
-    --bg-black:           #000000;
-    --bg-card:            rgba(6, 6, 14, 0.94);
-    --bg-card-header:     rgba(12, 12, 24, 0.7);
-    --bg-input:           rgba(0, 0, 0, 0.65);
-    --bg-surface-dim:     rgba(0, 0, 0, 0.4);
-    --bg-surface-track:   rgba(0, 0, 0, 0.45);
-    --bg-hover-cyan:      rgba(0, 229, 255, 0.08);
+    --palette-black:           #000000;
+    --palette-white:           #ffffff;
+    --palette-cyan:            #00e5ff;
+    --palette-green:           #00ff88;
+    --palette-pink:            #ff007f;
+    --palette-purple:          #c77dff;
+    --palette-amber:           #ffaa00;
+    --palette-blue:            #0088ff;
 
-    --text-white:         #ffffff;
-    --text-muted:         rgba(255, 255, 255, 0.75);
-    --text-dim:           rgba(255, 255, 255, 0.45);
+    --color-primary:           var(--palette-cyan);
+    --color-secondary:         var(--palette-purple);
+    --color-accent:            var(--palette-pink);
+    --color-success:           var(--palette-green);
+    --color-warning:           var(--palette-amber);
+    --color-danger:            var(--palette-pink);
+    --color-info:              var(--palette-blue);
 
-    --border-solid:       rgba(255, 255, 255, 0.35);
-    --border-dim:         rgba(255, 255, 255, 0.12);
+    --bg-root:                 var(--palette-black);
+    --bg-surface:              rgba(6, 6, 14, 0.94);
+    --bg-surface-subtle:       rgba(0, 0, 0, 0.4);
+    --bg-surface-track:        rgba(0, 0, 0, 0.45);
+    --bg-input:                rgba(0, 0, 0, 0.65);
+    --bg-console:              rgba(0, 0, 0, 0.55);
 
-    --cyan:               #00e5ff;
-    --green:              #00ff88;
-    --pink:               #ff007f;
-    --purple:             #c77dff;
-    --amber:              #ffaa00;
-    --blue:               #0088ff;
+    --bg-interactive-hover:    rgba(0, 229, 255, 0.08);
+    --bg-primary-subtle:       rgba(0, 229, 255, 0.05);
+    --bg-primary-tint:         rgba(0, 229, 255, 0.15);
+    --bg-success-subtle:       rgba(0, 255, 136, 0.12);
+    --bg-success-tint:         rgba(0, 255, 136, 0.15);
+    --bg-danger-subtle:        rgba(255, 0, 127, 0.12);
+    --bg-danger-tint:          rgba(255, 0, 127, 0.15);
+    --bg-secondary-subtle:     rgba(199, 125, 255, 0.12);
+    --bg-scrollbar-thumb:      rgba(0, 229, 255, 0.35);
+    --bg-scrollbar-track:      rgba(255, 255, 255, 0.02);
 
-    --space-2xs:          2px;
-    --space-xs:           4px;
-    --space-sm:           6px;
-    --space-md:           8px;
-    --space-lg:           10px;
-    --space-xl:           14px;
-    --space-2xl:          18px;
-    --space-3xl:          24px;
+    --text-primary:            var(--palette-white);
+    --text-secondary:          rgba(255, 255, 255, 0.75);
+    --text-tertiary:           rgba(255, 255, 255, 0.45);
+    --text-inverse:            var(--palette-black);
 
-    --font-mono:          ui-monospace, 'SF Mono', 'Fira Code', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
-    --font-size-2xs:      8px;
-    --font-size-xs:       9.5px;
-    --font-size-sm:       10px;
-    --font-size-base:     11px;
-    --font-size-md:       11.5px;
-    --font-size-lg:       13px;
-    --line-height-tight:  1.35;
-    --line-height-normal: 1.5;
-    --line-height-editor: 1.6;
+    --text-brand:              var(--color-primary);
+    --text-success:            var(--color-success);
+    --text-danger:             var(--color-danger);
+    --text-accent:             var(--color-accent);
+    --text-secondary-accent:   var(--color-secondary);
 
-    --radius-sm:          2px;
-    --radius-md:          4px;
-    --blur-glass:         blur(16px);
-    --shadow-modal:       0 16px 48px rgba(0, 0, 0, 0.85);
+    --border-subtle:           rgba(255, 255, 255, 0.12);
+    --border-strong:           rgba(255, 255, 255, 0.35);
 
-    --hud-padding-y:      20px;
-    --hud-padding-x:      24px;
+    --border-primary:          var(--color-primary);
+    --border-primary-subtle:   rgba(0, 229, 255, 0.35);
+    --border-success:          var(--color-success);
+    --border-success-subtle:   rgba(0, 255, 136, 0.3);
+    --border-danger:           var(--color-danger);
+    --border-danger-subtle:    rgba(255, 0, 127, 0.3);
+    --border-secondary-subtle: rgba(199, 125, 255, 0.4);
 
-    --stats-card-width:   480px;
-    --stats-card-right:   24px;
-    --stats-card-bottom:  48px;
-    --stats-card-padding: 14px 16px;
-    --stats-max-height:   calc(100vh - 100px);
-    --stats-grid-cols:    repeat(2, 1fr);
-    --stats-loops-height: 180px;
+    --bus-drums-color:         var(--color-accent);
+    --bus-drums-bg:            rgba(255, 0, 127, 0.2);
+    --bus-drums-border:        rgba(255, 0, 127, 0.4);
 
-    --tutorial-card-width: 860px;
-    --tutorial-card-top:  46px;
-    --tutorial-card-left: 20px;
-    --tutorial-card-padding: 14px 18px;
-    --tutorial-max-height: calc(100vh - 70px);
-    --editor-min-height:  380px;
-    --editor-max-height:  calc(100vh - 270px);
+    --bus-bass-color:          var(--color-primary);
+    --bus-bass-bg:             rgba(0, 229, 255, 0.2);
+    --bus-bass-border:         rgba(0, 229, 255, 0.4);
+
+    --bus-space-color:         var(--color-secondary);
+    --bus-space-bg:            rgba(199, 125, 255, 0.2);
+    --bus-space-border:        rgba(199, 125, 255, 0.4);
+
+    --bus-direct-color:        var(--color-warning);
+    --bus-direct-bg:           rgba(255, 170, 0, 0.2);
+    --bus-direct-border:       rgba(255, 170, 0, 0.4);
+
+    --bus-master-color:        var(--text-secondary);
+    --bus-master-bg:           rgba(255, 255, 255, 0.1);
+    --bus-master-border:       var(--border-subtle);
+
+    --space-2xs:               2px;
+    --space-xs:                4px;
+    --space-sm:                6px;
+    --space-md:                8px;
+    --space-lg:                10px;
+    --space-xl:                14px;
+    --space-2xl:               18px;
+    --space-3xl:               24px;
+
+    --font-mono:               ui-monospace, 'SF Mono', 'Fira Code', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+    --font-size-2xs:           8px;
+    --font-size-xs:            9.5px;
+    --font-size-sm:            10px;
+    --font-size-base:          11px;
+    --font-size-md:            11.5px;
+    --font-size-lg:            13px;
+    --line-height-editor:      1.6;
+
+    --radius-sm:               2px;
+    --blur-glass:              blur(16px);
+    --shadow-modal:            0 16px 48px rgba(0, 0, 0, 0.85);
+    --glow-success:            0 0 8px rgba(0, 255, 136, 0.6);
+    --glow-danger:             0 0 8px rgba(255, 0, 127, 0.6);
+    --glow-focus:              0 0 12px rgba(0, 229, 255, 0.22);
+
+    --hud-padding-y:           20px;
+    --hud-padding-x:           24px;
+
+    --stats-card-width:        480px;
+    --stats-card-right:        24px;
+    --stats-card-bottom:       48px;
+    --stats-card-padding:      14px 16px;
+    --stats-max-height:        calc(100vh - 100px);
+    --stats-grid-cols:         repeat(2, 1fr);
+    --stats-loops-height:      180px;
+
+    --tutorial-card-width:     860px;
+    --tutorial-card-top:       46px;
+    --tutorial-card-left:      20px;
+    --tutorial-card-padding:   14px 18px;
+    --tutorial-max-height:     calc(100vh - 70px);
+    --editor-min-height:       380px;
+    --editor-max-height:       calc(100vh - 270px);
 }
