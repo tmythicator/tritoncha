@@ -1,0 +1,27 @@
+/* ==========================================================================
+   Base Reset & Canvas Layout
+   ========================================================================== */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-black);
+    color: var(--text-white);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    -webkit-font-smoothing: antialiased;
+}
+
+#canvas-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    touch-action: none;
+}
