@@ -1,6 +1,7 @@
 (ns app.visuals.engine
   (:require ["three" :as three]
             [app.state :refer [visual-state repl-registry visual-pulse engine-ctx pulse!]]
+            [app.utils :refer [mobile?]]
             [app.lib.scenes :as lib-scenes]
             [app.custom.scenes :as custom-scenes]))
 
@@ -125,7 +126,8 @@
           outer      (build-outer-mesh (:outer-geom cur-scene) (:outer colors))]
 
       (.setSize renderer w h)
-      (.setPixelRatio renderer (min (.-devicePixelRatio js/window) 2))
+      (let [max-dpr (if (mobile?) 1.5 2.0)]
+        (.setPixelRatio renderer (min (.-devicePixelRatio js/window) max-dpr)))
       (set! (.. scene -background) (three/Color. (:bg colors)))
       (.appendChild container (.-domElement renderer))
       (.set (.-position camera) 0 0 responsive-z)

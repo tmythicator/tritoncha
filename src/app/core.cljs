@@ -2,6 +2,7 @@
   (:require ["three" :as three]
             ["tone" :as tone]
             [app.state :refer [ui-state audio-state visual-state engine-ctx]]
+            [app.utils :refer [mobile?]]
             [app.audio.engine :refer [init-audio!]]
             [app.visuals.engine :as engine :refer [init-three! render-loop! toggle-wireframe!]]
             [app.audio.looper :refer [toggle-click!]]
@@ -40,8 +41,8 @@
   []
   (when-let [ctx (when (:tone @engine-ctx) (.-context tone))]
     (if (.-hidden js/document)
-      (set! (.-lookAhead ctx) 0.45)
-      (set! (.-lookAhead ctx) 0.25))))
+      (set! (.-lookAhead ctx) 0.6)
+      (set! (.-lookAhead ctx) (if (mobile?) 0.45 0.25)))))
 
 (defn- handle-pointer-down!
   "Silently unlocks and resumes the WebAudio context on first user interaction."

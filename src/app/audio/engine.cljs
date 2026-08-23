@@ -3,6 +3,7 @@
   (:require ["tone" :as tone]
             [clojure.string :as str]
             [app.state :refer [audio-state engine-ctx]]
+            [app.utils :refer [mobile?]]
             [app.audio.voices :as voices]
             [app.audio.routing :as routing]))
 
@@ -30,8 +31,9 @@
   []
   (resume-audio-context!)
   (when-not (:tone @engine-ctx)
-    (set! (.. tone -context -lookAhead) 0.25)
-    (set! (.. tone -context -latencyHint) "playback")
+    (let [ahead (if (mobile?) 0.45 0.25)]
+      (set! (.. tone -context -lookAhead) ahead)
+      (set! (.. tone -context -latencyHint) "playback"))
 
     (let [busses      (routing/build-graph!)
           instruments (init-instruments! busses)]

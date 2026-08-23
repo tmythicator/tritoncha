@@ -149,3 +149,10 @@
     :blue   (css-var "--blue" "#0088ff")})
   ([k]
    (get (colors) k (css-var (str "--" (name k)) "#00e5ff"))))
+
+(defn mobile?
+  "Returns true if running on a mobile browser or touch device."
+  []
+  (and (exists? js/navigator)
+       (or (boolean (re-find #"(?i)android|iphone|ipad|ipod|mobile" (or (.-userAgent js/navigator) "")))
+           (pos? (or (.-maxTouchPoints js/navigator) 0)))))
