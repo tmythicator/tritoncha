@@ -1,8 +1,6 @@
 (ns app.lib.instruments
   "Core built-in instrument library and drum voice catalog for Tritoncha.")
 
-;; Core Synthesizers & Sound Presets
-
 (def core-instruments
   {:saw-bass
    {:type :mono

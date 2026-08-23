@@ -2,9 +2,9 @@
    Tritoncha Master Stylesheet
    ========================================================================== */
 
-@import "./css/tokens.css";
-@import "./css/base.css";
-@import "./css/hud.css";
-@import "./css/stats.css";
-@import "./css/tutorial.css";
-@import "./css/responsive.css";
+@import url("./css/tokens.css");
+@import url("./css/base.css");
+@import url("./css/hud.css");
+@import url("./css/stats.css");
+@import url("./css/tutorial.css");
+@import url("./css/responsive.css");
