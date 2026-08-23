@@ -39,8 +39,7 @@
              (merge busses
                     instruments
                     {:drums-muted?   (atom false)
-                     :click-enabled? (atom false)}))))
-  (swap! audio-state assoc :active? true))
+                     :click-enabled? (atom false)})))))
 
 (defn- format-track-summary [tracks]
   (if (empty? tracks)

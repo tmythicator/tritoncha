@@ -8,21 +8,21 @@
            :tutorial-visible? false}))
 
 (defonce audio-state
-  (atom {:active?     false
-         :bpm         168
-         :current-jam :roller
-         :key         {:root :e :mode :phrygian :octave 1}
-         :active-tracks {}
-         :solo-mode?    false
-         :clock-sample  nil}))
+  (r/atom {:active?       false
+           :bpm           168
+           :current-jam   :roller
+           :key           {:root :e :mode :phrygian :octave 1}
+           :active-tracks {}
+           :solo-mode?    false
+           :clock-sample  nil}))
 
 (defonce visual-state
-  (atom {:current-scene :cyber-torus
-         :mesh-type     :torus-knot
-         :wireframe?    true
-         :colors        {:bg "#050510" :mesh "#00ffcc" :wire "#ff007f"}
-         :sensitivity   1.6
-         :camera-speed  0.005}))
+  (r/atom {:current-scene :cyber-torus
+           :mesh-type     :torus-knot
+           :wireframe?    true
+           :colors        {:bg "#050510" :mesh "#00ffcc" :wire "#ff007f"}
+           :sensitivity   1.6
+           :camera-speed  0.005}))
 
 (defonce visual-pulse (atom 0.0))
 
