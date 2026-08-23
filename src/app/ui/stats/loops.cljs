@@ -43,9 +43,9 @@
      [:div.neo-section-label (str "# ACTIVE LOOPS (" active-count ")")]
      (if (empty? tracks-map)
        [:div.neo-empty "no active loops (use (play!) or (l! :track-name {...}))"]
-       [:div.neo-tracks-grid {:tab-index 0
-                              :role "region"
-                              :aria-label "Active audio loops list"}
-        (for [[kw info] tracks-map]
-          ^{:key kw}
-          [track-card kw info])])]))
+       (into [:div.neo-tracks-grid {:tab-index 0
+                                    :role "region"
+                                    :aria-label "Active audio loops list"}]
+             (for [[kw info] tracks-map]
+               ^{:key kw}
+               [track-card kw info])))]))

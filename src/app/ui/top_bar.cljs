@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [app.state :refer [ui-state audio-state visual-state]]))
 
-(defn top-bar-component [{:keys [toggle-stats! toggle-tutorial! cycle-scene!]}]
+(defn top-bar-component [{:keys [toggle-play! cycle-jam! cycle-scene! toggle-track-mute! toggle-stats! toggle-tutorial!]}]
   (let [{:keys [stats-visible? tutorial-visible?]} @ui-state
         {:keys [active? bpm current-jam key active-tracks]} @audio-state
         {:keys [current-scene colors]} @visual-state
@@ -22,7 +22,11 @@
        [:span.neo-badge (str bpm " BPM")]
        [:span.neo-badge.badge-cyan
         (str (str/upper-case (name (or root :e))) " " (str/upper-case (name (or mode :dorian))))]
-       [:span.neo-badge.badge-jam {:style {:border-color (or mesh-color "#ffffff")}} jam-name]
+       [:button.neo-btn-stats.badge-jam {:on-click cycle-jam!
+                                         :style {:border-color (or mesh-color "#ffffff")}
+                                         :aria-label "Cycle track preset"
+                                         :title "Click or press [1-4] to cycle Track Preset"}
+        (str "JAM: " jam-name)]
        [:button.neo-btn-stats {:on-click cycle-scene!
                                :aria-label "Cycle 3D Scene Preset"
                                :title "Click or press [G] to cycle 3D Scene"}
@@ -39,13 +43,16 @@
      [:div.hud-info
       [:div.hud-tracks
        (when (seq active-loops)
-         [:div.loop-tags
-          (for [lk active-loops
-                :let [tr (get active-loops-map lk)
-                      muted? (boolean @(:muted? tr))]]
-            ^{:key lk}
-            [:span.loop-tag {:class (if muted? "muted" "active")}
-             (str (if muted? "[M] " "") (name lk))])])
-       [:span.status-hint (if active?
-                            "ENGINE: ACTIVE"
-                            "ENGINE: READY [SPACE]")]]]]))
+         (into [:div.loop-tags]
+               (for [lk active-loops
+                     :let [tr (get active-loops-map lk)
+                           muted? (boolean @(:muted? tr))]]
+                 ^{:key lk}
+                 [:button.loop-tag {:on-click #(toggle-track-mute! lk)
+                                    :class (if muted? "muted" "active")
+                                    :title (str "Click to " (if muted? "unmute " "mute ") (name lk))}
+                  (str (if muted? "[M] " "") (name lk))])))
+       [:button.neo-btn-stats.btn-engine {:on-click toggle-play!
+                                          :class (when active? "active")
+                                          :title "Click or press [Space] to Start / Stop Engine"}
+        (if active? "ENGINE: ACTIVE [■]" "ENGINE: READY [▶]")]]]]))
