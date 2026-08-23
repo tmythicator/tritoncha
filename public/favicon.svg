@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 512 512"
+   width="100%"
+   height="100%"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="favicon.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs5" />
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.7773438"
+     inkscape:cx="256.28132"
+     inkscape:cy="255.71868"
+     inkscape:window-width="1264"
+     inkscape:window-height="1378"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g5" />
+  <rect
+     width="512"
+     height="512"
+     rx="96"
+     fill="#05050a"
+     stroke="#00e5ff"
+     stroke-width="12"
+     id="rect1" />
+  <g
+     fill="none"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     id="g5">
+    <path
+       d="M 256 436 L 256 320"
+       stroke="#00e5ff"
+       stroke-width="36"
+       id="path2" />
+    <path
+       d="m 256.15824,321.68791 c 66,0 136,-30 136,-120 0,-62 -28,-62 0,-123.999997"
+       stroke="#00e5ff"
+       stroke-width="36"
+       id="path5" />
+    <path
+       d="M 256 320 L 256 68"
+       stroke="#00ff88"
+       stroke-width="36"
+       id="path3" />
+    <path
+       d="M 256 320 C 190 320, 120 290, 120 200 C 120 138, 148 138, 120 76"
+       stroke="#00e5ff"
+       stroke-width="36"
+       id="path4" />
+    <path
+       d="m 256,295.77148 -21,12.11719 v 24.22266 l 21,12.11719 21,-12.11719 v -24.22266 z"
+       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#1a1a1a;stroke-linecap:butt;stroke-linejoin:miter;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+       id="path9" />
+    <path
+       d="m 256,285.00195 a 5.0005,5.0005 0 0 0 -2.49805,0.66797 l -26,15 A 5.0005,5.0005 0 0 0 225,305 v 30 a 5.0005,5.0005 0 0 0 2.50195,4.33008 l 26,15 a 5.0005,5.0005 0 0 0 4.9961,0 l 26,-15 A 5.0005,5.0005 0 0 0 287,335 v -30 a 5.0005,5.0005 0 0 0 -2.50195,-4.33008 l -26,-15 A 5.0005,5.0005 0 0 0 256,285.00195 Z m 0,10.76953 21,12.11719 v 24.22266 l -21,12.11719 -21,-12.11719 v -24.22266 z"
+       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke-linecap:butt;stroke-linejoin:miter;enable-background:accumulate;stop-color:#000000;stop-opacity:1;stroke:#00ffff;stroke-opacity:1;paint-order:fill markers stroke;fill-opacity:1"
+       id="path8" />
+    <circle
+       cx="256"
+       cy="320"
+       r="7"
+       fill="#00ff88"
+       id="circle5" />
+  </g>
+</svg>
