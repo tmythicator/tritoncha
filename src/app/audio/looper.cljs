@@ -1,15 +1,15 @@
 (ns app.audio.looper
   "Live looper, scheduler and modulation engine."
   (:require ["tone" :as tone]
-            [app.state :refer [state tone-ctx active-tracks solo-mode? global-key]]
+            [app.state :refer [audio-state engine-ctx]]
             [app.audio.engine :refer [init-audio!]]
             [app.audio.voices :as voices]
             [app.audio.theory :as theory]))
 
 (defn- track-audible? [track-info]
   (let [muted? @(:muted? track-info)
-        solo? @(:solo? track-info)
-        global-solo? @solo-mode?]
+        solo?  @(:solo? track-info)
+        global-solo? (:solo-mode? @audio-state)]
     (and (not muted?)
          (if global-solo? solo? true))))
 
@@ -17,7 +17,7 @@
   (when-let [^js t (.-Transport tone)]
     (when (not= (.-state t) "started")
       (.start t)
-      (swap! state assoc :active? true))))
+      (swap! audio-state assoc :active? true))))
 
 (defn- trigger-event!
   "Plays a single note/drum event or simultaneous multi-instrument hit."
@@ -73,7 +73,7 @@
                          (assoc raw-data :notes (theory/d degs oct)))
                        raw-data)
         step         (or (:step pattern-data) "16n")
-        existing-tr  (get @active-tracks track-kw)]
+        existing-tr  (get (:active-tracks @audio-state) track-kw)]
 
     (if existing-tr
       ;; Live hot-swap pattern state without rebuilding Tone.Sequence
@@ -91,7 +91,7 @@
             seq-instance
             (tone/Sequence.
              (fn [time idx]
-               (when-let [ctx @tone-ctx]
+               (when-let [ctx (:tone @engine-ctx)]
                  (let [cur-pat  @pattern-atom
                        events   (or (:notes cur-pat) (:hits cur-pat) (:pattern cur-pat))
                        inst-key (or (:inst cur-pat) (:synth cur-pat) track-kw)
@@ -113,7 +113,7 @@
              step)]
 
         (.start ^js seq-instance 0)
-        (swap! active-tracks assoc track-kw
+        (swap! audio-state assoc-in [:active-tracks track-kw]
                {:seq seq-instance
                 :pattern pattern-atom
                 :muted? muted-atom
@@ -126,20 +126,18 @@
   [& track-names]
   (doseq [tn track-names]
     (let [kw (keyword tn)]
-      (when-let [{:keys [^js seq]} (get @active-tracks kw)]
+      (when-let [{:keys [^js seq]} (get (:active-tracks @audio-state) kw)]
         (try (.stop seq) (catch js/Object _))
         (try (.dispose seq) (catch js/Object _))
-        (swap! active-tracks dissoc kw)))))
+        (swap! audio-state update :active-tracks dissoc kw)))))
 
 (defn clear-loops!
   "Stops all active loops, releases synth voices, and stops the transport."
   []
-  (doseq [[_ {:keys [^js seq]}] @active-tracks]
+  (doseq [[_ {:keys [^js seq]}] (:active-tracks @audio-state)]
     (try (.stop seq) (catch js/Object _))
     (try (.dispose seq) (catch js/Object _)))
-  (reset! active-tracks {})
-  (reset! solo-mode? false)
-  (when-let [{:keys [^js pad ^js bass ^js sub]} @tone-ctx]
+  (when-let [{:keys [^js pad ^js bass ^js sub]} (:tone @engine-ctx)]
     (try (.releaseAll pad) (catch js/Object _))
     (try (.triggerRelease bass) (catch js/Object _))
     (try (.triggerRelease sub) (catch js/Object _)))
@@ -147,12 +145,12 @@
     (.. tone -Transport cancel)
     (.. tone -Transport stop)
     (catch js/Object _))
-  (swap! state assoc :active? false :pulse 0.0))
+  (swap! audio-state assoc :active-tracks {} :solo-mode? false :active? false))
 
 (defn toggle-click!
   "Toggles the metronome click track (C6 downbeat / G5 beats) for playing in sync."
   []
-  (if (get @active-tracks :click)
+  (if (get (:active-tracks @audio-state) :click)
     (stop-loop! :click)
     (loop! :click
       {:inst :click
@@ -161,13 +159,25 @@
        :dur "32n"
        :vel 0.8})))
 
+(defn- drum-track?
+  "Determines if an active track or pattern map belongs to drums or percussion."
+  [kw pat]
+  (let [inst (or (:inst pat) (:synth pat) kw)]
+    (or (= (keyword kw) :drums)
+        (= (keyword kw) :drum)
+        (contains? (voices/all-drum-keys) (keyword kw))
+        (contains? (voices/all-drum-keys) (keyword inst))
+        (= (voices/instrument-bus inst) :drums)
+        (some? (:pattern pat))
+        (some? (:hits pat)))))
+
 (defn transpose-all!
   "Transposes all active melodic loops by N semitones live.
   Examples: (transpose-all! 2), (transpose-all! -1)."
   [semitones]
-  (doseq [[kw tr] @active-tracks]
-    (when-not (contains? (voices/all-drum-keys) kw)
-      (let [cur-pat @(:pattern tr)]
+  (doseq [[kw tr] (:active-tracks @audio-state)]
+    (let [cur-pat @(:pattern tr)]
+      (when-not (drum-track? kw cur-pat)
         (when-let [notes (:notes cur-pat)]
           (let [tr-notes (mapv (fn [n]
                                  (cond
@@ -182,14 +192,14 @@
   Examples: (modulate-all! :f :phrygian), (modulate-all! :d :dorian 1)."
   ([root mode] (modulate-all! root mode 2))
   ([root mode octave]
-   (let [old-root (:root @global-key)
+   (let [old-root (get-in @audio-state [:key :root] :e)
          old-midi (or (theory/note->midi (str (name old-root) "3")) 60)
          new-midi (or (theory/note->midi (str (name root) "3")) 60)
          delta-st (- new-midi old-midi)]
      (theory/set-key! root mode (or octave 2))
-     (doseq [[kw tr] @active-tracks]
-       (when-not (contains? (voices/all-drum-keys) kw)
-         (let [cur-pat @(:pattern tr)]
+     (doseq [[kw tr] (:active-tracks @audio-state)]
+       (let [cur-pat @(:pattern tr)]
+         (when-not (drum-track? kw cur-pat)
            (cond
              (or (:deg cur-pat) (:degrees cur-pat))
              (let [degs (or (:deg cur-pat) (:degrees cur-pat))
@@ -201,10 +211,10 @@
              (let [notes (:notes cur-pat)
                    tr-notes (mapv (fn [n]
                                     (cond
-                                      (nil? n) nil
-                                      (sequential? n) (mapv #(theory/transpose % delta-st) n)
-                                      :else (theory/transpose n delta-st)))
-                                  notes)]
+                                       (nil? n) nil
+                                       (sequential? n) (mapv #(theory/transpose % delta-st) n)
+                                       :else (theory/transpose n delta-st)))
+                                   notes)]
                (swap! (:pattern tr) assoc :notes tr-notes)))))))))
 
 (def mod-all! modulate-all!)

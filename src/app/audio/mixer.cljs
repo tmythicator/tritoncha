@@ -1,7 +1,7 @@
 (ns app.audio.mixer
   "Audio mixer for tempo, bus routing, track mutes, soloing and volume leveling."
   (:require ["tone" :as tone]
-            [app.state :refer [state tone-ctx active-tracks solo-mode?]]
+            [app.state :refer [audio-state engine-ctx]]
             [app.audio.engine :refer [init-audio!]]
             [app.audio.voices :as voices]))
 
@@ -9,11 +9,11 @@
   "Changes the global tempo (BPM) in real time.
   Examples: (set-bpm! 174), (set-bpm! 130)."
   [bpm]
-  (swap! state assoc :bpm bpm)
+  (swap! audio-state assoc :bpm bpm)
   (set! (.. tone -Transport -bpm -value) bpm))
 
 (defn- get-bus [bus-key]
-  (when-let [ctx @tone-ctx]
+  (when-let [ctx (:tone @engine-ctx)]
     (case (keyword bus-key)
       (:drums :drum :drum-bus)       (:drum-bus ctx)
       (:bass :bass-bus)              (:bass-bus ctx)
@@ -71,7 +71,7 @@
   Examples: (mute! :kick :snare :hat)."
   [& track-names]
   (doseq [tn track-names]
-    (when-let [t (get @active-tracks (keyword tn))]
+    (when-let [t (get (:active-tracks @audio-state) (keyword tn))]
       (reset! (:muted? t) true))))
 
 (defn unmute!
@@ -79,14 +79,14 @@
   Examples: (unmute! :bass :sub)."
   [& track-names]
   (doseq [tn track-names]
-    (when-let [t (get @active-tracks (keyword tn))]
+    (when-let [t (get (:active-tracks @audio-state) (keyword tn))]
       (reset! (:muted? t) false))))
 
 (defn muted?
   "Returns true if the specified track is currently muted.
   Examples: (muted? :kick)."
   [track-name]
-  (if-let [t (get @active-tracks (keyword track-name))]
+  (if-let [t (get (:active-tracks @audio-state) (keyword track-name))]
     (true? @(:muted? t))
     false))
 
@@ -101,20 +101,20 @@
 (defn all-mute!
   "Mutes all currently active tracks."
   []
-  (doseq [[_ t] @active-tracks]
+  (doseq [[_ t] (:active-tracks @audio-state)]
     (reset! (:muted? t) true)))
 
 (defn all-unmute!
   "Unmutes all currently active tracks and audio busses."
   []
   (unmute-bus! :drums :bass :space)
-  (doseq [[_ t] @active-tracks]
+  (doseq [[_ t] (:active-tracks @audio-state)]
     (reset! (:muted? t) false)))
 
 (defn flip-mute!
   "Inverts mute state of all active tracks."
   []
-  (doseq [[_ t] @active-tracks]
+  (doseq [[_ t] (:active-tracks @audio-state)]
     (swap! (:muted? t) not)))
 
 (defn solo!
@@ -122,8 +122,8 @@
   Examples: (solo! :bass :sub)."
   [track-name & more-tracks]
   (let [solos (set (map keyword (cons track-name more-tracks)))]
-    (reset! solo-mode? true)
-    (doseq [[kw t] @active-tracks]
+    (swap! audio-state assoc :solo-mode? true)
+    (doseq [[kw t] (:active-tracks @audio-state)]
       (if (contains? solos kw)
         (reset! (:muted? t) false)
         (reset! (:muted? t) true)))))
@@ -132,15 +132,15 @@
   "Clears solo mode and restores all active tracks to unmuted state.
   Examples: (unsolo!)."
   []
-  (reset! solo-mode? false)
-  (doseq [[_ t] @active-tracks]
+  (swap! audio-state assoc :solo-mode? false)
+  (doseq [[_ t] (:active-tracks @audio-state)]
     (reset! (:muted? t) false)))
 
 (defn toggle-solo!
   "Toggles solo mode for the given tracks.
   Examples: (toggle-solo! :bass)."
   [track-name & more-tracks]
-  (if @solo-mode?
+  (if (:solo-mode? @audio-state)
     (unsolo!)
     (apply solo! track-name more-tracks)))
 
@@ -158,7 +158,7 @@
   Examples: (mute-type! :drums)."
   [& bus-types]
   (let [targets (set bus-types)]
-    (doseq [[_ t] @active-tracks]
+    (doseq [[_ t] (:active-tracks @audio-state)]
       (when (contains? targets (track-type (:inst t)))
         (reset! (:muted? t) true)))))
 
@@ -167,7 +167,7 @@
   Examples: (unmute-type! :drums :bass)."
   [& bus-types]
   (let [targets (set bus-types)]
-    (doseq [[_ t] @active-tracks]
+    (doseq [[_ t] (:active-tracks @audio-state)]
       (when (contains? targets (track-type (:inst t)))
         (reset! (:muted? t) false)))))
 
@@ -182,7 +182,7 @@
   []
   (unmute-bus! :drums)
   (unmute-type! :drums :bass :space)
-  (doseq [[_ t] @active-tracks]
+  (doseq [[_ t] (:active-tracks @audio-state)]
     (reset! (:muted? t) false)))
 
 ;; Track Stop + Cleanup
@@ -193,20 +193,18 @@
   [& track-names]
   (doseq [tn track-names]
     (let [kw (keyword tn)]
-      (when-let [{:keys [^js seq]} (get @active-tracks kw)]
+      (when-let [{:keys [^js seq]} (get (:active-tracks @audio-state) kw)]
         (try (.stop seq) (catch js/Object _))
         (try (.dispose seq) (catch js/Object _))
-        (swap! active-tracks dissoc kw)))))
+        (swap! audio-state update :active-tracks dissoc kw)))))
 
 (defn clear-loops!
   "Stops all active loops, releases synth voices, and stops the transport."
   []
-  (doseq [[_ {:keys [^js seq]}] @active-tracks]
+  (doseq [[_ {:keys [^js seq]}] (:active-tracks @audio-state)]
     (try (.stop seq) (catch js/Object _))
     (try (.dispose seq) (catch js/Object _)))
-  (reset! active-tracks {})
-  (reset! solo-mode? false)
-  (when-let [{:keys [^js pad ^js bass ^js sub]} @tone-ctx]
+  (when-let [{:keys [^js pad ^js bass ^js sub]} (:tone @engine-ctx)]
     (try (.releaseAll pad) (catch js/Object _))
     (try (.triggerRelease bass) (catch js/Object _))
     (try (.triggerRelease sub) (catch js/Object _)))
@@ -214,7 +212,7 @@
     (.. tone -Transport cancel)
     (.. tone -Transport stop)
     (catch js/Object _))
-  (swap! state assoc :active? false :pulse 0.0))
+  (swap! audio-state assoc :active-tracks {} :solo-mode? false :active? false))
 
 (defn stop!
   "Stops all playing audio, or specific loops if names are provided.

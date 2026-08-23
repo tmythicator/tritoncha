@@ -1,6 +1,6 @@
 (ns app.audio.tracker
   "Track registry, scene orchestrator, and algorithmic preset launcher."
-  (:require [app.state :refer [state repl-tracks]]
+  (:require [app.state :refer [audio-state repl-registry]]
             [app.audio.engine :refer [init-audio!]]
             [app.utils :refer [pattern]]
             [app.audio.theory :refer [set-key! chord d]]
@@ -18,7 +18,7 @@
   "Registers or updates a dynamic track in the REPL registry.
   Examples: (register-track! :my-jam {:bpm 170 :scale [:d :dorian 1] :tracks {...}})."
   [track-key spec]
-  (swap! repl-tracks assoc track-key spec)
+  (swap! repl-registry assoc-in [:tracks track-key] spec)
   track-key)
 
 (def deftrack! register-track!)
@@ -27,7 +27,7 @@
   "Returns a merged map of core built-in tracks, user custom tracks, and REPL tracks.
   Examples: (all-tracks)."
   []
-  (merge core-tracks user-tracks @repl-tracks))
+  (merge core-tracks user-tracks (:tracks @repl-registry)))
 
 (def tracks all-tracks)
 
@@ -48,7 +48,7 @@
         {:keys [bpm scale geom colors cutoff tracks]} preset-map
         [bg-c mesh-c] (or colors ["#080412" "#ff007f"])]
 
-    (swap! state assoc :current-jam preset-key :active? true)
+    (swap! audio-state assoc :current-jam preset-key :active? true)
     (when scale
       (let [[r m oct] scale]
         (set-key! r m (or oct 2))))
@@ -67,7 +67,7 @@
   "Reloads and restarts the currently active track preset with updated track data.
   Examples: (reload-track!)."
   []
-  (let [cur-jam (:current-jam @state)]
+  (let [cur-jam (:current-jam @audio-state)]
     (when (and cur-jam (not= cur-jam :none))
       (play-preset! cur-jam))))
 

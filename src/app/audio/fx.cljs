@@ -1,11 +1,14 @@
 (ns app.audio.fx
   "Audio effects, transitions and SFX triggers."
   (:require ["tone" :as tone]
-            [app.state :refer [tone-ctx pulse!]]
+            [app.state :refer [engine-ctx pulse!]]
             [app.audio.engine :refer [init-audio!]]))
 
+(defn- tone-node [k]
+  (get (:tone @engine-ctx) k))
+
 (defn- ramp-node-param! [node-key getter-fn target-val ramp-time]
-  (when-let [node (get @tone-ctx node-key)]
+  (when-let [node (tone-node node-key)]
     (.rampTo ^js (getter-fn node) target-val (or ramp-time 0.05))))
 
 (defn set-filter-cutoff!
@@ -21,7 +24,7 @@
 (defn sweep-filter!
   "Smoothly sweeps master filter cutoff from one frequency to another over seconds."
   [from-hz to-hz duration-secs]
-  (when-let [{:keys [^js filter]} @tone-ctx]
+  (when-let [{:keys [^js filter]} (:tone @engine-ctx)]
     (let [now (tone/now)
           freq (.-frequency filter)]
       (.cancelScheduledValues freq now)
@@ -31,7 +34,7 @@
 (defn set-distortion!
   "Sets overdrive/distortion amount (0.0 to 1.0)."
   [amt]
-  (when-let [^js distort (:distort @tone-ctx)]
+  (when-let [^js distort (:distort (:tone @engine-ctx))]
     (set! (.-distortion distort) amt)))
 
 (defn set-delay-feedback!
@@ -42,7 +45,7 @@
 (defn set-delay-time!
   "Sets delay tempo subdivision ('8n.', '16n', '4n')."
   [time-val]
-  (when-let [^js delay (:delay @tone-ctx)]
+  (when-let [^js delay (:delay (:tone @engine-ctx))]
     (set! (.. delay -delayTime -value) time-val)))
 
 (defn set-reverb-wet!
@@ -59,7 +62,7 @@
   "Triggers a classic one-shot dub laser siren FX."
   []
   (init-audio!)
-  (when-let [{:keys [^js siren]} @tone-ctx]
+  (when-let [{:keys [^js siren]} (:tone @engine-ctx)]
     (let [now (tone/now)
           freq (.-frequency siren)]
       (.cancelScheduledValues freq now)
@@ -73,7 +76,7 @@
   "Triggers a seismic sub-bass drop."
   []
   (init-audio!)
-  (when-let [{:keys [^js kick]} @tone-ctx]
+  (when-let [{:keys [^js kick]} (:tone @engine-ctx)]
     (let [now (tone/now)]
       (.triggerAttackRelease kick "F1" "1n" now 1.0)
       (pulse! 3.0))))
@@ -83,7 +86,7 @@
   ([] (trigger-dark-chord! ["E3" "G3" "B3" "D4" "F#4"]))
   ([chord]
    (init-audio!)
-   (when-let [{:keys [^js pad]} @tone-ctx]
+   (when-let [{:keys [^js pad]} (:tone @engine-ctx)]
      (let [now (tone/now)]
        (doseq [n chord]
          (.triggerAttackRelease pad n "2n" now 0.4)))

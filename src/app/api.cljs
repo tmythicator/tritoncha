@@ -10,7 +10,6 @@
             [app.audio.routing :as routing]
             [app.audio.tracker :as tracker]
             [app.audio.fx :as fx]
-            [app.ui.hud :as hud]
             [app.visuals.engine :as visuals]))
 
 ;; Playback
@@ -99,5 +98,5 @@
 
 ;; Diagnostics/HUD
 (def stat engine/audio-status)
-(def stats! hud/toggle-stats!)
-(def hud! hud/toggle-hud!)
+(defn stats! [] (swap! state/ui-state update :stats-visible? not))
+(defn hud! [] (swap! state/ui-state update :hud-visible? not))
