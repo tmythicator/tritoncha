@@ -1,13 +1,16 @@
 (ns app.ui.top-bar
   (:require [clojure.string :as str]
-            [app.state :refer [state active-tracks global-key]]))
+            [app.state :refer [ui-state audio-state visual-state]]))
 
-(defn top-bar-component [{:keys [toggle-stats! cycle-scene!]}]
-  (let [{:keys [active? bpm current-jam stats-visible? mesh-color current-scene]} @state
+(defn top-bar-component [{:keys [toggle-stats! toggle-tutorial! cycle-scene!]}]
+  (let [{:keys [stats-visible? tutorial-visible?]} @ui-state
+        {:keys [active? bpm current-jam key active-tracks]} @audio-state
+        {:keys [current-scene colors]} @visual-state
+        mesh-color (:mesh colors "#00ffcc")
+        {:keys [root mode]} (or key {:root :e :mode :phrygian})
         jam-name   (-> (or current-jam :roller) name str/upper-case)
         scene-name (-> (or current-scene :cyber-torus) name str/upper-case)
-        {:keys [root mode]} @global-key
-        active-loops-map @active-tracks
+        active-loops-map (or active-tracks {})
         active-loops (keys active-loops-map)]
     [:header.hud-top {:role "banner" :aria-label "Studio Status and Controls"}
      [:div.neo-brand-container
@@ -24,6 +27,10 @@
                                :aria-label "Cycle 3D Scene Preset"
                                :title "Click or press [G] to cycle 3D Scene"}
         (str "SCENE: " scene-name)]
+       [:button.neo-btn-stats {:on-click toggle-tutorial!
+                               :aria-label (if tutorial-visible? "Close interactive tutorial" "Open interactive tutorial")
+                               :class (when tutorial-visible? "active")}
+        "TUTORIAL [T]"]
        [:button.neo-btn-stats {:on-click toggle-stats!
                                :aria-label (if stats-visible? "Close statistics modal" "Open statistics modal")
                                :class (when stats-visible? "active")}

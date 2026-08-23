@@ -10,9 +10,10 @@
    [:div.hotkey-hints
     [:span "[Space] Jam"]
     [:span "[1-4] Presets"]
+    [:span "[T] Tutorial"]
     [:span "[I] Stats"]
     [:span "[U] Undrum"]
     [:span "[R] Redrum"]
-    [:span "[G] Geom"]
+    [:span "[G] Scene"]
     [:span "[W] Wire"]
     [:span "[H] HUD"]]])
