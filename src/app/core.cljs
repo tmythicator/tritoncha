@@ -1,40 +1,44 @@
 (ns app.core
   (:require ["three" :as three]
             ["tone" :as tone]
-            [app.state :refer [state tone-ctx three-ctx events-bound?]]
+            [app.state :refer [ui-state audio-state visual-state engine-ctx]]
             [app.audio.engine :refer [init-audio!]]
-            [app.visuals.engine :refer [init-three! render-loop! set-geometry! toggle-wireframe!]]
+            [app.visuals.engine :as engine :refer [init-three! render-loop! toggle-wireframe!]]
             [app.audio.looper :refer [toggle-click!]]
             [app.audio.mixer :refer [stop! toggle-bus! undrum! redrum!]]
             [app.audio.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
             [app.audio.tracker :refer [play-preset!]]
-            [app.ui.hud :refer [render-ui! toggle-hud! toggle-stats!]]
+            [app.ui.hud :refer [render-ui! toggle-hud! toggle-stats! toggle-tutorial!]]
             [app.lib.instruments]
             [app.lib.tracks]
             [app.lib.routes]
+            [app.lib.scenes]
             [app.audio.voices]
             [app.demo.tutorial]
             [app.custom.instruments]
             [app.custom.tracks]
             [app.custom.routes]
+            [app.custom.scenes]
+            [app.api]
             [app.live.jam]))
 
 (defn toggle-play! []
-  (if (:active? @state)
+  (if (:active? @audio-state)
     (stop!)
-    (play-preset! (:current-jam @state :roller))))
+    (play-preset! (:current-jam @audio-state :roller))))
 
-(defn cycle-geometry! []
-  (let [geoms [:torus-knot :icosahedron :octahedron :box :sphere]
-        cur   (:mesh-type @state)
-        next-g (let [idx (.indexOf (clj->js geoms) (name cur))]
-                 (get geoms (mod (inc (if (neg? idx) 0 idx)) (count geoms))))]
-    (set-geometry! next-g)))
+(defn cycle-scene! []
+  (let [all-keys (vec (keys (engine/all-scenes)))
+        cur      (:current-scene @visual-state :cyber-torus)
+        cur-name (name cur)
+        idx      (or (first (keep-indexed (fn [i k] (when (= (name k) cur-name) i)) all-keys)) 0)
+        next-s   (get all-keys (mod (inc idx) (count all-keys)) :cyber-torus)]
+    (engine/scene! next-s)))
 
 (defn- handle-visibility-change!
   "Adjusts WebAudio lookahead buffer when the tab is backgrounded to prevent x-runs."
   []
-  (when-let [ctx (when @tone-ctx (.-context tone))]
+  (when-let [ctx (when (:tone @engine-ctx) (.-context tone))]
     (if (.-hidden js/document)
       (set! (.-lookAhead ctx) 0.45)
       (set! (.-lookAhead ctx) 0.25))))
@@ -50,41 +54,54 @@
 (defn- handle-key-down!
   "Global hotkey dispatcher for performance controls, presets, and HUD overlays."
   [^js e]
-  (let [k (.-key e)]
-    (case k
-      " " (do (.preventDefault e) (toggle-play!))
-      "1" (play-preset! :roller)
-      "2" (play-preset! :sub-roller)
-      "3" (play-preset! :acid-roller)
-      "4" (play-preset! :ambient-drift)
-      ("c" "C") (toggle-click!)
-      ("d" "D") (toggle-bus! :drums)
-      ("u" "U") (undrum!)
-      ("r" "R") (redrum!)
-      ("s" "S") (trigger-dub-siren!)
-      ("b" "B") (trigger-sub-drop!)
-      ("g" "G") (cycle-geometry!)
-      ("w" "W") (toggle-wireframe!)
-      ("h" "H") (toggle-hud!)
-      ("i" "I") (toggle-stats!)
-      ("Escape" "Esc") (when (:stats-visible? @state) (toggle-stats!))
-      nil)))
+  (let [k   (.-key e)
+        tag (some-> (.-target e) (.-tagName) (.toLowerCase))
+        in-editor? (or (= tag "textarea") (= tag "input"))]
+    (if in-editor?
+      (when (and (#{"Escape" "Esc"} k) (:tutorial-visible? @ui-state))
+        (toggle-tutorial!))
+      (case k
+        " " (do (.preventDefault e) (toggle-play!))
+        "1" (play-preset! :roller)
+        "2" (play-preset! :sub-roller)
+        "3" (play-preset! :acid-roller)
+        "4" (play-preset! :ambient-drift)
+        ("c" "C") (toggle-click!)
+        ("d" "D") (toggle-bus! :drums)
+        ("u" "U") (undrum!)
+        ("r" "R") (redrum!)
+        ("s" "S") (trigger-dub-siren!)
+        ("b" "B") (trigger-sub-drop!)
+        ("g" "G") (cycle-scene!)
+        ("w" "W") (toggle-wireframe!)
+        ("h" "H") (toggle-hud!)
+        ("i" "I") (toggle-stats!)
+        ("t" "T") (toggle-tutorial!)
+        ("Escape" "Esc") (do
+                           (when (:stats-visible? @ui-state) (toggle-stats!))
+                           (when (:tutorial-visible? @ui-state) (toggle-tutorial!)))
+        nil))))
 
 (defn- handle-window-resize!
-  "Adapts Three.js camera aspect ratio and renderer viewport to window size changes."
+  "Adapts Three.js camera aspect ratio, responsive Z distance, and renderer viewport to window size changes."
   []
-  (when-let [{:keys [^js camera ^js renderer]} @three-ctx]
+  (when-let [{:keys [^js camera ^js renderer]} (:three @engine-ctx)]
     (let [w (.-innerWidth js/window)
-          h (.-innerHeight js/window)]
-      (set! (.-aspect camera) (/ w h))
+          h (.-innerHeight js/window)
+          aspect (/ w h)
+          responsive-z (if (< aspect 1.0)
+                         (/ 7.0 (max 0.45 aspect))
+                         7.0)]
+      (set! (.-aspect camera) aspect)
+      (set! (.. camera -position -z) responsive-z)
       (.updateProjectionMatrix camera)
       (.setSize renderer w h))))
 
 (defn- bind-events!
-  "Registers browser event listeners guarded by events-bound? atom to prevent hot-reload duplicates."
+  "Registers browser event listeners guarded by events flag in engine-ctx to prevent hot-reload duplicates."
   []
-  (when-not @events-bound?
-    (reset! events-bound? true)
+  (when-not (:events @engine-ctx)
+    (swap! engine-ctx assoc :events true)
     (.addEventListener js/document "visibilitychange" handle-visibility-change!)
     (.addEventListener js/window "pointerdown" handle-pointer-down!)
     (.addEventListener js/window "keydown" handle-key-down!)
@@ -101,7 +118,8 @@
 (defn ^:export reload! []
   (js/console.log "Hot Reloading ClojureScript app.core...")
   (render-ui!)
-  (when-let [{:keys [scene ^js mesh]} @three-ctx]
-    (set! (.. scene -background) (three/Color. (:bg-color @state)))
-    (set! (.. mesh -material -wireframe) (:wireframe? @state))
-    (.set (.. mesh -material -color) (three/Color. (:mesh-color @state)))))
+  (when-let [{:keys [scene ^js mesh]} (:three @engine-ctx)]
+    (let [{:keys [bg-color wireframe? mesh-color]} @visual-state]
+      (set! (.. scene -background) (three/Color. bg-color))
+      (set! (.. mesh -material -wireframe) wireframe?)
+      (.set (.. mesh -material -color) (three/Color. mesh-color)))))

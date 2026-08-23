@@ -13,3 +13,10 @@
           (is (<= 60 (:bpm track) 240) (str "Preset " preset-kw " BPM must be in valid range"))
           (is (map? (:tracks track)) (str "Preset " preset-kw " must contain a :tracks map"))
           (is (seq (:tracks track)) (str "Preset " preset-kw " tracks map must not be empty")))))))
+
+(deftest core-tracks-drum-structure-test
+  (testing "Drum tracks preserve their hit keywords"
+    (let [roller-drums (get-in core-tracks [:roller :tracks :drums])]
+      (is (some? (:notes roller-drums)))
+      (is (vector? (first (:notes roller-drums))))
+      (is (= :kick (first (first (:notes roller-drums))))))))

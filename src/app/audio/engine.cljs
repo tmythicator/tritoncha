@@ -2,7 +2,7 @@
   "WebAudio context initialization and engine diagnostics."
   (:require ["tone" :as tone]
             [clojure.string :as str]
-            [app.state :refer [state tone-ctx last-clock-sample active-tracks]]
+            [app.state :refer [audio-state engine-ctx]]
             [app.audio.voices :as voices]
             [app.audio.routing :as routing]))
 
@@ -29,17 +29,18 @@
   "Initializes the WebAudio context, compiles the DSP routing graph and registers instruments."
   []
   (resume-audio-context!)
-  (when-not @tone-ctx
+  (when-not (:tone @engine-ctx)
     (set! (.. tone -context -lookAhead) 0.25)
     (set! (.. tone -context -latencyHint) "playback")
 
     (let [busses      (routing/build-graph!)
           instruments (init-instruments! busses)]
-      (reset! tone-ctx (merge busses
-                              instruments
-                              {:drums-muted?   (atom false)
-                               :click-enabled? (atom false)}))))
-  (swap! state assoc :active? true))
+      (swap! engine-ctx assoc :tone
+             (merge busses
+                    instruments
+                    {:drums-muted?   (atom false)
+                     :click-enabled? (atom false)}))))
+  (swap! audio-state assoc :active? true))
 
 (defn- format-track-summary [tracks]
   (if (empty? tracks)
@@ -58,9 +59,9 @@
 (defn audio-status
   "Print WebAudio context status, loop count, latency and clock drift."
   []
-  (let [ctx          (when @tone-ctx (.-context tone))
+  (let [ctx          (when (:tone @engine-ctx) (.-context tone))
         transport    (.-Transport tone)
-        tracks-map   @active-tracks
+        tracks-map   (:active-tracks @audio-state)
         active-count (count tracks-map)
         tracks-desc  (format-track-summary tracks-map)
         raw-ctx      (when ctx (.-rawContext ctx))
@@ -69,14 +70,14 @@
         pos          (when transport (str (.-position transport)))
         tone-now     (tone/now)
         sys-now      (/ (.now js/performance) 1000)
-        drift        (if-let [{:keys [t-tone t-sys]} @last-clock-sample]
+        drift        (if-let [{:keys [t-tone t-sys]} (:clock-sample @audio-state)]
                        (let [dt-tone (- tone-now t-tone)
                              dt-sys  (- sys-now t-sys)
                              d-ms    (* 1000 (- dt-tone dt-sys))]
-                         (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
+                         (swap! audio-state assoc :clock-sample {:t-tone tone-now :t-sys sys-now})
                          (str (if (pos? d-ms) "+" "") (.toFixed d-ms 3) " ms"))
                        (do
-                         (reset! last-clock-sample {:t-tone tone-now :t-sys sys-now})
+                         (swap! audio-state assoc :clock-sample {:t-tone tone-now :t-sys sys-now})
                          "0.000 ms (calibrated)"))]
     (js/console.log
      (str/join "\n"

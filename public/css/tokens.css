@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Tritoncha Design System
+   ========================================================================== */
+
+:root {
+    --bg-black:           #000000;
+    --bg-card:            rgba(6, 6, 14, 0.94);
+    --bg-card-header:     rgba(12, 12, 24, 0.7);
+    --bg-input:           rgba(0, 0, 0, 0.65);
+    --bg-surface-dim:     rgba(0, 0, 0, 0.4);
+    --bg-surface-track:   rgba(0, 0, 0, 0.45);
+    --bg-hover-cyan:      rgba(0, 229, 255, 0.08);
+
+    --text-white:         #ffffff;
+    --text-muted:         rgba(255, 255, 255, 0.75);
+    --text-dim:           rgba(255, 255, 255, 0.45);
+
+    --border-solid:       rgba(255, 255, 255, 0.35);
+    --border-dim:         rgba(255, 255, 255, 0.12);
+
+    --cyan:               #00e5ff;
+    --green:              #00ff88;
+    --pink:               #ff007f;
+    --purple:             #c77dff;
+    --amber:              #ffaa00;
+    --blue:               #0088ff;
+
+    --space-2xs:          2px;
+    --space-xs:           4px;
+    --space-sm:           6px;
+    --space-md:           8px;
+    --space-lg:           10px;
+    --space-xl:           14px;
+    --space-2xl:          18px;
+    --space-3xl:          24px;
+
+    --font-mono:          ui-monospace, 'SF Mono', 'Fira Code', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+    --font-size-2xs:      8px;
+    --font-size-xs:       9.5px;
+    --font-size-sm:       10px;
+    --font-size-base:     11px;
+    --font-size-md:       11.5px;
+    --font-size-lg:       13px;
+    --line-height-tight:  1.35;
+    --line-height-normal: 1.5;
+    --line-height-editor: 1.6;
+
+    --radius-sm:          2px;
+    --radius-md:          4px;
+    --blur-glass:         blur(16px);
+    --shadow-modal:       0 16px 48px rgba(0, 0, 0, 0.85);
+
+    --hud-padding-y:      20px;
+    --hud-padding-x:      24px;
+
+    --stats-card-width:   480px;
+    --stats-card-right:   24px;
+    --stats-card-bottom:  48px;
+    --stats-card-padding: 14px 16px;
+    --stats-max-height:   calc(100vh - 100px);
+    --stats-grid-cols:    repeat(2, 1fr);
+    --stats-loops-height: 180px;
+
+    --tutorial-card-width: 860px;
+    --tutorial-card-top:  46px;
+    --tutorial-card-left: 20px;
+    --tutorial-card-padding: 14px 18px;
+    --tutorial-max-height: calc(100vh - 70px);
+    --editor-min-height:  380px;
+    --editor-max-height:  calc(100vh - 270px);
+}

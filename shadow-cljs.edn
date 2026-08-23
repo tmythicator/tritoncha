@@ -1,7 +1,12 @@
 {:source-paths ["src" "test"]
  :dependencies
  [[reagent "1.2.0"]
-  [cider/cider-nrepl "0.62.2"]]
+  [cider/cider-nrepl "0.62.2"]
+  [org.babashka/sci "0.9.44"]]
+
+ :nrepl
+ {:middleware
+  [cider.nrepl/cider-middleware]}
 
  :dev-http {3000 "public"}
 

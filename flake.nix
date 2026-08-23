@@ -31,6 +31,7 @@
             buildInputs = with pkgs; [
               nodejs
               pnpm
+              jdk21_headless
               clj-kondo
               git
             ];

@@ -54,12 +54,11 @@
               :envelope {:attack 0.4 :decay 1.2 :sustain 0.7 :release 2.0}}}
 
    :pluck-lead
-   {:type :mono
+   {:type :poly
     :bus :space
+    :maxPolyphony 6
     :options {:oscillator {:type "square"}
-              :filter {:Q 4 :type "lowpass" :rolloff -12}
-              :filterEnvelope {:attack 0.001 :decay 0.1 :sustain 0.1 :release 0.05 :baseFrequency 800 :octaves 2}
-              :envelope {:attack 0.002 :decay 0.12 :sustain 0.1 :release 0.08}}}
+              :envelope {:attack 0.002 :decay 0.14 :sustain 0.05 :release 0.12}}}
 
    :kick
    {:type :membrane

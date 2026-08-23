@@ -1,6 +1,6 @@
 (ns app.audio.theory
   (:require [app.utils :refer [parse-note]]
-            [app.state :refer [global-key]]))
+            [app.state :refer [audio-state]]))
 
 (def ^:dynamic _
   "Rest placeholder symbol for note vectors.
@@ -215,19 +215,27 @@
                                   (range (quot (inc n) 2)))))
          clean)))))
 
+(defn current-key
+  "Returns the active musical key map from application state.
+  Examples: (current-key) -> {:root :e, :mode :phrygian, :octave 1}."
+  []
+  (:key @audio-state {:root :e :mode :phrygian :octave 1}))
+
 (defn set-key!
-  "Sets the session global key, mode, and octave.
+  "Sets the session musical key, mode, and octave.
   Examples: (set-key! :e :phrygian 1) -> {:root :e, :mode :phrygian, :octave 1}."
   ([root mode] (set-key! root mode 2))
   ([root mode octave]
-   (reset! global-key {:root (keyword root) :mode (keyword mode) :octave octave})))
+   (let [new-k {:root (keyword root) :mode (keyword mode) :octave octave}]
+     (swap! audio-state assoc :key new-k)
+     new-k)))
 
 (defn d
   "Resolves degree numbers using the current session key.
   Examples: (d [1 _ 1 2]) -> ['E2' nil 'E2' 'F#2'], (d [1 3 5] 1) -> ['E1' 'G1' 'B1']."
   ([degrees] (d degrees {}))
   ([degrees opts-or-oct]
-   (let [{:keys [root mode octave]} @global-key
+   (let [{:keys [root mode octave]} (current-key)
          opt-map (cond
                    (map? opts-or-oct) opts-or-oct
                    (number? opts-or-oct) {:octave opts-or-oct}
@@ -239,8 +247,8 @@
   "Returns pitch strings for the current active scale.
   Examples: (sc 1) -> ['E2' 'F#2' 'G2' 'A2' 'B2' 'C#3' 'D3']."
   ([]
-   (let [{:keys [root mode octave]} @global-key]
+   (let [{:keys [root mode octave]} (current-key)]
      (scale root mode {:octave octave :octaves 2})))
   ([octaves]
-   (let [{:keys [root mode octave]} @global-key]
+   (let [{:keys [root mode octave]} (current-key)]
      (scale root mode {:octave octave :octaves octaves}))))

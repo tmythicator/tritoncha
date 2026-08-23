@@ -2,7 +2,7 @@
   "Declarative WebAudio graph compiler, node factory, and bus routing."
   (:require ["tone" :as tone]
             [app.utils :refer [enforce-stereo-mode!]]
-            [app.state :refer [repl-routes]]
+            [app.state :refer [repl-registry]]
             [app.lib.routes :refer [default-graph core-routes]]
             [app.custom.routes :refer [user-routes]]))
 
@@ -12,7 +12,7 @@
   "Registers or updates a dynamic audio routing graph topology in the REPL registry.
   Examples: (register-routing! :shimmer-ambient {...})."
   [graph-key spec]
-  (swap! repl-routes assoc graph-key spec)
+  (swap! repl-registry assoc-in [:routes graph-key] spec)
   graph-key)
 
 (def defrouting! register-routing!)
@@ -22,7 +22,7 @@
   "Returns a merged map of default core, user custom, and dynamic REPL routing graphs.
   Examples: (all-routings)."
   []
-  (merge core-routes user-routes @repl-routes))
+  (merge core-routes user-routes (:routes @repl-registry)))
 
 ;; Audio Node Factory + Graph Compiler
 

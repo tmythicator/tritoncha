@@ -2,7 +2,7 @@
   "Voice lifecycle, node factory, bus routing and audio trigger dispatcher."
   (:require ["tone" :as tone]
             [app.utils :refer [enforce-stereo-mode!]]
-            [app.state :refer [tone-ctx pulse! repl-instruments]]
+            [app.state :refer [repl-registry engine-ctx pulse!]]
             [app.lib.instruments :refer [core-instruments drum-voices]]
             [app.custom.instruments :refer [user-instruments]]))
 
@@ -19,7 +19,7 @@
   "Registers or updates a dynamic user instrument preset in the REPL registry.
   Examples: (register-instrument! :supersaw {:type :mono :bus :space :options {...}})."
   [inst-key spec]
-  (swap! repl-instruments assoc inst-key spec)
+  (swap! repl-registry assoc-in [:instruments inst-key] spec)
   inst-key)
 
 (def definst! register-instrument!)
@@ -28,7 +28,7 @@
   "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments.
   Examples: (all-instruments)."
   []
-  (merge core-instruments user-instruments @repl-instruments))
+  (merge core-instruments user-instruments (:instruments @repl-registry)))
 
 (def instruments all-instruments)
 
@@ -67,9 +67,23 @@
     (enforce-stereo-mode! node)
     node))
 
+(defn instrument-bus
+  "Returns the target mixer bus keyword (:drums, :bass, :space, :direct) for any instrument."
+  [inst-key]
+  (let [kw (keyword inst-key)]
+    (cond
+      (or (= kw :drums) (= kw :drum) (contains? (all-drum-keys) kw))
+      :drums
+
+      :else
+      (let [spec (resolve-instrument-spec kw)]
+        (or (:bus spec)
+            (if (re-find #"drum|kick|snare|hat" (name kw))
+              :drums
+              :direct))))))
+
 (defn- synth-bus-target [inst-key busses]
-  (let [spec (resolve-instrument-spec (keyword inst-key))
-        bus-type (or (:bus spec) :master)]
+  (let [bus-type (instrument-bus inst-key)]
     (case bus-type
       :drums  (:drum-bus busses)
       :bass   (:bass-bus busses)
@@ -94,19 +108,19 @@
       (when-let [spec (resolve-instrument-spec kw)]
         (let [^js inst (create-instrument spec)]
           (route-instrument! kw inst ctx)
-          (swap! tone-ctx assoc kw inst)
+          (swap! engine-ctx assoc-in [:tone kw] inst)
           inst)))))
 
 (defn reload-instruments!
   "Rebuilds and re-routes all instrument synth nodes from updated definitions in all-instruments."
   []
-  (when-let [ctx @tone-ctx]
+  (when-let [ctx (:tone @engine-ctx)]
     (doseq [[k _spec] (all-instruments)]
       (when-let [^js old-node (get ctx k)]
         (try (.dispose old-node) (catch js/Object _)))
       (let [new-node (create-instrument k)]
         (route-instrument! k new-node ctx)
-        (swap! tone-ctx assoc k new-node))))
+        (swap! engine-ctx assoc-in [:tone k] new-node))))
   :ok)
 
 (def refresh-instruments! reload-instruments!)

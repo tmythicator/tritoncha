@@ -10,17 +10,16 @@
             [app.audio.routing :as routing]
             [app.audio.tracker :as tracker]
             [app.audio.fx :as fx]
-            [app.ui.hud :as hud]
             [app.visuals.engine :as visuals]))
 
-;; --- Transport & Playback ---
+;; Playback
 (def play! tracker/play-preset!)
 (def jam! tracker/play-preset!)
 (def stop! mixer/stop!)
 (def b! mixer/set-bpm!)
 (def set-bpm! mixer/set-bpm!)
 
-;; --- Track Orchestration & Sound Design ---
+;; Track Orchestration
 (def tracks tracker/all-tracks)
 (def deftrack! tracker/deftrack!)
 (def instruments voices/all-instruments)
@@ -31,7 +30,7 @@
 (def demo-stop! tracker/demo-stop!)
 (def refresh! tracker/refresh!)
 
-;; --- Live Looper & Rhythms ---
+;; Live Looper
 (def loop! looper/loop!)
 (def l! looper/loop!)
 (def stop-loop! mixer/stop-loop!)
@@ -43,7 +42,7 @@
 (def click! looper/toggle-click!)
 (def toggle-click! looper/toggle-click!)
 
-;; --- Mixer & Transitions ---
+;; Mixer + FX
 (def mute! mixer/mute!)
 (def m! mixer/mute!)
 (def unmute! mixer/unmute!)
@@ -62,12 +61,12 @@
 (def fb! fx/set-delay-feedback!)
 (def wet! fx/set-reverb-wet!)
 
-;; --- FX One-Shots ---
+;; FX shots
 (def s! fx/trigger-dub-siren!)
 (def drop! fx/trigger-sub-drop!)
 (def chord! fx/trigger-dark-chord!)
 
-;; --- Music Theory & Live Modulation ---
+;; Live Modulation ---
 (def _ theory/_)
 (def d theory/d)
 (def deg theory/deg)
@@ -82,7 +81,11 @@
 (def mod-all! looper/modulate-all!)
 (def tr-all! looper/transpose-all!)
 
-;; --- Visuals & Aesthetics ---
+;; Visuals
+(def scenes visuals/all-scenes)
+(def defscene! visuals/register-scene!)
+(def scene! visuals/load-scene!)
+(def set-scene! visuals/load-scene!)
 (def g! visuals/set-geometry!)
 (def set-geometry! visuals/set-geometry!)
 (def c! visuals/set-colors!)
@@ -93,7 +96,7 @@
 (def colors utils/colors)
 (def css-var utils/css-var)
 
-;; --- Diagnostics & HUD ---
+;; Diagnostics/HUD
 (def stat engine/audio-status)
-(def stats! hud/toggle-stats!)
-(def hud! hud/toggle-hud!)
+(defn stats! [] (swap! state/ui-state update :stats-visible? not))
+(defn hud! [] (swap! state/ui-state update :hud-visible? not))

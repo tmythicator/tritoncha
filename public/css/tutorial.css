@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Interactive Live REPL Tutorial Modal
+   ========================================================================== */
+
+.neo-tutorial-card {
+    position: fixed;
+    top: var(--tutorial-card-top);
+    left: var(--tutorial-card-left);
+    width: var(--tutorial-card-width);
+    max-width: calc(100vw - 40px);
+    background: var(--bg-card);
+    backdrop-filter: var(--blur-glass);
+    border: 1px solid var(--border-solid);
+    padding: var(--tutorial-card-padding);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    z-index: 60;
+    pointer-events: auto;
+    max-height: var(--tutorial-max-height);
+    box-shadow: var(--shadow-modal);
+    border-radius: var(--radius-sm);
+}
+
+.neo-modal-tabs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-left: auto;
+}
+
+.tab-btn {
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: var(--space-2xs) var(--space-md);
+    border: 1px solid var(--border-dim);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: var(--cyan);
+        border-color: var(--cyan);
+        background: var(--bg-hover-cyan);
+    }
+}
+
+.neo-btn-close {
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    color: var(--pink);
+    cursor: pointer;
+    padding: 0 var(--space-xs);
+
+    &:hover {
+        color: #ff3399;
+    }
+}
+
+.scratchpad-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    width: 100%;
+}
+
+.scratchpad-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md);
+    width: 100%;
+}
+
+.scratchpad-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-dim);
+}
+
+.scratchpad-btn-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.neo-run-btn {
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--green);
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--green);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        background: var(--green);
+        color: #000000;
+    }
+
+    &.btn-all {
+        border-color: var(--cyan);
+        background: rgba(0, 229, 255, 0.15);
+        color: var(--cyan);
+
+        &:hover {
+            background: var(--cyan);
+            color: #000000;
+        }
+    }
+}
+
+.neo-code-editor {
+    width: 100%;
+    box-sizing: border-box;
+    display: block;
+    font-family: inherit;
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-editor);
+    background: var(--bg-input);
+    border: 1px solid var(--border-dim);
+    color: var(--text-white);
+    padding: var(--space-md) var(--space-xl);
+    resize: vertical;
+    border-radius: var(--radius-sm);
+    outline: none;
+    min-height: var(--editor-min-height);
+    max-height: var(--editor-max-height);
+    white-space: pre;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 229, 255, 0.35) rgba(255, 255, 255, 0.02);
+
+    &::-webkit-scrollbar { width: 4px; height: 4px; }
+    &::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+    &::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.35); border-radius: var(--radius-sm); }
+
+    &:focus {
+        border-color: var(--cyan);
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.22);
+    }
+}
+
+.neo-output-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    width: 100%;
+}
+
+.neo-output-console {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid var(--border-dim);
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    max-height: 75px;
+    overflow-y: auto;
+    border-radius: var(--radius-sm);
+
+    &.output-ok {
+        border-color: rgba(0, 255, 136, 0.3);
+        .output-prompt { color: var(--green); }
+        .output-text   { color: var(--green); }
+    }
+
+    &.output-err {
+        border-color: rgba(255, 0, 127, 0.3);
+        .output-prompt { color: var(--pink); }
+        .output-text   { color: var(--pink); }
+    }
+}
