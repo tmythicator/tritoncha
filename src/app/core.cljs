@@ -1,27 +1,30 @@
 (ns app.core
-  (:require ["three" :as three]
-            ["tone" :as tone]
-            [app.state :refer [ui-state audio-state visual-state engine-ctx]]
-            [app.utils :refer [mobile?]]
-            [app.audio.engine :refer [init-audio!]]
-            [app.visuals.engine :as engine :refer [init-three! render-loop! toggle-wireframe!]]
-            [app.audio.looper :refer [toggle-click!]]
-            [app.audio.mixer :refer [stop! toggle-bus! undrum! redrum!]]
-            [app.audio.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
-            [app.audio.tracker :refer [play-preset!]]
-            [app.ui.hud :refer [render-ui! toggle-hud! toggle-stats! toggle-tutorial!]]
-            [app.lib.instruments]
-            [app.lib.tracks]
-            [app.lib.routes]
-            [app.lib.scenes]
-            [app.audio.voices]
-            [app.demo.tutorial]
-            [app.custom.instruments]
-            [app.custom.tracks]
-            [app.custom.routes]
-            [app.custom.scenes]
-            [app.api]
-            [app.live.jam]))
+  (:require
+   ["three" :as three]
+   ["tone" :as tone]
+   [app.api]
+   [app.audio.engine :refer [init-audio!]]
+   [app.audio.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
+   [app.audio.looper :refer [toggle-click!]]
+   [app.audio.mixer :refer [redrum! stop! toggle-bus! undrum!]]
+   [app.audio.tracker :refer [play-preset!]]
+   [app.audio.voices]
+   [app.config :as cfg]
+   [app.custom.instruments]
+   [app.custom.routes]
+   [app.custom.scenes]
+   [app.custom.tracks]
+   [app.demo.tutorial]
+   [app.lib.instruments]
+   [app.lib.routes]
+   [app.lib.scenes]
+   [app.lib.tracks]
+   [app.live.jam]
+   [app.state :refer [audio-state engine-ctx ui-state visual-state]]
+   [app.ui.hud :refer [render-ui! toggle-hud! toggle-stats! toggle-tutorial!]]
+   [app.utils :refer [active-lookahead cycle-next]]
+   [app.visuals.engine :as engine :refer [init-three! render-loop!
+                                          toggle-wireframe!]]))
 
 (defn toggle-play! []
   (if (:active? @audio-state)
@@ -29,20 +32,17 @@
     (play-preset! (:current-jam @audio-state :roller))))
 
 (defn cycle-scene! []
-  (let [all-keys (vec (keys (engine/all-scenes)))
-        cur      (:current-scene @visual-state :cyber-torus)
-        cur-name (name cur)
-        idx      (or (first (keep-indexed (fn [i k] (when (= (name k) cur-name) i)) all-keys)) 0)
-        next-s   (get all-keys (mod (inc idx) (count all-keys)) :cyber-torus)]
-    (engine/scene! next-s)))
+  (let [next-scene (cycle-next (:current-scene @visual-state :cyber-torus) (keys (engine/all-scenes)))]
+    (engine/scene! next-scene)))
 
 (defn- handle-visibility-change!
   "Adjusts WebAudio lookahead buffer when the tab is backgrounded to prevent x-runs."
   []
   (when-let [ctx (when (:tone @engine-ctx) (.-context tone))]
-    (if (.-hidden js/document)
-      (set! (.-lookAhead ctx) 0.6)
-      (set! (.-lookAhead ctx) (if (mobile?) 0.45 0.25)))))
+    (set! (.-lookAhead ctx)
+          (if (.-hidden js/document)
+            cfg/lookahead-bg
+            (active-lookahead)))))
 
 (defn- handle-pointer-down!
   "Silently unlocks and resumes the WebAudio context on first user interaction."

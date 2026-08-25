@@ -2,6 +2,7 @@
   "Live looper, scheduler and modulation engine."
   (:require ["tone" :as tone]
             [reagent.core :as r]
+            [app.config :as cfg]
             [app.state :refer [audio-state engine-ctx]]
             [app.audio.engine :refer [init-audio!]]
             [app.audio.voices :as voices]
@@ -73,7 +74,7 @@
                        (let [oct (or (:oct raw-data) (:octave raw-data) 2)]
                          (assoc raw-data :notes (theory/d degs oct)))
                        raw-data)
-        step         (or (:step pattern-data) "16n")
+        step         (or (:step pattern-data) cfg/default-step)
         existing-tr  (get (:active-tracks @audio-state) track-kw)]
 
     (if existing-tr
@@ -87,7 +88,7 @@
             tr-info      {:pattern pattern-atom
                           :muted?  muted-atom
                           :solo?   solo-atom}
-            max-steps    64
+            max-steps    cfg/max-looper-steps
             indices-js   (clj->js (vec (range max-steps)))
             seq-instance
             (tone/Sequence.

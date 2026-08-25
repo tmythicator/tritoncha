@@ -15,19 +15,15 @@
   (swap! repl-registry assoc-in [:routes graph-key] spec)
   graph-key)
 
-(def defrouting! register-routing!)
-(def defgraph! register-routing!)
-
 (defn all-routings
-  "Returns a merged map of default core, user custom, and dynamic REPL routing graphs.
-  Examples: (all-routings)."
+  "Returns a merged map of default core, user custom and dynamic REPL routing graphs."
   []
   (merge core-routes user-routes (:routes @repl-registry)))
 
 ;; Audio Node Factory + Graph Compiler
 
 (defn create-node
-  "Instantiates a Tone.js audio processor node from a declarative specification map."
+  "Instantiates a Tone.js audio processor node from a specification map."
   [{:keys [type volume decay wet time feedback frequency filter-type distortion threshold]}]
   (let [node (case type
                :volume     (tone/Volume. (or volume 0))
@@ -50,7 +46,6 @@
          node-map    (into {} (for [[k n-spec] all-specs] [k (create-node n-spec)]))
          aliases     {:filter (:master-filter node-map)}]
 
-     ;; Wire all connection chains defined in :routes
      (doseq [chain routes]
        (let [resolved (for [target chain]
                         (if (= target :destination)

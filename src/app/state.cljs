@@ -1,28 +1,32 @@
 (ns app.state
   "Source of truth for UI, audio, visuals, REPL and engine states."
-  (:require [reagent.core :as r]))
+  (:require
+   [app.config :as cfg]
+   [reagent.core :as r]))
 
 (defonce ui-state
-  (r/atom {:hud-visible?      true
-           :stats-visible?    false
-           :tutorial-visible? false}))
+  (r/atom {:hud-visible?              true
+           :stats-visible?            false
+           :tutorial-visible?         false
+           :mobile-notice-dismissed?  false}))
 
 (defonce audio-state
-  (r/atom {:active?       false
-           :bpm           168
-           :current-jam   :roller
-           :key           {:root :e :mode :phrygian :octave 1}
-           :active-tracks {}
-           :solo-mode?    false
-           :clock-sample  nil}))
+  (r/atom {:active?          false
+           :bpm              cfg/default-bpm
+           :current-jam      :roller
+           :current-routing  :default
+           :key              cfg/default-key
+           :active-tracks    {}
+           :solo-mode?       false
+           :clock-sample     nil}))
 
 (defonce visual-state
   (r/atom {:current-scene :cyber-torus
            :mesh-type     :torus-knot
            :wireframe?    true
            :colors        {:bg "#050510" :mesh "#00ffcc" :wire "#ff007f"}
-           :sensitivity   1.6
-           :camera-speed  0.005}))
+           :sensitivity   cfg/default-sensitivity
+           :camera-speed  cfg/default-camera-speed}))
 
 (defonce visual-pulse (atom 0.0))
 

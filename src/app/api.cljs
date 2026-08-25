@@ -21,7 +21,7 @@
 
 ;; Track Orchestration
 (def tracks tracker/all-tracks)
-(def deftrack! tracker/deftrack!)
+(def deftrack! tracker/register-track!)
 (def instruments voices/all-instruments)
 (def definst! voices/register-instrument!)
 (def defrouting! routing/register-routing!)
