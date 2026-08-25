@@ -3,7 +3,7 @@ name: Deploy Release to GitHub Pages
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   release:
     types: [published]
   workflow_dispatch:
@@ -14,12 +14,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: "pages"
   cancel-in-progress: false
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy to Pages
+    name: Build + Deploy to Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -29,33 +29,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Clojure & clj-kondo
-        uses: DeLaGuardo/setup-clojure@13.1
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
         with:
-          clj-kondo: 'latest'
+          extra_nix_config: |
+            experimental-features = nix-command flakes
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Lint source & tests
-        run: clj-kondo --lint src test
+        run: nix develop --command clj-kondo --lint src test
 
       - name: Run unit test suite
-        run: pnpm test
+        run: nix develop --command pnpm test
 
       - name: Build production release bundle
-        run: pnpm run build
+        run: nix develop --command pnpm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -63,7 +53,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'public'
+          path: "public"
 
       - name: Deploy to GitHub Pages
         id: deployment
