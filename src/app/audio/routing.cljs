@@ -62,3 +62,10 @@
                  resolved)))
 
      (merge node-map aliases))))
+
+(defn load-routing!
+  "Switches and re-compiles the active DSP routing graph."
+  [graph-key]
+  (let [k (if (keyword? graph-key) graph-key :custom)]
+    (swap! audio-state assoc :current-routing k)
+    (build-graph! graph-key)))
