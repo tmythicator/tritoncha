@@ -1,17 +1,18 @@
 (ns app.ui.hud
-  (:require [reagent.dom.client :as rdom]
-            [app.config :as cfg]
-            [app.state :refer [ui-state audio-state visual-state engine-ctx]]
-            [app.utils :refer [cycle-next mobile?]]
-            [app.visuals.engine :as engine :refer [toggle-wireframe!]]
-            [app.audio.mixer :refer [stop! toggle-mute! undrum! redrum!]]
-            [app.audio.looper :refer [toggle-click!]]
-            [app.audio.tracker :as tracker]
-            [app.ui.top-bar :refer [top-bar-component]]
-            [app.ui.bottom-bar :refer [bottom-bar-component]]
-            [app.ui.stats-panel :refer [stats-panel-component]]
-            [app.ui.tutorial-modal :refer [tutorial-modal-component]]
-            [app.ui.mobile-notice :refer [mobile-notice-component]]))
+  (:require
+   [app.audio.looper :refer [toggle-click!]]
+   [app.audio.mixer :refer [redrum! stop! toggle-mute! undrum!]]
+   [app.audio.tracker :as tracker]
+   [app.config :as cfg]
+   [app.state :refer [audio-state engine-ctx ui-state visual-state]]
+   [app.ui.bottom-bar :refer [bottom-bar-component]]
+   [app.ui.mobile-notice :refer [mobile-notice-component]]
+   [app.ui.stats-panel :refer [stats-panel-component]]
+   [app.ui.top-bar :refer [top-bar-component]]
+   [app.ui.tutorial-modal :refer [tutorial-modal-component]]
+   [app.utils :refer [cycle-next mobile?]]
+   [app.visuals.engine :as engine :refer [toggle-wireframe!]]
+   [reagent.dom.client :as rdom]))
 
 (defn toggle-hud! []
   (swap! ui-state update :hud-visible? not))
@@ -53,7 +54,7 @@
                           :toggle-tutorial!   toggle-tutorial!}]
 
       (when stats-visible?
-        [stats-panel-component])
+        [stats-panel-component {:on-close toggle-stats!}])
 
       (when tutorial-visible?
         [tutorial-modal-component {:on-close toggle-tutorial!}])
