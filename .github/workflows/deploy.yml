@@ -4,25 +4,18 @@ on:
   push:
     tags:
       - "v*"
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
-    name: Build + Deploy to Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
+    name: Build Release (Nix Flake)
     runs-on: ubuntu-latest
 
     steps:
@@ -38,14 +31,11 @@ jobs:
       - name: Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Lint source & tests
-        run: nix develop --command clj-kondo --lint src test
+      - name: Verify code style, lint + tests
+        run: nix develop --command bash -c "cljfmt check src test && clj-kondo --lint src test && pnpm test"
 
-      - name: Run unit test suite
-        run: nix develop --command pnpm test
-
-      - name: Build production release bundle
-        run: nix develop --command pnpm run build
+      - name: Build clean production bundle
+        run: nix develop --command bash -c "pnpm run clean && pnpm run build"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -55,6 +45,18 @@ jobs:
         with:
           path: "public"
 
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

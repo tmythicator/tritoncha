@@ -12,6 +12,8 @@
     "compile": "shadow-cljs compile app",
     "test": "shadow-cljs compile test",
     "lint": "clj-kondo --lint src test",
+    "fmt": "cljfmt fix src test",
+    "fmt:check": "cljfmt check src test",
     "clean": "rm -rf .shadow-cljs public/js target"
   },
   "dependencies": {

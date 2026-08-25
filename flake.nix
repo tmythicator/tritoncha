@@ -33,7 +33,7 @@
               pnpm
               jdk21_headless
               clj-kondo
-              git
+              cljfmt
             ];
 
             shellHook = ''
