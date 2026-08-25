@@ -7,7 +7,7 @@
     bottom: var(--stats-card-bottom);
     right: var(--stats-card-right);
     width: var(--stats-card-width);
-    max-width: calc(100vw - 36px);
+    max-width: calc(100vw - 16px);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
@@ -21,6 +21,13 @@
     border-radius: var(--radius-sm);
     max-height: var(--stats-max-height);
     overflow-y: auto;
+
+    @media (max-width: 640px) {
+        left: var(--space-md);
+        right: var(--space-md);
+        bottom: var(--stats-card-bottom);
+        gap: var(--space-sm);
+    }
 }
 
 .neo-header {
@@ -42,8 +49,8 @@
 }
 
 .neo-dot {
-    width: 6px;
-    height: 6px;
+    width: var(--space-sm);
+    height: var(--space-sm);
     border-radius: 50%;
     background: var(--color-success);
     box-shadow: var(--glow-success);
@@ -54,16 +61,30 @@
     }
 }
 
+.neo-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
 .neo-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+
+    @media (max-width: 640px) {
+        gap: var(--space-sm);
+    }
 }
 
 .neo-section {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+
+    @media (max-width: 640px) {
+        gap: var(--space-2xs);
+    }
 }
 
 .neo-section-label {
@@ -80,12 +101,22 @@
     padding: var(--space-md) var(--space-lg);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
+
+    @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+        padding: var(--space-sm) var(--space-md);
+        gap: var(--space-2xs) var(--space-sm);
+    }
 }
 
 .neo-item {
     font-size: var(--font-size-sm);
     display: flex;
     justify-content: space-between;
+
+    @media (max-width: 640px) {
+        font-size: var(--font-size-xs);
+    }
 }
 
 .neo-k { color: var(--text-tertiary); }
@@ -102,12 +133,19 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-xs);
+
+    @media (max-width: 640px) {
+        padding: var(--space-sm) var(--space-md);
+        gap: var(--space-xs);
+        font-size: var(--font-size-2xs);
+    }
 }
 
 .neo-route-row {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--space-sm);
+    flex-wrap: wrap;
 }
 
 .neo-bus-tag {
@@ -115,8 +153,9 @@
     font-weight: 700;
     padding: var(--space-2xs) var(--space-xs);
     border-radius: var(--radius-sm);
-    min-width: 48px;
+    min-width: calc(var(--space-3xl) * 2);
     text-align: center;
+    flex-shrink: 0;
 
     &.bus-drums  { background: var(--bus-drums-bg); color: var(--bus-drums-color); border: 1px solid var(--bus-drums-border); }
     &.bus-bass   { background: var(--bus-bass-bg); color: var(--bus-bass-color); border: 1px solid var(--bus-bass-border); }
@@ -129,6 +168,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+    flex-wrap: wrap;
     color: var(--text-tertiary);
 }
 
@@ -149,6 +189,10 @@
     gap: var(--space-xs);
     max-height: var(--stats-loops-height);
     overflow-y: auto;
+
+    @media (max-width: 640px) {
+        gap: var(--space-2xs);
+    }
 }
 
 .neo-track-box {
@@ -159,6 +203,11 @@
     flex-direction: column;
     gap: var(--space-xs);
     border-radius: var(--radius-sm);
+
+    @media (max-width: 640px) {
+        padding: var(--space-xs) var(--space-sm);
+        gap: var(--space-2xs);
+    }
 
     &.box-live  { border-color: var(--border-success-subtle); }
     &.box-muted { border-color: var(--border-danger-subtle); opacity: 0.6; }
@@ -172,8 +221,28 @@
     width: 100%;
 }
 
-.track-left  { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--font-size-sm); font-weight: 600; }
-.track-right { display: flex; align-items: center; gap: var(--space-sm); }
+.track-left  {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+
+    @media (max-width: 640px) {
+        font-size: var(--font-size-xs);
+    }
+}
+
+.track-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+
+    @media (max-width: 640px) {
+        font-size: var(--font-size-xs);
+    }
+}
+
 .track-name  { color: var(--text-brand); }
 .track-sep   { color: var(--text-tertiary); }
 .track-inst  { color: var(--text-secondary); }

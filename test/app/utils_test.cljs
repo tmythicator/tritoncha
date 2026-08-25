@@ -1,6 +1,7 @@
 (ns app.utils-test
-  (:require [cljs.test :refer [deftest is testing]]
-            [app.utils :as utils]))
+  (:require
+   [app.utils :as utils]
+   [cljs.test :refer [deftest is testing]]))
 
 (deftest clamp-test
   (testing "Clamps numeric values between minimum and maximum bounds"
@@ -15,6 +16,15 @@
     (is (= 50.0 (utils/lerp 0 100 0.5)))
     (is (= 0 (utils/lerp 0 100 0.0)))
     (is (= 100 (utils/lerp 0 100 1.0)))))
+
+(deftest time-conversion-test
+  (testing "Converts seconds to milliseconds and vice versa"
+    (is (= 250.0 (utils/sec->ms 0.25)))
+    (is (= 1000.0 (utils/sec->ms 1)))
+    (is (= 0.25 (utils/ms->sec 250)))
+    (is (= 1.0 (utils/ms->sec 1000)))
+    (is (nil? (utils/sec->ms nil)))
+    (is (nil? (utils/ms->sec nil)))))
 
 (deftest scale-range-test
   (testing "Linear range mapping"
@@ -59,3 +69,10 @@
            (utils/pattern "h o . hc")))
     (is (= [true nil true nil]
            (utils/pattern "x . 1 0")))))
+
+(deftest cycle-next-test
+  (testing "Cycles to the next element wrapping around"
+    (is (= :b (utils/cycle-next :a [:a :b :c])))
+    (is (= :c (utils/cycle-next :b [:a :b :c])))
+    (is (= :a (utils/cycle-next :c [:a :b :c])))
+    (is (= :roller (utils/cycle-next :unknown [:roller :acid])))))

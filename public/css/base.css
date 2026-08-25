@@ -26,3 +26,19 @@ html, body {
     z-index: 1;
     touch-action: none;
 }
+
+.neo-btn-close {
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    color: var(--text-danger);
+    cursor: pointer;
+    padding: 0 var(--space-xs);
+    transition: color 0.15s ease;
+
+    &:hover {
+        color: var(--palette-pink);
+    }
+}

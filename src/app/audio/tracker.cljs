@@ -1,5 +1,5 @@
 (ns app.audio.tracker
-  "Track registry, scene orchestrator, and algorithmic preset launcher."
+  "Track registry and player."
   (:require [app.state :refer [audio-state repl-registry]]
             [app.audio.engine :refer [init-audio!]]
             [app.utils :refer [pattern]]
@@ -21,15 +21,10 @@
   (swap! repl-registry assoc-in [:tracks track-key] spec)
   track-key)
 
-(def deftrack! register-track!)
-
 (defn all-tracks
-  "Returns a merged map of core built-in tracks, user custom tracks, and REPL tracks.
-  Examples: (all-tracks)."
+  "Returns a merged map of core built-in tracks, user custom tracks, and REPL tracks."
   []
   (merge core-tracks user-tracks (:tracks @repl-registry)))
-
-(def tracks all-tracks)
 
 ;; Track Playback Orchestrator
 
@@ -60,22 +55,15 @@
     (doseq [[track-name track-opts] tracks]
       (loop! track-name track-opts))))
 
-(def jam! play-preset!)
-(def play! play-preset!)
-
 (defn reload-track!
-  "Reloads and restarts the currently active track preset with updated track data.
-  Examples: (reload-track!)."
+  "Reloads and restarts the currently active track preset with updated track data."
   []
   (let [cur-jam (:current-jam @audio-state)]
     (when (and cur-jam (not= cur-jam :none))
       (play-preset! cur-jam))))
 
-(def refresh-track! reload-track!)
-
 (defn refresh!
-  "Refreshes both custom sound design synth nodes and current track playback.
-  Examples: (refresh!)."
+  "Refreshes both custom sound design synth nodes and current track playback."
   []
   (reload-instruments!)
   (reload-track!)
@@ -99,7 +87,6 @@
       (loop! :demo {:inst kw :notes (d [1 2 3 5 7 8 5 3 1] 2) :step "16n" :dur "16n" :vel 0.85}))))
 
 (defn demo-stop!
-  "Stops and deletes the active preview demo loop.
-  Examples: (demo-stop!)."
+  "Stops and deletes the active preview demo loop."
   []
   (stop-loop! :demo))

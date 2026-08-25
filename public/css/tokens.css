@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Tritoncha Design System
+   Tritoncha Design System Tokens
    ========================================================================== */
 
 :root {
@@ -34,6 +34,8 @@
     --bg-success-tint:         rgba(0, 255, 136, 0.15);
     --bg-danger-subtle:        rgba(255, 0, 127, 0.12);
     --bg-danger-tint:          rgba(255, 0, 127, 0.15);
+    --bg-warning-subtle:       rgba(255, 170, 0, 0.1);
+    --bg-warning-tint:         rgba(255, 170, 0, 0.22);
     --bg-secondary-subtle:     rgba(199, 125, 255, 0.12);
     --bg-scrollbar-thumb:      rgba(0, 229, 255, 0.35);
     --bg-scrollbar-track:      rgba(255, 255, 255, 0.02);
@@ -46,6 +48,7 @@
     --text-brand:              var(--color-primary);
     --text-success:            var(--color-success);
     --text-danger:             var(--color-danger);
+    --text-warning:            var(--color-warning);
     --text-accent:             var(--color-accent);
     --text-secondary-accent:   var(--color-secondary);
 
@@ -58,6 +61,8 @@
     --border-success-subtle:   rgba(0, 255, 136, 0.3);
     --border-danger:           var(--color-danger);
     --border-danger-subtle:    rgba(255, 0, 127, 0.3);
+    --border-warning:          var(--color-warning);
+    --border-warning-subtle:   rgba(255, 170, 0, 0.35);
     --border-secondary-subtle: rgba(199, 125, 255, 0.4);
 
     --bus-drums-color:         var(--color-accent);
@@ -105,22 +110,22 @@
     --glow-danger:             0 0 8px rgba(255, 0, 127, 0.6);
     --glow-focus:              0 0 12px rgba(0, 229, 255, 0.22);
 
-    --hud-padding-y:           20px;
-    --hud-padding-x:           24px;
+    --hud-padding-y:           clamp(8px, 2vh, 20px);
+    --hud-padding-x:           clamp(10px, 3vw, 24px);
 
-    --stats-card-width:        480px;
-    --stats-card-right:        24px;
-    --stats-card-bottom:       48px;
-    --stats-card-padding:      14px 16px;
-    --stats-max-height:        calc(100vh - 100px);
-    --stats-grid-cols:         repeat(2, 1fr);
-    --stats-loops-height:      180px;
+    --stats-card-width:        min(480px, calc(100vw - 16px));
+    --stats-card-right:        clamp(8px, 2vw, 24px);
+    --stats-card-bottom:       clamp(38px, 5vh, 48px);
+    --stats-card-padding:      clamp(8px, 1.5vw, 16px);
+    --stats-max-height:        calc(100dvh - 80px);
+    --stats-grid-cols:         repeat(auto-fit, minmax(180px, 1fr));
+    --stats-loops-height:      clamp(110px, 20vh, 180px);
 
-    --tutorial-card-width:     860px;
-    --tutorial-card-top:       46px;
-    --tutorial-card-left:      20px;
-    --tutorial-card-padding:   14px 18px;
-    --tutorial-max-height:     calc(100vh - 70px);
-    --editor-min-height:       380px;
-    --editor-max-height:       calc(100vh - 270px);
+    --tutorial-card-width:     min(860px, calc(100vw - 16px));
+    --tutorial-card-top:       clamp(8px, 4vh, 46px);
+    --tutorial-card-left:      clamp(8px, 2vw, 20px);
+    --tutorial-card-padding:   clamp(8px, 1.5vw, 18px);
+    --tutorial-max-height:     calc(100dvh - 16px);
+    --editor-min-height:       clamp(180px, 35vh, 380px);
+    --editor-max-height:       calc(100dvh - 240px);
 }

@@ -22,15 +22,11 @@
   (swap! repl-registry assoc-in [:instruments inst-key] spec)
   inst-key)
 
-(def definst! register-instrument!)
-
 (defn all-instruments
   "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments.
   Examples: (all-instruments)."
   []
   (merge core-instruments user-instruments (:instruments @repl-registry)))
-
-(def instruments all-instruments)
 
 (def ^:private instrument-aliases
   {:bass :saw-bass

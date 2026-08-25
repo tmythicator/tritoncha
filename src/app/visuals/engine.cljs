@@ -1,8 +1,11 @@
 (ns app.visuals.engine
-  (:require ["three" :as three]
-            [app.state :refer [visual-state repl-registry visual-pulse engine-ctx pulse!]]
-            [app.lib.scenes :as lib-scenes]
-            [app.custom.scenes :as custom-scenes]))
+  (:require
+   ["three" :as three]
+   [app.custom.scenes :as custom-scenes]
+   [app.lib.scenes :as lib-scenes]
+   [app.state :refer [engine-ctx pulse! repl-registry visual-pulse
+                      visual-state]]
+   [app.utils :refer [max-dpr]]))
 
 (defn all-scenes
   "Returns the complete merged catalog of built-in, custom and REPL-defined 3D scenes."
@@ -17,8 +20,6 @@
   [scene-key spec]
   (swap! repl-registry assoc-in [:scenes (keyword scene-key)] spec)
   (keyword scene-key))
-
-(def defscene! register-scene!)
 
 (defn create-geom
   "Instantiates a Three.js BufferGeometry from keyword type or zero-arg constructor."
@@ -99,7 +100,6 @@
         (pulse! 2.0)
         (or scene-key :custom)))))
 
-(def set-scene! load-scene!)
 (def scene! load-scene!)
 
 (defn init-three!
@@ -125,7 +125,7 @@
           outer      (build-outer-mesh (:outer-geom cur-scene) (:outer colors))]
 
       (.setSize renderer w h)
-      (.setPixelRatio renderer (min (.-devicePixelRatio js/window) 2))
+      (.setPixelRatio renderer (min (.-devicePixelRatio js/window) (max-dpr)))
       (set! (.. scene -background) (three/Color. (:bg colors)))
       (.appendChild container (.-domElement renderer))
       (.set (.-position camera) 0 0 responsive-z)

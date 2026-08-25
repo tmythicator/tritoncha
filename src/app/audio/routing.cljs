@@ -1,10 +1,11 @@
 (ns app.audio.routing
   "Declarative WebAudio graph compiler, node factory, and bus routing."
-  (:require ["tone" :as tone]
-            [app.utils :refer [enforce-stereo-mode!]]
-            [app.state :refer [repl-registry]]
-            [app.lib.routes :refer [default-graph core-routes]]
-            [app.custom.routes :refer [user-routes]]))
+  (:require
+   ["tone" :as tone]
+   [app.custom.routes :refer [user-routes]]
+   [app.lib.routes :refer [core-routes default-graph]]
+   [app.state :refer [audio-state repl-registry]]
+   [app.utils :refer [enforce-stereo-mode!]]))
 
 ;; Routing Registry (Built-in + Custom User + REPL Live Routing Graphs)
 
@@ -15,23 +16,21 @@
   (swap! repl-registry assoc-in [:routes graph-key] spec)
   graph-key)
 
-(def defrouting! register-routing!)
-(def defgraph! register-routing!)
-
 (defn all-routings
-  "Returns a merged map of default core, user custom, and dynamic REPL routing graphs.
-  Examples: (all-routings)."
+  "Returns a merged map of default core, user custom and dynamic REPL routing graphs."
   []
   (merge core-routes user-routes (:routes @repl-registry)))
 
 ;; Audio Node Factory + Graph Compiler
 
 (defn create-node
-  "Instantiates a Tone.js audio processor node from a declarative specification map."
-  [{:keys [type volume decay wet time feedback frequency filter-type distortion threshold]}]
+  "Instantiates a Tone.js audio processor node from a specification map."
+  [{:keys [type volume wet time feedback frequency filter-type distortion threshold room-size]}]
   (let [node (case type
                :volume     (tone/Volume. (or volume 0))
-               :reverb     (tone/Reverb. #js {:decay (or decay 3.8) :wet (or wet 0.32)})
+               :reverb     (tone/JCReverb. #js {:roomSize (or room-size wet 0.5)})
+               :jcreverb   (tone/JCReverb. #js {:roomSize (or room-size wet 0.5)})
+               :freeverb   (tone/JCReverb. #js {:roomSize (or room-size wet 0.5)})
                :delay      (tone/FeedbackDelay. (or time "8n.") (or feedback 0.38))
                :filter     (tone/Filter. (or frequency 3400) (or filter-type "lowpass"))
                :distortion (tone/Distortion. (or distortion 0.35))
@@ -50,7 +49,6 @@
          node-map    (into {} (for [[k n-spec] all-specs] [k (create-node n-spec)]))
          aliases     {:filter (:master-filter node-map)}]
 
-     ;; Wire all connection chains defined in :routes
      (doseq [chain routes]
        (let [resolved (for [target chain]
                         (if (= target :destination)
@@ -67,3 +65,10 @@
                  resolved)))
 
      (merge node-map aliases))))
+
+(defn load-routing!
+  "Switches and re-compiles the active DSP routing graph."
+  [graph-key]
+  (let [k (if (keyword? graph-key) graph-key :custom)]
+    (swap! audio-state assoc :current-routing k)
+    (build-graph! graph-key)))

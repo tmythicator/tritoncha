@@ -1,5 +1,40 @@
 (ns app.utils
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [app.config :as cfg]))
+
+(defn mobile?
+  "Returns true if running on a mobile browser or touch device."
+  []
+  (and (exists? js/navigator)
+       (or (boolean (re-find #"(?i)android|iphone|ipad|ipod|mobile" (or (.-userAgent js/navigator) "")))
+           (pos? (or (.-maxTouchPoints js/navigator) 0)))))
+
+(defn active-lookahead
+  "Returns optimal lookahead buffer duration based on device class."
+  []
+  (if (mobile?) cfg/lookahead-mobile cfg/lookahead-desktop))
+
+(defn max-dpr
+  "Returns optimal maximum devicePixelRatio based on device class."
+  []
+  (if (mobile?) cfg/max-dpr-mobile cfg/max-dpr-desktop))
+
+(defn cycle-next
+  "Finds the next item in a collection after current, wrapping around to the beginning.
+  If current is not found in coll, returns the first element.
+  Examples: (cycle-next :b [:a :b :c]) -> :c, (cycle-next :c [:a :b :c]) -> :a."
+  [current coll]
+  (let [v (vec coll)
+        cnt (count v)]
+    (cond
+      (zero? cnt) current
+      (nil? current) (first v)
+      :else
+      (let [cur-str (name current)
+            found-idx (first (keep-indexed (fn [i x] (when (= (name x) cur-str) i)) v))]
+        (if found-idx
+          (get v (mod (inc found-idx) cnt))
+          (first v))))))
 
 (defn parse-note
   "Parses a note string or keyword into pitch name and octave.
@@ -62,6 +97,20 @@
                 "b" :bass
                 (keyword tok)))
             tokens))))
+
+(defn sec->ms
+  "Converts seconds to milliseconds.
+  Examples: (sec->ms 0.25) -> 250.0."
+  [s]
+  (when (number? s)
+    (* s 1000.0)))
+
+(defn ms->sec
+  "Converts milliseconds to seconds.
+  Examples: (ms->sec 250) -> 0.25."
+  [ms]
+  (when (number? ms)
+    (/ ms 1000.0)))
 
 (defn clamp
   "Clamps a numeric value between min and max bounds.
