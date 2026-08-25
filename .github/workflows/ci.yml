@@ -29,7 +29,10 @@ jobs:
       - name: Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Lint source & tests
+      - name: Check code style (cljfmt)
+        run: nix develop --command cljfmt check src test
+
+      - name: Lint source + tests (clj-kondo)
         run: nix develop --command clj-kondo --lint src test
 
       - name: Run unit test suite

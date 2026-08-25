@@ -187,5 +187,4 @@
                      (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 2.8)))
                      (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 0.7))))
                    (when outer
-                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.9)))))}
-   })
+                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.9)))))}})

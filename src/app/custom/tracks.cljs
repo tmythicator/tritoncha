@@ -23,7 +23,7 @@
     :cutoff 4200
     :tracks
     {:drums   {:hits [[:kick 1.0 "D1"] [:hh-c 0.4] [[:snare 1.0 "G3"] [:hh-c 0.45]] [:hh-c 0.4]
-                     [:kick 0.9 "D1"] [:hh-o 0.7] [[:sn-rs 0.95 "G3"] [:hh-c 0.4]] [:sn-gh 0.35]]
+                      [:kick 0.9 "D1"] [:hh-o 0.7] [[:sn-rs 0.95 "G3"] [:hh-c 0.4]] [:sn-gh 0.35]]
                :step "16n"}
      :bass    {:inst :bass :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 1) :step "16n"}
      :sub     {:inst :sub  :notes (d [1 _ _ _ 2 _ _ _  1 _ _ _ 5 _ 4 _] 1) :step "16n" :dur "8n"}

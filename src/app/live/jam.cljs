@@ -27,8 +27,7 @@
   (l! :snare {:inst :snare :notes (pat! ". . . .  s . . .  . . s .  r r r r") :step "16n"})
   (l! :hat   {:inst :hh-c  :mask (euc! 11 16) :step "16n" :dur "32n" :vel [0.4 0.7 0.3 0.8]})
 
-
-  ;; FX + Transitions
+;; FX + Transitions
   (m! :bass :bass-1 :bass-2 :sub)
   (u! :bass :bass-1 :bass-2 :sub)
   (m! :kick :snare :hat)

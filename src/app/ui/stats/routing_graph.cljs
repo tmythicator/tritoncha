@@ -11,7 +11,7 @@
     (:drum-bus :drums)   {:label "DRUMS"  :class "bus-drums"}
     (:bass-bus :bass)    {:label "BASS"   :class "bus-bass"}
     (:space-bus :space)  {:label "SPACE"  :class "bus-space"}
-    (:direct-bus :direct){:label "DIRECT" :class "bus-direct"}
+    (:direct-bus :direct) {:label "DIRECT" :class "bus-direct"}
     (let [clean (-> (name bus-key) (str/replace #"-bus$" "") str/upper-case)]
       {:label clean :class "bus-direct"})))
 

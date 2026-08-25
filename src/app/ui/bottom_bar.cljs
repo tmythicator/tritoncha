@@ -11,8 +11,8 @@
 
      [:div.hotkey-hints
       [:button.neo-action-btn {:on-click toggle-play!
-                              :class (when active? "active")
-                              :title "Play or Stop Engine (Space)"}
+                               :class (when active? "active")
+                               :title "Play or Stop Engine (Space)"}
        (if active? "[■ Stop]" "[▶ Jam]")]
       [:button.neo-action-btn {:on-click cycle-jam! :title "Switch Track Preset (1-4)"} "[1-4] Jam"]
       [:button.neo-action-btn {:on-click undrum! :title "Mute Drums (U)"} "[U] Undrum"]

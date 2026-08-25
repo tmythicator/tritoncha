@@ -42,5 +42,4 @@
                      (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 1.8))))
                    (when outer
                      (set! (.. outer -rotation -x) (- (.. outer -rotation -x) (* camera-speed 0.5)))
-                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5)))))}
-   })
+                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5)))))}})
