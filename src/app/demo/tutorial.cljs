@@ -61,43 +61,43 @@
 
   ;; Quantized Saw Bassline (Cursor inside block + Ctrl+Enter to eval)
   (l! :bass
-    {:inst  :bass
-     :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])
-     :step  "16n"
-     :dur   "16n"
-     :vel   0.95})
+      {:inst  :bass
+       :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])
+       :step  "16n"
+       :dur   "16n"
+       :vel   0.95})
 
   ;; Sub-bass Reinforcement
   (l! :sub
-    {:inst  :sub
-     :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _])
-     :step  "16n"
-     :dur   "8n"
-     :vel   1.0})
+      {:inst  :sub
+       :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _])
+       :step  "16n"
+       :dur   "8n"
+       :vel   1.0})
 
   ;; 5. Chords & Euclidean Arpeggiators
   (l! :arp
-    {:inst  :pad
-     :notes (arp (chord :e :min9 3) :up-down)
-     :mask  (euc! 7 16)
-     :step  "16n"
-     :vel   0.35})
+      {:inst  :pad
+       :notes (arp (chord :e :min9 3) :up-down)
+       :mask  (euc! 7 16)
+       :step  "16n"
+       :vel   0.35})
 
   ;; 6. Breakbeats & Mini-Notation
   (l! :kick
-    {:inst    :kick
-     :pattern (pat! "k . . .  k . . .  . . k .  . . . .")
-     :step    "16n"})
+      {:inst    :kick
+       :pattern (pat! "k . . .  k . . .  . . k .  . . . .")
+       :step    "16n"})
 
   (l! :snare
-    {:inst    :snare
-     :pattern (pat! ". . . .  s . . .  . . . .  s . . g")
-     :step    "16n"})
+      {:inst    :snare
+       :pattern (pat! ". . . .  s . . .  . . . .  s . . g")
+       :step    "16n"})
 
   (l! :hat
-    {:inst :hh-c
-     :mask (euc! 11 16)
-     :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]})
+      {:inst :hh-c
+       :mask (euc! 11 16)
+       :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]})
 
   ;; 7. Live Sound Design in REPL (definst! -> demo!)
   (definst! :supersaw

@@ -155,11 +155,11 @@
   (if (get (:active-tracks @audio-state) :click)
     (stop-loop! :click)
     (loop! :click
-      {:inst :click
-       :notes ["C6" "G5" "G5" "G5"]
-       :step "4n"
-       :dur "32n"
-       :vel 0.8})))
+           {:inst :click
+            :notes ["C6" "G5" "G5" "G5"]
+            :step "4n"
+            :dur "32n"
+            :vel 0.8})))
 
 (defn- drum-track?
   "Determines if an active track or pattern map belongs to drums or percussion."
@@ -213,10 +213,10 @@
              (let [notes (:notes cur-pat)
                    tr-notes (mapv (fn [n]
                                     (cond
-                                       (nil? n) nil
-                                       (sequential? n) (mapv #(theory/transpose % delta-st) n)
-                                       :else (theory/transpose n delta-st)))
-                                   notes)]
+                                      (nil? n) nil
+                                      (sequential? n) (mapv #(theory/transpose % delta-st) n)
+                                      :else (theory/transpose n delta-st)))
+                                  notes)]
                (swap! (:pattern tr) assoc :notes tr-notes)))))))))
 
 (def mod-all! modulate-all!)
