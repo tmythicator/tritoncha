@@ -2,11 +2,10 @@
   "Top bar branding and musical status badge subcomponent."
   (:require
    [app.state :refer [audio-state]]
-   [clojure.string :as str]))
+   [app.utils.audio :refer [format-key]]))
 
 (defn branding-component []
-  (let [{:keys [bpm key]} @audio-state
-        {:keys [root mode]} (or key {:root :e :mode :phrygian})]
+  (let [{:keys [bpm key]} @audio-state]
     [:div.top-bar-branding
      [:div.neo-brand
       [:span.neo-prompt "> "]
@@ -14,5 +13,4 @@
 
      [:div.top-bar-status
       [:span.neo-badge (str bpm " BPM")]
-      [:span.neo-badge.badge-cyan
-       (str (str/upper-case (name (or root :e))) " " (str/upper-case (name (or mode :dorian))))]]]))
+      [:span.neo-badge.badge-cyan (format-key key)]]]))

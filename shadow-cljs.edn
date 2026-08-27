@@ -21,5 +21,8 @@
 
   :test {:target :node-test
          :output-to "target/test.cjs"
-         :main app.test-runner/main
-         :autorun true}}}
+         :autorun true}
+
+  :perf {:target :node-script
+         :output-to "target/perf.cjs"
+         :main app.perf/main}}}

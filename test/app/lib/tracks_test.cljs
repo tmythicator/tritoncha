@@ -1,6 +1,6 @@
 (ns app.lib.tracks-test
-  (:require [cljs.test :refer [deftest is testing]]
-            [app.lib.tracks :refer [core-tracks]]))
+  (:require [app.lib.tracks :refer [core-tracks]]
+            [cljs.test :refer [deftest is testing]]))
 
 (deftest core-tracks-catalog-test
   (testing "All core presets are defined and structurally valid"

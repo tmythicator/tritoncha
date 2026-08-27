@@ -1,122 +1,154 @@
 (ns app.demo.tutorial
   "Live-coding audio + visuals tutorial for Tritoncha."
   (:require [app.api :refer [_ arp b! c! chord d definst! deftrack! demo! demo-stop!
-                             drop! euc! f! fb! jam! l! mod-all! pat! redrum! s!
-                             scale scene! set-key! stop! sw! tr-all! undrum! w! wet!]]))
+                             drop! euc f! fast fb! jam! l! mod-all! pat redrum! rev
+                             s! scale scene! slow stack! stop!
+                             sw! tr-all! undrum! v! w! wet!]]))
 
 (comment
   ;; =============================================================================
-  ;; Tritoncha: Live-Coding Electronic Music + 3D WebGL Studio
+  ;; TRITONCHA: Live-Coding Electronic Music + 3D WebGL Studio
   ;;
-  ;; NOTE: Tritoncha is fundamentally a REPL-FIRST live performance instrument!
-  ;; This in-browser scratchpad is an interactive visual sandbox to play with
-  ;; expressions directly on the web and get a taste of the algorithmic workflow.
-  ;;
-  ;; For the full Algorave & live jamming experience:
-  ;;   1. Connect from your editor via nREPL (e.g. Emacs: M-x cider-connect-cljs -> :app)
-  ;;   2. Jam directly in `src/app/live/jam.cljs` with full REPL keybindings!
-  ;;
-  ;; SHORTCUTS:
-  ;;   [Ctrl+Enter]       -> Evaluate current line or form under cursor
+  ;; Web Browser Shortcuts:
+  ;;   [Ctrl+Enter]       -> Evaluate form under cursor / current line
   ;;   [Ctrl+Shift+Enter] -> Evaluate entire script buffer
+  ;;   [I]                -> Toggle Realtime Telemetry HUD (FPS, clock drift, DSP)
+  ;;
+  ;; Emacs + CIDER Live Performance:
+  ;;   M-x cider-connect-cljs -> localhost:46073 -> :app -> (in-ns 'app.core)
   ;; =============================================================================
 
-  ;; 1. Presets & Instant Jams
-  (jam! :roller)           ;; Phrygian Drum & Bass Roller (168 BPM)
-  (jam! :sub-roller)       ;; Deep Sub-Bass Halftime (172 BPM)
-  (jam! :acid-roller)      ;; Resonant 303 Acid Roller (174 BPM)
-  (jam! :ambient-drift)    ;; Floating Ambient Chill (160 BPM)
-  (b! 174)                 ;; Live Tempo Change
-  (stop!)                  ;; Full Audio Stop
+  ;; Built-in Jams
+  (jam! :roller)
+  (jam! :sub-roller)
+  (jam! :acid-roller)
+  (jam! :ambient-drift)
 
-  ;; 2. Live Modulations & Transpositions (Instant Harmonic Shifts)
-  ;; While any track is playing, shift harmonic key or transpose on the fly:
-  (mod-all! :b :arabic 3)          ;; Modulate all active loops to B Arabic (octave 3)
-  (mod-all! :d :dorian 2)          ;; Modulate all active loops to D Dorian
-  (mod-all! :f# :hirajoshi 2)      ;; Modulate to Japanese Hirajoshi pentatonic
-  (mod-all! :a :hungarian-minor 2) ;; Modulate to dark Hungarian minor
-  (mod-all! :c :blues 2)           ;; Modulate to C Blues scale
-  (mod-all! :e :phrygian 1)        ;; Back to E Phrygian
-  (tr-all! 3)                      ;; Transpose active loops UP by 3 semitones live
-  (tr-all! -2)                     ;; Transpose active loops DOWN by 2 semitones live
-  (tr-all! -1)                     ;; Transpose DOWN 1 semitone
+  ;; Live tempo control
+  (b! 174)
+  (b! 160)
 
-  ;; Music Theory Inspect (Evaluate line to inspect notes in $ eval_output)
-  (scale :d :dorian)               ;; => ["D3" "E3" "F3" "G3" "A3" "B3" "C4"]
-  (scale :e :hirajoshi 2)          ;; => ["E2" "F#2" "G2" "B2" "C3"]
-  (chord :e :min9 3)               ;; => ["E3" "G3" "B3" "D4" "F#4"]
-  (chord :f :dark-m9 3)            ;; => Dark minor 9th spread
+  ;; Full audio stop
+  (stop!)
 
-  ;; 3. 3D WebGL Scenes & Shaders
-  (scene! :synthwave-grid) ;; Rolling 80s Cyberpunk Horizon Grid
-  (scene! :star-tunnel)    ;; Hyperspace Warp Vortex
-  (scene! :orbital-matrix) ;; Saturn Concentric Orbital Rings
-  (scene! :dna-nexus)      ;; Helical Spine Inside Floating Dodecahedron
-  (scene! :quantum-polyhedron)
-  (w!)                     ;; Toggle Wireframe
-  (c! "#04000c" "#00ffff") ;; Set Custom Colors (bg, mesh)
+  ;; Live Stack: Launch and hot-swap all tracks in a single form
+  (stack!
+   [:kick  (pat "k . . .  k . . .  . . k .  . . . .")]
+   [:snare (pat ". . . .  s . . .  . . . .  s . . g")]
+   [:hat   {:inst :hh-c :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}]
+   [:bass  {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}]
+   [:sub   {:notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}]
+   [:arp   {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.8}])
 
-  ;; 4. Scale Degrees, Basslines & Live Loops
-  (set-key! :e :phrygian 1)
+  ;; Time Manipulation on the Fly (fast, slow, rev)
 
-  ;; Quantized Saw Bassline (Cursor inside block + Ctrl+Enter to eval)
-  (l! :bass
-      {:inst  :bass
-       :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])
-       :step  "16n"
-       :dur   "16n"
-       :vel   0.95})
+  ;; Double-time bass roll (fast 2x):
+  (l! :bass {:notes (fast 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n" :vel 0.95})
 
-  ;; Sub-bass Reinforcement
-  (l! :sub
-      {:inst  :sub
-       :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _])
-       :step  "16n"
-       :dur   "8n"
-       :vel   1.0})
+  ;; Halftime bass breakdown (slow 2x):
+  (l! :bass {:notes (slow 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n" :vel 0.95})
 
-  ;; 5. Chords & Euclidean Arpeggiators
-  (l! :arp
-      {:inst  :pad
-       :notes (arp (chord :e :min9 3) :up-down)
-       :mask  (euc! 7 16)
-       :step  "16n"
-       :vel   0.35})
+  ;; Reverse the bass melody:
+  (l! :bass {:notes (rev (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])) :step "16n"})
 
-  ;; 6. Breakbeats & Mini-Notation
-  (l! :kick
-      {:inst    :kick
-       :pattern (pat! "k . . .  k . . .  . . k .  . . . .")
-       :step    "16n"})
+  ;; Back to standard bass:
+  (l! :bass {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95})
 
-  (l! :snare
-      {:inst    :snare
-       :pattern (pat! ". . . .  s . . .  . . . .  s . . g")
-       :step    "16n"})
+  ;; Double-time kick drum buildup before the drop:
+  (l! :kick {:pattern (fast 2 (pat "k . . .  k . . .")) :step "16n"})
 
-  (l! :hat
-      {:inst :hh-c
-       :mask (euc! 11 16)
-       :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]})
+  ;; Restore the syncopated breakbeat:
+  (l! :kick {:pattern (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
 
-  ;; 7. Live Sound Design in REPL (definst! -> demo!)
-  (definst! :supersaw
+  ;; Harmonic Modulation (mod-all!, tr-all!)
+
+  ;; Shift entire jam to <key> and <scale> (check them out in theory.cljs)
+  (mod-all! :d :dorian)
+  (mod-all! :f# :hirajoshi)
+  (mod-all! :a :hungarian-minor)
+  (mod-all! :b :arabic)
+  (mod-all! :c :blues)
+  (mod-all! :e :blues)
+  (mod-all! :e :arabic)
+
+  ;; Return back to default E phrygian
+  (mod-all! :e :phrygian)
+
+  ;; Live transposition (by X semitones):
+  (tr-all! 3)
+  (tr-all! -3)
+  (tr-all! -1)
+  (tr-all! 1)
+
+  ;; Live FX and Mixer Control
+
+  ;; Mute all drums
+  (undrum!)
+  ;; 4-second opening filter sweep
+  (sw! 300 7000 4)
+
+  ;; Fire Dub Laser Siren
+  (s!)
+
+  ;; Sub-bass drop
+  (drop!)
+
+  ;; Unmute all drums back
+  (redrum!)
+
+  ;; Real-time mixer tweaks
+
+  ;; Smooth lowpass cutoff
+  (f! 3200)
+  ;; Delay feedback (0 <-> 1)
+  (fb! 0.6)
+  ;; Wet reverb (0 <-> 1)
+  (wet! 0.45)
+
+  ;; Volume control
+  (v! :bus/drums +2)
+  (v! :bus/space -3)
+
+  ;; 3D WebGL Scenes
+  (scene! :synthwave-grid)
+  (scene! :star-tunnel)
+  (scene! :orbital-matrix)
+  (scene! :dna-nexus)
+  (scene! :cyber-torus)
+
+  ;; Toggle wireframe
+  (w!)
+
+  ;; Color scheme change (bg, mesh)
+  (c! "#04000c" "#00ffff")
+  (c! "#100404" "#ff0055")
+
+  ;; Music Theory Inspection
+  (scale :d :dorian)
+  (scale :e :hirajoshi 2)
+  (chord :e :min9 3)
+  (chord :f :dark-m9 3)
+  (arp (chord :e :min9 3) :up-down)
+
+  ;; Live Sound Design in REPL (definst! -> demo!)
+  (definst! :supersaw-cus
     {:type :mono
-     :bus :space
+     :bus :bus/space
      :options {:oscillator {:type "fatsawtooth" :count 5 :spread 30}
                :filter {:Q 4 :type "lowpass" :rolloff -24}
                :filterEnvelope {:attack 0.01 :decay 0.2 :sustain 0.4 :release 0.2 :baseFrequency 300 :octaves 3}
                :envelope {:attack 0.01 :decay 0.2 :sustain 0.7 :release 0.25}
                :portamento 0.03}})
 
-  (demo! :supersaw)        ;; Live preview instrument in current scale
-  (demo-stop!)             ;; Stop preview
+  ;; Preview instrument
+  (demo! :supersaw-cus)
+  (demo-stop!)
 
-  ;; Use custom synth in a live loop:
-  (l! :lead {:inst :supersaw :notes (d [1 3 4 5 7 8 5 3] 3) :step "16n"})
+  ;; Plug the new synth directly into a live loop
+  (l! :lead {:inst :supersaw-cus :notes (d [1 3 4 5 7 8 5 3] 3) :step "16n" :vel 0.5})
 
-  ;; 8. Custom Track Architecture (deftrack! -> jam!)
-  (deftrack! :cyber-roller
+  ;; Custom Track Architecture (deftrack! -> jam!)
+  (deftrack! :cyber-roller-cus
     {:name   "Cyber Roller In D Dorian (174 BPM)"
      :bpm    174
      :scale  [:d :dorian 1]
@@ -124,23 +156,13 @@
      :colors ["#080412" "#00ffaa"]
      :cutoff 3800
      :tracks
-     {:drums {:pattern (pat! "k . . .  s . . .  . . k .  s . . g") :step "16n"}
-      :hat   {:inst :hh-c :mask (euc! 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}
+     {:drums {:pattern (pat "k . . .  s . . .  . . k .  s . . g") :step "16n"}
+      :hat   {:inst :hh-c :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}
       :bass  {:inst :bass :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}
       :sub   {:inst :sub  :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}
-      :pad   {:inst :pad  :notes [(chord :d :min9 3) (chord :g :dom7 3) (chord :c :maj7 3)] :step "1m" :dur "1m" :vel 0.35}}})
+      :pad   {:inst :pad  :notes [(chord :d :min9 3) (chord :g :dom7 3) (chord :c :maj7 3)] :step "1m" :dur "1m" :vel 0.4}}})
 
-  (jam! :cyber-roller)
+  (jam! :cyber-roller-cus)
 
-  ;; 9. Live Dub FX, Sweeps & Performance Controls
-  (sw! 300 6000 4)         ;; 4-second opening filter sweep into the drop
-  (s!)                     ;; Dub Laser Siren
-  (drop!)                  ;; Seismic Sub-Bass Drop
-  (fb! 0.65)               ;; Space delay feedback
-  (wet! 0.4)               ;; Reverb mix
-  (f! 3200)                ;; Master filter cutoff
-
-  ;; Mixer controls
-  (undrum!)                ;; Mute all drums (keep bass & pads)
-  (redrum!)                ;; Drop drums back in
+  ;; Audio Stop
   (stop!))

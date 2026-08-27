@@ -21,10 +21,13 @@
            :clock-sample     nil}))
 
 (defonce visual-state
-  (r/atom {:current-scene :cyber-torus
-           :mesh-type     :torus-knot
+  (r/atom {:current-scene cfg/default-scene
+           :mesh-type     cfg/default-geometry
            :wireframe?    true
-           :colors        {:bg "#050510" :mesh "#00ffcc" :wire "#ff007f"}
+           :bg-color      (:bg cfg/default-scene-colors)
+           :mesh-color    (:mesh cfg/default-scene-colors)
+           :wire-color    (:wire cfg/default-scene-colors)
+           :colors        cfg/default-scene-colors
            :sensitivity   cfg/default-sensitivity
            :camera-speed  cfg/default-camera-speed}))
 

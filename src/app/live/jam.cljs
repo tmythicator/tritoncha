@@ -1,7 +1,7 @@
 (ns app.live.jam
   "Live performance scratchpad for Emacs CIDER (C-c C-e / C-c C-k)."
-  (:require [app.api :as a :refer [_ arp b! c! chord click! d drop! euc! f! g! jam! l! m! mod-all!
-                                   pat! play! redrum! refresh! s! set-key! so! stat stop! sw! tr-all!
+  (:require [app.api :as a :refer [_ arp b! c! chord click! d drop! euc f! g! jam! l! m! mod-all!
+                                   pat play! redrum! refresh! s! set-key! so! stat stop! sw! tr-all!
                                    u! undrum! unso! w!]]))
 
 (comment
@@ -20,12 +20,12 @@
   (l! :sub  {:inst :sub  :notes (d [1 _ _ _ 2 _ _ _  1 _ _ _ 4 _ 3 _]) :step "16n" :dur "8n"})
 
   (l! :pad {:inst :pad :notes [(chord :e :dark-m9) (chord :c :maj9) (chord :d :sus4) (chord :b :min7 2)] :step "1m" :dur "1m" :vel 0.35})
-  (l! :arp {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc! 7 16) :step "16n" :vel 0.35})
+  (l! :arp {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35})
 
-  (l! :kick  {:inst :kick  :notes (pat! "k . . .  k . . .  . . k .  . . . .") :step "16n"})
-  (l! :snare {:inst :snare :notes (pat! ". . . .  s . . .  . . . .  s . . g") :step "16n"})
-  (l! :snare {:inst :snare :notes (pat! ". . . .  s . . .  . . s .  r r r r") :step "16n"})
-  (l! :hat   {:inst :hh-c  :mask (euc! 11 16) :step "16n" :dur "32n" :vel [0.4 0.7 0.3 0.8]})
+  (l! :kick  {:inst :kick  :notes (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
+  (l! :snare {:inst :snare :notes (pat ". . . .  s . . .  . . . .  s . . g") :step "16n"})
+  (l! :snare {:inst :snare :notes (pat ". . . .  s . . .  . . s .  r r r r") :step "16n"})
+  (l! :hat   {:inst :hh-c  :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.4 0.7 0.3 0.8]})
 
 ;; FX + Transitions
   (m! :bass :bass-1 :bass-2 :sub)

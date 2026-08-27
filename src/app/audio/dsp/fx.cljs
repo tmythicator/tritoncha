@@ -1,15 +1,20 @@
-(ns app.audio.fx
-  "Audio effects, transitions and SFX triggers."
-  (:require ["tone" :as tone]
+(ns app.audio.dsp.fx
+  "Audio effects automations, filter sweeps, dub sirens, and sub-bass drops."
+  (:require [app.audio.dsp.engine :refer [init-audio!]]
             [app.state :refer [engine-ctx pulse!]]
-            [app.audio.engine :refer [init-audio!]]))
+            [app.utils.audio :refer [safe-ramp!]]))
 
 (defn- tone-node [k]
   (get (:tone @engine-ctx) k))
 
+(defn- audio-now []
+  (if-let [t (:transport (:tone @engine-ctx))]
+    (try (.. ^js t -context -currentTime) (catch js/Object _ 0.0))
+    0.0))
+
 (defn- ramp-node-param! [node-key getter-fn target-val ramp-time]
   (when-let [node (tone-node node-key)]
-    (.rampTo ^js (getter-fn node) target-val (or ramp-time 0.05))))
+    (safe-ramp! (getter-fn node) target-val (or ramp-time 0.05))))
 
 (defn set-filter-cutoff!
   "Sets the master lowpass filter cutoff frequency in Hz with smooth ramp."
@@ -25,7 +30,7 @@
   "Smoothly sweeps master filter cutoff from one frequency to another over seconds."
   [from-hz to-hz duration-secs]
   (when-let [{:keys [^js filter]} (:tone @engine-ctx)]
-    (let [now (tone/now)
+    (let [now (audio-now)
           freq (.-frequency filter)]
       (.cancelScheduledValues freq now)
       (.setValueAtTime freq from-hz now)
@@ -63,7 +68,7 @@
   []
   (init-audio!)
   (when-let [{:keys [^js siren]} (:tone @engine-ctx)]
-    (let [now (tone/now)
+    (let [now (audio-now)
           freq (.-frequency siren)]
       (.cancelScheduledValues freq now)
       (.setValueAtTime freq 350 now)
@@ -77,7 +82,7 @@
   []
   (init-audio!)
   (when-let [{:keys [^js kick]} (:tone @engine-ctx)]
-    (let [now (tone/now)]
+    (let [now (audio-now)]
       (.triggerAttackRelease kick "F1" "1n" now 1.0)
       (pulse! 3.0))))
 
@@ -87,7 +92,7 @@
   ([chord]
    (init-audio!)
    (when-let [{:keys [^js pad]} (:tone @engine-ctx)]
-     (let [now (tone/now)]
+     (let [now (audio-now)]
        (doseq [n chord]
          (.triggerAttackRelease pad n "2n" now 0.4)))
      (pulse! 1.8))))

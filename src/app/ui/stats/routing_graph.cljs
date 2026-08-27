@@ -1,17 +1,19 @@
 (ns app.ui.stats.routing-graph
   "Audio routing topology visualization subcomponent."
   (:require
-   [app.audio.routing :as routing]
+   [app.audio.dsp.busses :as busses]
+   [app.audio.dsp.routing :as routing]
    [app.lib.routes :refer [default-graph]]
    [app.state :refer [audio-state engine-ctx]]
    [clojure.string :as str]))
 
 (defn- bus-badge-info [bus-key]
-  (case (keyword bus-key)
-    (:drum-bus :drums)   {:label "DRUMS"  :class "bus-drums"}
-    (:bass-bus :bass)    {:label "BASS"   :class "bus-bass"}
-    (:space-bus :space)  {:label "SPACE"  :class "bus-space"}
-    (:direct-bus :direct) {:label "DIRECT" :class "bus-direct"}
+  (case (busses/normalize-bus-key bus-key)
+    :bus/drums  {:label "DRUMS"  :class "bus-drums"}
+    :bus/bass   {:label "BASS"   :class "bus-bass"}
+    :bus/space  {:label "SPACE"  :class "bus-space"}
+    :bus/direct {:label "DIRECT" :class "bus-direct"}
+    :bus/master {:label "MASTER" :class "bus-master"}
     (let [clean (-> (name bus-key) (str/replace #"-bus$" "") str/upper-case)]
       {:label clean :class "bus-direct"})))
 
