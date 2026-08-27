@@ -1,12 +1,12 @@
 (ns app.ui.stats-panel
   "Audio engine statistics panel coordinating telemetry, DSP graph and loops monitors."
   (:require
-   [app.audio.engine :refer [telemetry-snapshot]]
+   [app.audio.dsp.telemetry :refer [telemetry-snapshot]]
    [app.state :refer [audio-state visual-state]]
    [app.ui.stats.loops :refer [active-loops-component]]
    [app.ui.stats.routing-graph :refer [routing-graph-component]]
    [app.ui.stats.telemetry :refer [telemetry-component]]
-   [clojure.string :as str]
+   [app.utils.audio :refer [format-key]]
    [reagent.core :as r]))
 
 (defn- stats-header [{:keys [ctx-state]} on-close]
@@ -34,7 +34,7 @@
     (r/create-class
      {:component-did-mount
       (fn [_]
-        (reset! interval-id (js/setInterval #(swap! tick-atom inc) 1000)))
+        (reset! interval-id (js/setInterval #(swap! tick-atom inc) 200)))
 
       :component-will-unmount
       (fn [_]
@@ -46,8 +46,8 @@
         (let [_            @tick-atom
               snap         (telemetry-snapshot)
               tracks-map   (or (:active-tracks @audio-state) {})
-              key-data     (:key @audio-state {:root :e :mode :phrygian :octave 1})
-              key-str      (str (str/upper-case (name (:root key-data :e))) " " (name (:mode key-data :phrygian)))
+              key-data     (:key @audio-state)
+              key-str      (format-key key-data)
               scene-name   (name (:current-scene @visual-state :cyber-torus))
               telemetry    (merge snap {:key-str key-str :scene-name scene-name})]
           [:aside.neo-stats-card {:aria-label "System Audio Status"}

@@ -1,11 +1,14 @@
 (ns app.visuals.engine
   (:require
    ["three" :as three]
+   [app.config :as cfg]
    [app.custom.scenes :as custom-scenes]
    [app.lib.scenes :as lib-scenes]
    [app.state :refer [engine-ctx pulse! repl-registry visual-pulse
                       visual-state]]
-   [app.utils :refer [max-dpr]]))
+   [app.utils.coll :as coll]
+   [app.utils.dom :refer [max-dpr]]
+   [app.utils.math :refer [lerp]]))
 
 (defn all-scenes
   "Returns the complete merged catalog of built-in, custom and REPL-defined 3D scenes."
@@ -25,38 +28,54 @@
   "Instantiates a Three.js BufferGeometry from keyword type or zero-arg constructor."
   [geom-spec]
   (cond
-    (fn? geom-spec)        (geom-spec)
-    (instance? three/BufferGeometry geom-spec) geom-spec
+    (or (nil? geom-spec) (= :none (keyword geom-spec)))
+    (three/BufferGeometry.)
+
+    (fn? geom-spec)
+    (geom-spec)
+
+    (instance? three/BufferGeometry geom-spec)
+    geom-spec
+
     :else
     (case (keyword geom-spec)
+      :none         (three/BufferGeometry.)
       :icosahedron  (three/IcosahedronGeometry. 2.0 1)
       :torus-knot   (three/TorusKnotGeometry. 1.8 0.45 128 32)
       :octahedron   (three/OctahedronGeometry. 2.2 0)
       :box          (three/BoxGeometry. 2.5 2.5 2.5)
       :sphere       (three/SphereGeometry. 2.0 32 32)
       :dodecahedron (three/DodecahedronGeometry. 2.0 0)
+      :tetrahedron  (three/TetrahedronGeometry. 2.5 2)
+      :cylinder     (three/CylinderGeometry. 1.5 1.5 3.0 32)
+      :torus        (three/TorusGeometry. 2.0 0.6 30 100)
       (three/IcosahedronGeometry. 2.0 1))))
 
 (defn- build-mesh-material [mesh-color wire-color wireframe? mat-spec]
-  (let [opts (merge {:color       (three/Color. mesh-color)
-                     :wireframe   (boolean wireframe?)
-                     :roughness   0.2
-                     :metalness   0.8
-                     :emissive    (three/Color. (or wire-color "#ff007f"))
-                     :emissiveIntensity 0.15}
-                    mat-spec)]
-    (three/MeshStandardMaterial. (clj->js opts))))
+  (let [emissive-col (or wire-color (:wire cfg/default-scene-colors))
+        mat (three/MeshStandardMaterial.
+             #js {:color             (three/Color. mesh-color)
+                  :wireframe         (boolean wireframe?)
+                  :roughness         0.2
+                  :metalness         0.8
+                  :emissive          (three/Color. emissive-col)
+                  :emissiveIntensity 0.15})]
+    (when (map? mat-spec)
+      (doseq [[k v] mat-spec]
+        (aset mat (name k) (if (string? v) (three/Color. v) v))))
+    mat))
 
 (defn- build-outer-mesh [outer-geom outer-color]
-  (let [geom (if (fn? outer-geom)
-               (outer-geom)
-               (three/IcosahedronGeometry. 3.8 1))
-        mat  (three/MeshBasicMaterial.
-              #js {:color (three/Color. (or outer-color "#331144"))
-                   :wireframe true
-                   :transparent true
-                   :opacity 0.25})]
-    (three/Mesh. geom mat)))
+  (when (and outer-geom (not= :none (keyword outer-geom)))
+    (let [geom (if (fn? outer-geom)
+                 (outer-geom)
+                 (three/IcosahedronGeometry. 3.8 1))
+          mat  (three/MeshBasicMaterial.
+                #js {:color (three/Color. (or outer-color (:outer cfg/default-scene-colors)))
+                     :wireframe true
+                     :transparent true
+                     :opacity 0.25})]
+      (three/Mesh. geom mat))))
 
 (defn load-scene!
   "Switches active 3D scene preset live without dropping WebGL context."
@@ -65,11 +84,14 @@
         scene-key (when (keyword? scene-key-or-spec) scene-key-or-spec)
         spec      (if (map? scene-key-or-spec)
                     scene-key-or-spec
-                    (get available (keyword scene-key-or-spec) (get available :cyber-torus)))]
+                    (get available (keyword scene-key-or-spec) (get available cfg/default-scene)))]
     (when spec
       (let [{:keys [geom colors material outer-geom camera-pos animate]} spec
             {:keys [bg mesh wire outer]
-             :or {bg "#050510" mesh "#00ffcc" wire "#ff007f" outer "#331144"}} colors
+             :or {bg    (:bg cfg/default-scene-colors)
+                  mesh  (:mesh cfg/default-scene-colors)
+                  wire  (:wire cfg/default-scene-colors)
+                  outer (:outer cfg/default-scene-colors)}} colors
             wireframe? (get material :wireframe (:wireframe? @visual-state true))]
 
         (swap! visual-state assoc
@@ -88,19 +110,49 @@
               (.set (.-position camera) cx cy cz)))
 
           (when mesh
+            (when-let [old-geom (.-geometry mesh)]
+              (.dispose ^js old-geom))
+            (when-let [old-mat (.-material mesh)]
+              (.dispose ^js old-mat))
             (set! (.-geometry mesh) (create-geom geom))
             (set! (.-material mesh) (build-mesh-material mesh wire wireframe? material)))
 
           (when (and scene outer-mesh)
             (.remove scene outer-mesh)
-            (let [new-outer (build-outer-mesh outer-geom outer)]
-              (.add scene new-outer)
-              (swap! engine-ctx update :three assoc :outer new-outer :outer-mesh new-outer :animate animate))))
+            (when-let [og (.-geometry outer-mesh)] (.dispose ^js og))
+            (when-let [om (.-material outer-mesh)] (.dispose ^js om)))
+
+          (let [new-outer (build-outer-mesh outer-geom outer)]
+            (when (and scene new-outer)
+              (.add scene new-outer))
+            (swap! engine-ctx update :three assoc :outer new-outer :outer-mesh new-outer :animate animate)))
 
         (pulse! 2.0)
         (or scene-key :custom)))))
 
-(def scene! load-scene!)
+(defn cycle-scene!
+  "Cycles to the next registered 3D WebGL scene.
+  Examples: (cycle-scene!)."
+  []
+  (let [next-scene (coll/cycle-next (:current-scene @visual-state cfg/default-scene) (keys (all-scenes)))]
+    (load-scene! next-scene)))
+
+(defn- responsive-camera-z [aspect]
+  (if (< aspect 1.0)
+    (/ cfg/default-camera-distance (max 0.45 aspect))
+    cfg/default-camera-distance))
+
+(defn resize-viewport!
+  "Adapts Three.js camera aspect ratio, responsive Z distance, and renderer viewport."
+  []
+  (when-let [{:keys [^js camera ^js renderer]} (:three @engine-ctx)]
+    (let [w (.-innerWidth js/window)
+          h (.-innerHeight js/window)
+          aspect (/ w (max 1 h))]
+      (set! (.-aspect camera) aspect)
+      (set! (.. camera -position -z) (responsive-camera-z aspect))
+      (.updateProjectionMatrix camera)
+      (.setSize renderer w h))))
 
 (defn init-three!
   "Initializes the Three.js WebGL rendering context, camera, lighting, and mounts to DOM."
@@ -109,16 +161,18 @@
     (set! (.-innerHTML container) "")
     (let [w          (.-innerWidth js/window)
           h          (.-innerHeight js/window)
-          aspect     (/ w h)
-          responsive-z (if (< aspect 1.0) (/ 7.0 (max 0.45 aspect)) 7.0)
+          aspect     (/ w (max 1 h))
           scene      (three/Scene.)
           camera     (three/PerspectiveCamera. 60 aspect 0.1 1000)
           renderer   (three/WebGLRenderer. #js {:antialias true :alpha true})
-          cur-scene  (get (all-scenes) (:current-scene @visual-state) (get (all-scenes) :cyber-torus))
+          cur-scene  (get (all-scenes) (:current-scene @visual-state) (get (all-scenes) cfg/default-scene))
           geom-spec  (or (:geom cur-scene) (:mesh-type @visual-state))
           mat-spec   (:material cur-scene)
           colors     (or (:colors cur-scene)
-                         {:bg (:bg-color @visual-state) :mesh (:mesh-color @visual-state) :wire (:wire-color @visual-state) :outer "#331144"})
+                         {:bg    (:bg-color @visual-state (:bg cfg/default-scene-colors))
+                          :mesh  (:mesh-color @visual-state (:mesh cfg/default-scene-colors))
+                          :wire  (:wire-color @visual-state (:wire cfg/default-scene-colors))
+                          :outer (:outer cfg/default-scene-colors)})
           mesh-geom  (create-geom geom-spec)
           mesh-mat   (build-mesh-material (:mesh colors) (:wire colors) (:wireframe? @visual-state) mat-spec)
           mesh       (three/Mesh. mesh-geom mesh-mat)
@@ -128,12 +182,12 @@
       (.setPixelRatio renderer (min (.-devicePixelRatio js/window) (max-dpr)))
       (set! (.. scene -background) (three/Color. (:bg colors)))
       (.appendChild container (.-domElement renderer))
-      (.set (.-position camera) 0 0 responsive-z)
+      (.set (.-position camera) 0 0 (responsive-camera-z aspect))
 
-      (.add scene (three/AmbientLight. 0xffffff 0.6))
-      (.add scene (doto (three/DirectionalLight. 0xffffff 1.2) (.position.set 5 10 7)))
-      (.add scene mesh)
-      (.add scene outer)
+      (.add scene (three/AmbientLight. 0xffffff cfg/default-ambient-light-intensity))
+      (.add scene (doto (three/DirectionalLight. 0xffffff cfg/default-directional-light-intensity) (.position.set 5 10 7)))
+      (when mesh (.add scene mesh))
+      (when outer (.add scene outer))
 
       (swap! engine-ctx assoc :three
              {:scene      scene
@@ -150,11 +204,12 @@
   (when-let [{:keys [scene camera ^js renderer ^js mesh ^js outer animate]} (:three @engine-ctx)]
     (let [{:keys [sensitivity camera-speed]} @visual-state
           pulse        @visual-pulse
-          target-scale (+ 1.0 (* pulse sensitivity 0.4))
+          target-scale (+ 1.0 (* pulse sensitivity cfg/default-pulse-scale-factor))
           cur-scale    (if mesh (.-x (.-scale mesh)) 1.0)
-          new-scale    (+ cur-scale (* (- target-scale cur-scale) 0.18))]
+          new-scale    (lerp cur-scale target-scale cfg/default-scale-lerp)]
 
-      (swap! visual-pulse #(max 0.0 (- % 0.06)))
+      (when (pos? pulse)
+        (reset! visual-pulse (js/Math.max 0.0 (- pulse cfg/default-pulse-decay))))
 
       (when mesh
         (.set (.-scale mesh) new-scale new-scale new-scale))
@@ -182,6 +237,8 @@
   [geom-type]
   (swap! visual-state assoc :mesh-type (keyword geom-type))
   (when-let [{:keys [^js mesh]} (:three @engine-ctx)]
+    (when-let [old-geom (.-geometry mesh)]
+      (.dispose ^js old-geom))
     (set! (.-geometry mesh) (create-geom geom-type))
     (pulse! 1.5)))
 

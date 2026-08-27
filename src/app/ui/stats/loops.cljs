@@ -1,13 +1,13 @@
 (ns app.ui.stats.loops
   "Active audio loops monitor and track card subcomponent."
-  (:require [app.audio.voices :as voices]))
+  (:require [app.audio.dsp.busses :as busses]))
 
 (defn- bus-badge-class [bus-kw]
-  (case bus-kw
-    :drums  "bus-drums"
-    :bass   "bus-bass"
-    :space  "bus-space"
-    :direct "bus-direct"
+  (case (busses/normalize-bus-key bus-kw)
+    :bus/drums  "bus-drums"
+    :bus/bass   "bus-bass"
+    :bus/space  "bus-space"
+    :bus/direct "bus-direct"
     "bus-master"))
 
 (defn- track-card [kw info]
@@ -17,7 +17,7 @@
         step     (or (:step pat) "16n")
         dur      (or (:dur pat) step)
         inst     (or (:inst pat) kw)
-        bus      (voices/instrument-bus inst)
+        bus      (busses/instrument-bus inst)
         events   (or (:notes pat) (:hits pat) (:pattern pat))
         len      (if (sequential? events) (count events) 1)]
     [:div.neo-track-box {:class (cond solo? "box-solo" muted? "box-muted" :else "box-live")}

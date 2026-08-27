@@ -4,6 +4,7 @@
 
 (defn create-geometry [geom-type]
   (case (keyword geom-type)
+    :none         (three/BufferGeometry.)
     :torus-knot   (three/TorusKnotGeometry. 1.8 0.5 128 32)
     :icosahedron  (three/IcosahedronGeometry. 2.2 2)
     :octahedron   (three/OctahedronGeometry. 2.5 2)
@@ -16,7 +17,16 @@
     (three/TorusKnotGeometry. 1.8 0.5 128 32)))
 
 (def core-scenes
-  {:cyber-torus
+  {:none
+   {:name        "None (Zero 3D Geometry)"
+    :geom        :none
+    :colors      {:bg "#020205" :mesh "#000000" :wire "#000000" :outer "#000000"}
+    :material    {:visible false :wireframe false}
+    :outer-geom  nil
+    :camera-pos  [0 0 10]
+    :animate     (fn [_])}
+
+   :cyber-torus
    {:name        "Cyberpunk Torus Knot"
     :geom        :torus-knot
     :colors      {:bg "#080412" :mesh "#00ffcc" :wire "#ff007f" :outer "#331144"}

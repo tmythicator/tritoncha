@@ -1,6 +1,6 @@
 (ns app.lib.tracks
   "Built-in track library and baseline catalog for Tritoncha."
-  (:require [app.audio.theory :refer [_ deg chord arp scale]]))
+  (:require [app.audio.theory.harmony :refer [_ arp chord deg scale]]))
 
 (def core-tracks
   {:roller
@@ -27,7 +27,7 @@
                        (chord :d :min7 {:octave 3})
                        (chord :c :maj7 {:octave 3})
                        (chord :b :7    {:octave 2})]
-               :step "1m" :dur "1m" :vel 0.38}}}
+               :step "1m" :dur "1m" :vel 0.42}}}
 
    :sub-roller
    {:name   "Deep Sub Roller (172 BPM)"
@@ -53,7 +53,7 @@
                        (chord :db :maj9 {:octave 3})
                        (chord :eb :dom7 {:octave 3})
                        (chord :c :min7 {:octave 3})]
-               :step "1m" :dur "1m" :vel 0.35}}}
+               :step "1m" :dur "1m" :vel 0.4}}}
 
    :acid-roller
    {:name   "Acid Roller (174 BPM)"
@@ -96,7 +96,7 @@
      :sub     {:inst :sub
                :notes (deg :e :hirajoshi [1 _ _ _ 2 _ _ _ 1 _ _ _ 5 _ 4 _] {:octave 1})
                :step "16n" :dur "8n" :vel 0.9}
-     :arp     {:inst :pad
+     :arp     {:inst :ambient-glass
                :notes (arp (scale :e :hirajoshi {:octave 3}) :up-down)
                :step "16n" :dur "16n" :vel 0.32}
      :strings {:inst :pad

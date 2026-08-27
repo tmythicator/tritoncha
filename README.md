@@ -23,7 +23,7 @@ Tritoncha is an in-browser live-coding studio for electronic music and 3D WebGL 
   Similar in spirit, but runs entirely in the browser without installing SuperCollider (`scsynth`), audio daemons or any other toolchains.
 
 - **Is it a WebDAW?**
-  It has synthesizers, effects, and mixing buses, but you control them through code instead of timeline clicking. You sequence scale degrees (`d`), chords, drum patterns (`pat!`) and Euclidean rhythms (`euc!`) live in the REPL.
+  It has synthesizers, effects, and mixing buses, but you control them through code instead of timeline clicking. You sequence scale degrees (`d`), chords, drum patterns (`pat`) and Euclidean rhythms (`euc`) live in the REPL.
 
 - **How do the 3D visuals react to audio?**
   Direct state sharing. Every beat trigger, sub hit and synth note modulates 3D geometry scales, wireframes, and vertex shaders on every animation frame.
@@ -70,8 +70,8 @@ The fastest way to learn Tritoncha is through the interactive tutorial in `src/a
 
 ;; Live Looper and Drum Patterns
 (l! :bass  {:inst :bass  :notes (d [1 _ 1 2 _ 1 4 3]) :step "16n"})
-(l! :kick  {:inst :kick  :pattern (pat! "k . . .  k . . .") :step "16n"})
-(l! :hat   {:inst :hh-c  :mask (euc! 11 16) :step "16n" :dur "32n"})
+(l! :kick  {:inst :kick  :pattern (pat "k . . .  k . . .") :step "16n"})
+(l! :hat   {:inst :hh-c  :mask (euc 11 16) :step "16n" :dur "32n"})
 (l! :drums {:hits [[:kick 1.0 "D1"] [:hh-c 0.4] [[:snare 1.0 "G3"] [:hh-c 0.45]] [:hh-c 0.4]]})
 
 ;; Harmonic Modulation and Transposition

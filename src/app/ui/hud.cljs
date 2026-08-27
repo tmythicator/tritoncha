@@ -1,17 +1,16 @@
 (ns app.ui.hud
   (:require
-   [app.audio.looper :refer [toggle-click!]]
-   [app.audio.mixer :refer [redrum! stop! toggle-mute! undrum!]]
-   [app.audio.tracker :as tracker]
-   [app.config :as cfg]
-   [app.state :refer [audio-state engine-ctx ui-state visual-state]]
+   [app.audio.control.looper :refer [toggle-click!]]
+   [app.audio.control.mixer :refer [toggle-drums!]]
+   [app.audio.control.tracker :refer [cycle-jam! toggle-play!]]
+   [app.state :refer [audio-state engine-ctx ui-state]]
    [app.ui.bottom-bar :refer [bottom-bar-component]]
    [app.ui.mobile-notice :refer [mobile-notice-component]]
    [app.ui.stats-panel :refer [stats-panel-component]]
    [app.ui.top-bar :refer [top-bar-component]]
    [app.ui.tutorial-modal :refer [tutorial-modal-component]]
-   [app.utils :refer [cycle-next mobile?]]
-   [app.visuals.engine :as engine :refer [toggle-wireframe!]]
+   [app.utils.dom :refer [mobile?]]
+   [app.visuals.engine :refer [cycle-scene! toggle-wireframe!]]
    [reagent.dom.client :as rdom]))
 
 (defn toggle-hud! []
@@ -23,18 +22,9 @@
 (defn toggle-tutorial! []
   (swap! ui-state update :tutorial-visible? not))
 
-(defn toggle-play! []
-  (if (:active? @audio-state)
-    (stop!)
-    (tracker/play-preset! (:current-jam @audio-state :roller))))
-
-(defn cycle-jam! []
-  (let [next-jam (cycle-next (:current-jam @audio-state :roller) cfg/jam-presets)]
-    (tracker/play-preset! next-jam)))
-
-(defn cycle-scene! []
-  (let [next-scene (cycle-next (:current-scene @visual-state :cyber-torus) (keys (engine/all-scenes)))]
-    (engine/scene! next-scene)))
+(defn- toggle-track-mute! [track-key]
+  (when-let [tr (get (:active-tracks @audio-state) (keyword track-key))]
+    (swap! (:muted? tr) not)))
 
 (defn hud-component []
   (let [{:keys [hud-visible? stats-visible? tutorial-visible? mobile-notice-dismissed?]} @ui-state]
@@ -49,7 +39,7 @@
       [top-bar-component {:toggle-play!       toggle-play!
                           :cycle-jam!         cycle-jam!
                           :cycle-scene!       cycle-scene!
-                          :toggle-track-mute! toggle-mute!
+                          :toggle-track-mute! toggle-track-mute!
                           :toggle-stats!      toggle-stats!
                           :toggle-tutorial!   toggle-tutorial!}]
 
@@ -65,8 +55,7 @@
        [bottom-bar-component {:toggle-play!      toggle-play!
                               :cycle-jam!        cycle-jam!
                               :cycle-scene!      cycle-scene!
-                              :undrum!           undrum!
-                              :redrum!           redrum!
+                              :toggle-drums!     toggle-drums!
                               :toggle-wireframe! toggle-wireframe!
                               :toggle-click!     toggle-click!
                               :toggle-stats!     toggle-stats!

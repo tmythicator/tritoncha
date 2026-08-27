@@ -25,10 +25,10 @@
           all-nodes (into #{:destination} (concat (keys busses) (keys processors)))]
 
       (testing "All standard busses exist"
-        (is (contains? busses :drum-bus) "Must contain :drum-bus")
-        (is (contains? busses :bass-bus) "Must contain :bass-bus")
-        (is (contains? busses :space-bus) "Must contain :space-bus")
-        (is (contains? busses :direct-bus) "Must contain :direct-bus"))
+        (is (contains? busses :bus/drums) "Must contain :bus/drums")
+        (is (contains? busses :bus/bass) "Must contain :bus/bass")
+        (is (contains? busses :bus/space) "Must contain :bus/space")
+        (is (contains? busses :bus/direct) "Must contain :bus/direct"))
 
       (testing "All routes reference declared busses, processors or :destination"
         (doseq [chain routes]
@@ -57,9 +57,9 @@
 (deftest dynamic-routing-registry-test
   (testing "Dynamic routing graph registration and lookup"
     (let [custom-key :test-ambient-routing
-          custom-spec {:busses {:pad-bus {:type :volume :volume 0}}
+          custom-spec {:busses {:bus/pad {:type :volume :volume 0}}
                        :processors {:shimmer {:type :reverb :wet 0.8}}
-                       :routes [[:pad-bus :shimmer]
+                       :routes [[:bus/pad :shimmer]
                                 [:shimmer :destination]]}]
 
       (register-test-routing! custom-key custom-spec)
