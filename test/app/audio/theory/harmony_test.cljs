@@ -52,7 +52,12 @@
       (is (= ["G3" "E3" "C3"] (harmony/arp notes :down)))
       (is (= ["C3" "E3" "G3" "E3"] (harmony/arp notes :up-down)))
       (is (= ["G3" "E3" "C3" "E3"] (harmony/arp notes :down-up)))
-      (is (= ["C3" "G3" "E3"] (harmony/arp notes :converge))))))
+      (is (= ["C3" "G3" "E3"] (harmony/arp notes :converge)))))
+
+  (testing "Thread-friendly arp with ->>"
+    (let [res (->> (harmony/chord :c :maj 3)
+                   (harmony/arp :up-down))]
+      (is (= ["C3" "E3" "G3" "E3"] res)))))
 
 (deftest progression-test
   (testing "Chord progression generation"

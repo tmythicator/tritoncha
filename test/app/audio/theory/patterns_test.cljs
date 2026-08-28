@@ -48,3 +48,23 @@
            (pat/map-notes #(str % "!") ["C4" nil ["E4" "G4"]])))
     (is (= [[["C4+" "E4+"] nil] ["G4+" ["B4+" "D5+"]]]
            (pat/map-notes #(str % "+") [[["C4" "E4"] nil] ["G4" ["B4" "D5"]]])))))
+
+(deftest shift-and-take-steps-test
+  (testing "shift rotates sequences circularly"
+    (is (= ["E4" "G4" "C4"]
+           (pat/shift 1 ["C4" "E4" "G4"])))
+    (is (= ["G4" "C4" "E4"]
+           (pat/shift -1 ["C4" "E4" "G4"]))))
+
+  (testing "take-steps truncates or cycles sequence to exact count"
+    (is (= ["C4" "E4" "C4" "E4"]
+           (pat/take-steps 4 ["C4" "E4"])))
+    (is (= ["C4" "E4"]
+           (pat/take-steps 2 ["C4" "E4" "G4"])))))
+
+(deftest pipeline-threading-test
+  (testing "transformations compose cleanly via ->>"
+    (let [res (->> ["C4" "E4"]
+                   (pat/fast 2)
+                   (pat/shift 1))]
+      (is (= ["E4" "C4" "E4" "C4"] res)))))

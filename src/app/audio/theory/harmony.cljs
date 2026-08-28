@@ -175,10 +175,19 @@
 
 (defn arp
   "Generates arpeggiator patterns (:up, :down, :up-down, :down-up, :random, :converge).
-  Examples: (arp ['C3' 'E3' 'G3'] :up-down) -> ['C3' 'E3' 'G3' 'E3'], (arp ['C3' 'E3' 'G3'] :down) -> ['G3' 'E3' 'C3']."
-  ([notes] (arp notes :up))
-  ([notes pattern]
-   (let [clean (vec (filter some? notes))]
+  Supports both (arp notes :up-down) and ->> pipelines.
+  Examples:
+    (arp ['C3' 'E3' 'G3'] :up-down) -> ['C3' 'E3' 'G3' 'E3']
+    (->> (chord :e :min9) (arp :up-down)) -> ['E3' 'G3' 'B3' 'D4' 'F#4' 'D4' 'B3' 'G3']."
+  ([notes]
+   (if (keyword? notes)
+     (fn [ch] (arp ch notes))
+     (arp notes :up)))
+  ([a b]
+   (let [[notes pattern] (if (keyword? a)
+                           [b a]
+                           [a b])
+         clean (vec (filter some? notes))]
      (if (empty? clean)
        []
        (case (keyword pattern)

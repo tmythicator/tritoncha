@@ -1,5 +1,6 @@
 (ns app.test-runner
   (:require
+   [app.audio.control.looper-test]
    [app.audio.control.mixer-test]
    [app.audio.control.session-test]
    [app.audio.dsp.busses-test]

@@ -1,19 +1,13 @@
 (ns app.audio.control.looper
   "Live looper, scheduler and master transport engine."
-  (:require [app.audio.control.session :as session]
+  (:require [app.audio.control.scheduler :as sched]
             [app.audio.dsp.engine :refer [create-sequence init-audio!]]
             [app.audio.dsp.instruments :as inst]
             [app.config :as cfg]
             [app.state :refer [audio-state engine-ctx]]
-            [app.utils.audio :refer [is-bass-track? is-drum-track?]]
+            [app.utils.audio :refer [is-drum-track?]]
             [app.utils.math :refer [clamp]]
             [reagent.core :as r]))
-
-(defn- track-audible?
-  "Checks whether a track should produce sound based on its mute/solo state and global solo mode."
-  [{:keys [muted? solo?]}]
-  (and (not @muted?)
-       (or (not (:solo-mode? @audio-state)) @solo?)))
 
 (defn- ensure-transport-running! []
   (when-let [t (:transport (:tone @engine-ctx))]
@@ -43,46 +37,46 @@
 (defn- execute-step-callback!
   "Zero-allocation step callback executed on each quantization tick of Tone.Sequence."
   [track-info time step-idx synth-node inst-key]
-  (when (track-audible? track-info)
-    (let [{:keys [mask vel dur] :or {vel cfg/default-velocity dur cfg/default-step} :as pat} @(:pattern track-info)
-          hits (or (:notes pat) (:hits-vec pat) (:pattern pat) (:hits pat) [true])
-          cnt  (count hits)]
-      (when (pos? cnt)
-        (let [masked? (when mask (nil? (nth mask (mod step-idx (count mask)))))]
-          (when-not masked?
-            (when-let [hit (nth hits (mod step-idx cnt))]
-              (let [step-vel (if (vector? vel) (nth vel (mod step-idx (count vel))) vel)]
-                (trigger-hit! hit inst-key synth-node dur time step-vel)))))))))
+  (when (sched/track-audible? track-info (:solo-mode? @audio-state))
+    (when-let [{:keys [hit vel dur]} (sched/calculate-step-hit @(:pattern track-info) step-idx)]
+      (trigger-hit! hit inst-key synth-node dur time vel))))
+
+(defn- create-track-sequence
+  "Helper instantiating a new Tone.Sequence for a track."
+  [track-info synth inst-k step]
+  (create-sequence #(execute-step-callback! track-info %1 %2 synth inst-k)
+                   (into-array (range cfg/sequence-length))
+                   step))
 
 (defn loop!
   "Schedules or hot-swaps an audio loop track in the live-coding session.
   Examples: (loop! :bass {:notes (d [1 2 3]) :step \"16n\"})."
   [track-name pattern-map]
   (init-audio!)
-  (let [tk        (keyword track-name)
-        raw-data  (if (vector? pattern-map) {:notes pattern-map} pattern-map)
-        notes-in  (:notes raw-data)
-        meta-info (when (vector? notes-in) (meta notes-in))
-        degs      (or (:deg raw-data) (:degrees raw-data) (:degrees meta-info))
-        with-degs (if (and degs (not notes-in))
-                    (let [oct (or (:oct raw-data) (:octave raw-data))]
-                      (assoc raw-data :notes (session/d degs (if oct {:octave oct} {}))))
-                    raw-data)
-        notes     (:notes with-degs)
-        oct       (or (:oct with-degs)
-                      (:octave with-degs)
-                      (when (vector? notes) (:octave (meta notes)))
-                      (:octave meta-info)
-                      (if (is-bass-track? tk) cfg/default-bass-octave cfg/default-lead-octave))
-        pat-data  (cond-> (assoc with-degs :oct oct :hits-vec notes :hits-count (count notes))
-                    degs (assoc :deg degs))
-        step      (or (:step pat-data) cfg/default-step)]
+  (let [tk       (keyword track-name)
+        pat-data (sched/normalize-pattern-data tk pattern-map)
+        step     (:step pat-data)]
     (if-let [tr (get (:active-tracks @audio-state) tk)]
-      (reset! (:pattern tr) pat-data)
-      (let [inst-k   (or (:inst pat-data) (:synth pat-data) tk)
-            synth    (or (get (:tone @engine-ctx) inst-k) (get (:tone @engine-ctx) :saw-bass))
-            tr-info  {:pattern (atom pat-data) :muted? (r/atom false) :solo? (r/atom false) :synth synth :inst-key inst-k}
-            seq-obj  (create-sequence #(execute-step-callback! tr-info %1 %2 synth inst-k) (into-array (range cfg/sequence-length)) step)]
+      (let [old-step (:step @(:pattern tr))
+            old-inst (:inst-key tr)
+            new-inst (or (:inst pat-data) (:synth pat-data) tk)
+            synth    (if (not= new-inst old-inst)
+                       (or (get (:tone @engine-ctx) new-inst) (get (:tone @engine-ctx) :saw-bass))
+                       (:synth tr))]
+        (reset! (:pattern tr) pat-data)
+        (if (or (not= step old-step) (not= new-inst old-inst))
+          (do
+            (when-let [s (:sequence tr)]
+              (try (.dispose ^js s) (catch js/Object _)))
+            (let [tr-info (assoc tr :synth synth :inst-key new-inst)
+                  seq-obj (create-track-sequence tr-info synth new-inst step)]
+              (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
+          (when (not= synth (:synth tr))
+            (swap! audio-state assoc-in [:active-tracks tk :synth] synth))))
+      (let [inst-k  (or (:inst pat-data) (:synth pat-data) tk)
+            synth   (or (get (:tone @engine-ctx) inst-k) (get (:tone @engine-ctx) :saw-bass))
+            tr-info {:pattern (atom pat-data) :muted? (r/atom false) :solo? (r/atom false) :synth synth :inst-key inst-k}
+            seq-obj (create-track-sequence tr-info synth inst-k step)]
         (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
     (ensure-transport-running!)
     (swap! audio-state assoc :active? true)
@@ -151,6 +145,19 @@
               :vel 0.4})
       :click-on)))
 
+(defn- parse-stack-args
+  "Transforms variadic arguments, pair vectors, or track maps into a canonical vector of [key spec] pairs."
+  [args]
+  (cond
+    (and (= 1 (count args)) (map? (first args)))
+    (vec (first args))
+
+    (and (= 1 (count args)) (vector? (first (first args))))
+    (first args)
+
+    :else
+    (vec args)))
+
 (defn stack!
   "Launches multiple live loops simultaneously from variadic vectors or a track map.
   Examples:
@@ -158,10 +165,7 @@
       [:kick  (pat \"k . . .  k . . .\")]
       [:snare (pat \". . . .  s . . .\")])"
   [& args]
-  (let [pairs (cond
-                (and (= 1 (count args)) (map? (first args))) (vec (first args))
-                (and (= 1 (count args)) (vector? (first (first args)))) (first args)
-                :else args)
+  (let [pairs (parse-stack-args args)
         tks   (set (map first pairs))]
     (when (some #{:kick :snare :hat} tks) (stop-loop! :drums))
     (when (contains? tks :drums) (stop-loop! :kick :snare :hat))

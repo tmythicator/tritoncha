@@ -50,6 +50,16 @@
   [{:keys [root mode]}]
   (str (str/upper-case (name (or root :e))) " " (str/upper-case (name (or mode :phrygian)))))
 
+(defn normalize-opts
+  "Normalizes octave numbers or option maps into a standard options map.
+  Examples: (normalize-opts 2 1) -> {:octave 2}, (normalize-opts {:octave 3} 1) -> {:octave 3}, (normalize-opts nil 1) -> {:octave 1}."
+  ([opts-or-oct] (normalize-opts opts-or-oct 3))
+  ([opts-or-oct default-oct]
+   (cond
+     (map? opts-or-oct) opts-or-oct
+     (number? opts-or-oct) {:octave opts-or-oct}
+     :else {:octave default-oct})))
+
 (defn enforce-stereo-mode!
   "Enforces explicit 2-channel stereo routing on WebAudio/Tone.js nodes to prevent dynamic allocation glitches."
   [^js node]

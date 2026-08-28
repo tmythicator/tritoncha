@@ -4,7 +4,7 @@
             [app.audio.theory.patterns :refer [map-notes]]
             [app.config :as cfg]
             [app.state :refer [audio-state]]
-            [app.utils.audio :refer [is-bass-track? is-drum-track? note->midi]]))
+            [app.utils.audio :refer [is-bass-track? is-drum-track? normalize-opts note->midi]]))
 
 (defn current-key
   "Returns the active musical key map from application state.
@@ -23,16 +23,23 @@
 
 (defn d
   "Resolves degree numbers using the current session key.
-  Examples: (d [1 _ 1 2]) -> ['E2' nil 'E2' 'F#2'], (d [1 3 5] 1) -> ['E1' 'G1' 'B1']."
-  ([degrees] (d degrees {}))
-  ([degrees opts-or-oct]
-   (let [{:keys [root mode octave]} (current-key)
-         opt-map (cond
-                   (map? opts-or-oct) opts-or-oct
-                   (number? opts-or-oct) {:octave opts-or-oct}
-                   :else {:octave octave})
-         effective-oct (get opt-map :octave octave)
-         res (harmony/deg root mode degrees {:octave effective-oct})]
+  Supports both (d degrees opts) and ->> pipelines.
+  Examples:
+    (d [1 _ 1 2]) -> ['E2' nil 'E2' 'F#2']
+    (d [1 3 5] 1) -> ['E1' 'G1' 'B1']
+    (->> [1 3 5] (d 1)) -> ['E1' 'G1' 'B1']."
+  ([degrees]
+   (if (or (number? degrees) (and (map? degrees) (not (vector? degrees))))
+     (fn [degs] (d degs degrees))
+     (d degrees {})))
+  ([a b]
+   (let [[degrees opts-or-oct] (if (sequential? a)
+                                 [a b]
+                                 [b a])
+         {:keys [root mode octave]} (current-key)
+         opt-map       (normalize-opts opts-or-oct octave)
+         effective-oct (:octave opt-map octave)
+         res           (harmony/deg root mode degrees {:octave effective-oct})]
      (with-meta res {:degrees degrees :octave effective-oct :root (keyword root) :mode (keyword mode)}))))
 
 (defn sc
@@ -45,21 +52,50 @@
    (let [{:keys [root mode octave]} (current-key)]
      (harmony/scale root mode {:octave octave :octaves octaves}))))
 
+(defn- transpose-track-melody
+  "Pure transform updating pattern notes by transposing pitch values by delta semitones."
+  [pat delta]
+  (if-let [notes (or (:notes pat) (:pattern pat))]
+    (let [tr-notes (map-notes #(harmony/transpose % delta) notes)]
+      (assoc pat
+             :notes tr-notes
+             :hits-vec tr-notes
+             :hits-count (count tr-notes)))
+    pat))
+
+(defn- update-track-melody
+  "Pure transform modulating pattern notes to new key context or applying chromatic pitch shift."
+  [pat track-key delta-st {:keys [root mode oct-shift]}]
+  (let [notes (or (:notes pat) (:pattern pat))
+        degs  (or (:deg pat) (:degrees pat) (when (vector? notes) (:degrees (meta notes))))]
+    (cond
+      degs
+      (let [base-oct  (or (:oct pat) (:octave pat)
+                          (when (vector? notes) (:octave (meta notes)))
+                          (if (is-bass-track? track-key) cfg/default-bass-octave cfg/default-lead-octave))
+            track-oct (+ base-oct oct-shift)
+            new-notes (harmony/deg root mode degs {:octave track-oct})]
+        (assoc pat
+               :notes new-notes
+               :hits-vec new-notes
+               :hits-count (count new-notes)
+               :deg degs
+               :oct track-oct))
+
+      notes
+      (transpose-track-melody pat delta-st)
+
+      :else pat)))
+
 (defn transpose-all!
   "Transposes all active melodic loops by N semitones live.
   Examples: (transpose-all! 2), (transpose-all! -1)."
   [semitones]
   (let [delta (or semitones 0)]
     (when-not (zero? delta)
-      (doseq [[kw tr] (:active-tracks @audio-state)]
-        (let [cur-pat @(:pattern tr)]
-          (when-not (is-drum-track? kw)
-            (when-let [notes (or (:notes cur-pat) (:pattern cur-pat))]
-              (let [tr-notes (map-notes #(harmony/transpose % delta) notes)]
-                (swap! (:pattern tr) assoc
-                       :notes tr-notes
-                       :hits-vec tr-notes
-                       :hits-count (count tr-notes))))))))
+      (doseq [[kw tr] (:active-tracks @audio-state)
+              :when (not (is-drum-track? kw))]
+        (swap! (:pattern tr) transpose-track-melody delta)))
     delta))
 
 (defn modulate-all!
@@ -74,26 +110,9 @@
          old-midi   (note->midi (str (name old-root) "3"))
          new-midi   (note->midi (str (name root) "3"))
          delta-st   (+ (- new-midi old-midi) (* 12 oct-shift))
+         key-info   {:root root :mode mode :oct-shift oct-shift}
          new-k      (set-key! root mode target-oct)]
-     (doseq [[kw tr] (:active-tracks @audio-state)]
-       (let [cur-pat @(:pattern tr)]
-         (when-not (is-drum-track? kw)
-           (let [notes (or (:notes cur-pat) (:pattern cur-pat))
-                 degs  (or (:deg cur-pat) (:degrees cur-pat) (when (vector? notes) (:degrees (meta notes))))]
-             (if degs
-               (let [base-oct  (or (:oct cur-pat) (:octave cur-pat) (when (vector? notes) (:octave (meta notes))) (if (is-bass-track? kw) cfg/default-bass-octave cfg/default-lead-octave))
-                     track-oct (+ base-oct oct-shift)
-                     new-notes (harmony/deg root mode degs {:octave track-oct})]
-                 (swap! (:pattern tr) assoc
-                        :notes new-notes
-                        :hits-vec new-notes
-                        :hits-count (count new-notes)
-                        :deg degs
-                        :oct track-oct))
-               (when notes
-                 (let [tr-notes (map-notes #(harmony/transpose % delta-st) notes)]
-                   (swap! (:pattern tr) assoc
-                          :notes tr-notes
-                          :hits-vec tr-notes
-                          :hits-count (count tr-notes)))))))))
+     (doseq [[kw tr] (:active-tracks @audio-state)
+             :when (not (is-drum-track? kw))]
+       (swap! (:pattern tr) update-track-melody kw delta-st key-info))
      new-k)))
