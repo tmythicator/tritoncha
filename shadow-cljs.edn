@@ -17,7 +17,7 @@
         :modules {:main {:init-fn app.core/init!}}
         :js-options {:resolve-mode :npm}
         :compiler-options {:output-feature :es6}
-        :after-load app.core/reload!}
+        :devtools {:after-load app.core/reload!}}
 
   :test {:target :node-test
          :output-to "target/test.cjs"
