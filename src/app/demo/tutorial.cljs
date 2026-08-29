@@ -1,9 +1,9 @@
 (ns app.demo.tutorial
   "Live-coding audio + visuals tutorial for Tritoncha."
   (:require [app.api :refer [_ arp b! c! chord d definst! deftrack! demo! demo-stop!
-                             drop! euc f! fast fb! jam! l! mod-all! pat redrum! rev
-                             s! scale scene! slow stack! stop!
-                             sw! tr-all! undrum! v! w! wet!]]))
+                             drop! euc every-n f! fast fb! jam! l! mod-all! pat redrum! rev
+                             s! scale scene! shift slow sometimes sometimes-by stack! stop!
+                             sw! take-steps tr-all! undrum! v! w! wet!]]))
 
 (comment
   ;; =============================================================================
@@ -59,6 +59,66 @@
 
   ;; Restore the syncopated breakbeat:
   (l! :kick {:pattern (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
+
+  ;; Threading Pipelines (->>)
+  ;; 1. Shifting and doubling an arpeggio on the fly
+  (l! :arp
+      {:inst :pad
+       :notes (->> (chord :e :min9 3)
+                   (arp :up-down)
+                   (fast 2)
+                   (shift 2))
+       :step "16n"
+       :vel 0.45})
+
+  ;; 2. Probabilistic reverse: 50% chance to flip each bar
+  (l! :arp
+      {:inst :pad
+       :notes (->> (chord :e :min9 3)
+                   (fast 8)
+                   (arp :up-down)
+                   (sometimes rev))
+       :step "16n"
+       :vel 0.9})
+
+  ;; 3. Morphing degree melody pipeline
+  (l! :bass
+      {:inst :bass
+       :notes (->> [1 _ 1 2 _ 1 4 3]
+                   (fast 2)
+                   (shift 1)
+                   (d 1))
+       :step "16n"
+       :dur "16n"
+       :vel 0.95})
+
+  ;; 4. Breakbeat transformation pipeline:
+  (l! :kick
+      {:pattern (->> "k . . .  k . . .  . . k .  . . . ."
+                     (pat)
+                     (fast 2)
+                     (shift 4))
+       :step "64n"})
+
+  ;; 5. Polyrhythmic truncation with take-steps:
+  (l! :hat
+      {:inst :hh-c
+       :mask (->> (euc 7 16)
+                  (shift 2)
+                  (take-steps 12))
+       :step "16n"
+       :dur "32n"
+       :vel 0.6})
+
+  ;; 6. Probabilistic pitch mutations with sometimes-by and every-n:
+  (l! :lead
+      {:inst :pad
+       :notes (->> (chord :e :min9 3)
+                   (arp :random)
+                   (sometimes-by 0.3 rev)
+                   (every-n 4 (partial fast 2)))
+       :step "16n"
+       :vel 0.4})
 
   ;; Harmonic Modulation (mod-all!, tr-all!)
 

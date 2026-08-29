@@ -24,7 +24,7 @@
 
 (defn- toggle-track-mute! [track-key]
   (when-let [tr (get (:active-tracks @audio-state) (keyword track-key))]
-    (swap! (:muted? tr) not)))
+    (swap! (:pattern tr) update :muted? not)))
 
 (defn hud-component []
   (let [{:keys [hud-visible? stats-visible? tutorial-visible? mobile-notice-dismissed?]} @ui-state]

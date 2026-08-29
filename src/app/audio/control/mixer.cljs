@@ -47,7 +47,7 @@
   [& track-keys]
   (doseq [k track-keys]
     (when-let [tr (get (:active-tracks @audio-state) (keyword k))]
-      (reset! (:muted? tr) true)))
+      (swap! (:pattern tr) assoc :muted? true)))
   (keys (:active-tracks @audio-state)))
 
 (defn unmute!
@@ -56,10 +56,10 @@
   [& track-keys]
   (if (or (empty? track-keys) (= (first track-keys) :all))
     (doseq [[_ tr] (:active-tracks @audio-state)]
-      (reset! (:muted? tr) false))
+      (swap! (:pattern tr) assoc :muted? false))
     (doseq [k track-keys]
       (when-let [tr (get (:active-tracks @audio-state) (keyword k))]
-        (reset! (:muted? tr) false))))
+        (swap! (:pattern tr) assoc :muted? false))))
   (keys (:active-tracks @audio-state)))
 
 (defn solo!
@@ -69,7 +69,7 @@
   (let [solo-set (set (map keyword track-keys))]
     (swap! audio-state assoc :solo-mode? true)
     (doseq [[k tr] (:active-tracks @audio-state)]
-      (reset! (:solo? tr) (contains? solo-set k))))
+      (swap! (:pattern tr) assoc :solo? (contains? solo-set k))))
   track-keys)
 
 (defn unsolo!
@@ -77,7 +77,7 @@
   []
   (swap! audio-state assoc :solo-mode? false)
   (doseq [[_ tr] (:active-tracks @audio-state)]
-    (reset! (:solo? tr) false))
+    (swap! (:pattern tr) assoc :solo? false))
   :unsoloed)
 
 (defn undrum!
@@ -85,7 +85,7 @@
   []
   (doseq [[k tr] (:active-tracks @audio-state)]
     (when (is-drum-track? k)
-      (reset! (:muted? tr) true)))
+      (swap! (:pattern tr) assoc :muted? true)))
   (mute-bus! :bus/drums)
   (swap! audio-state assoc :drums-muted? true)
   :undrummed)
@@ -95,7 +95,7 @@
   []
   (doseq [[k tr] (:active-tracks @audio-state)]
     (when (is-drum-track? k)
-      (reset! (:muted? tr) false)))
+      (swap! (:pattern tr) assoc :muted? false)))
   (unmute-bus! :bus/drums)
   (swap! audio-state assoc :drums-muted? false)
   :redrummed)

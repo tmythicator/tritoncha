@@ -1,6 +1,6 @@
 {:source-paths ["src" "test"]
  :dependencies
- [[reagent "1.2.0"]
+ [[reagent "2.0.1"]
   [cider/cider-nrepl "0.62.2"]
   [org.babashka/sci "0.9.44"]]
 
@@ -17,7 +17,7 @@
         :modules {:main {:init-fn app.core/init!}}
         :js-options {:resolve-mode :npm}
         :compiler-options {:output-feature :es6}
-        :after-load app.core/reload!}
+        :devtools {:after-load app.core/reload!}}
 
   :test {:target :node-test
          :output-to "target/test.cjs"

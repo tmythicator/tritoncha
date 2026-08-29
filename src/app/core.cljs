@@ -85,7 +85,7 @@
   (bind-events!)
   (js/console.log "Audio + WebGL Engines Ready. Connect REPL or evaluate live in app.live.jam."))
 
-(defn ^:export reload! []
+(defn ^:dev/after-load ^:export reload! []
   (js/console.log "Hot Reloading ClojureScript app.core...")
   (render-ui!)
   (when-let [{:keys [scene ^js mesh]} (:three @engine-ctx)]

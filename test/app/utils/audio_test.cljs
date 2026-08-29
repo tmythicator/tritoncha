@@ -38,3 +38,9 @@
     (is (= "E PHRYGIAN" (audio/format-key {:root :e :mode :phrygian})))
     (is (= "D DORIAN" (audio/format-key {:root :d :mode :dorian :octave 2})))
     (is (= "E PHRYGIAN" (audio/format-key nil)))))
+
+(deftest normalize-opts-test
+  (testing "normalize-opts unifies numbers and option maps"
+    (is (= {:octave 2} (audio/normalize-opts 2 1)))
+    (is (= {:octave 4 :octaves 2} (audio/normalize-opts {:octave 4 :octaves 2} 1)))
+    (is (= {:octave 1} (audio/normalize-opts nil 1)))))

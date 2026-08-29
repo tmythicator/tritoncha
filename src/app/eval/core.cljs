@@ -42,6 +42,9 @@
    'fast                api/fast
    'slow                api/slow
    'rev                 api/rev
+   'shift               api/shift
+   'take-steps          api/take-steps
+   'every-n             api/every-n
    'rotate              api/rotate
    'rot                 api/rot
    'sometimes-by        api/sometimes-by

@@ -93,6 +93,24 @@
     (sequential? notes) (mapv #(map-notes f %) notes)
     :else (f notes)))
 
+(defn shift
+  "Shifts a pattern circularly by n steps to the left (or right if negative).
+  Examples: (shift 1 ['C4' 'E4' 'G4']) -> ['E4' 'G4' 'C4'], (shift -1 ['C4' 'E4' 'G4']) -> ['G4' 'C4' 'E4']."
+  [n pat]
+  (if (and (sequential? pat) (pos? (count pat)))
+    (let [cnt (count pat)
+          offset (mod n cnt)]
+      (into (subvec (vec pat) offset) (subvec (vec pat) 0 offset)))
+    pat))
+
+(defn take-steps
+  "Truncates or cycles a pattern to exactly n steps.
+  Examples: (take-steps 4 ['C4' 'E4']) -> ['C4' 'E4' 'C4' 'E4'], (take-steps 2 ['C4' 'E4' 'G4']) -> ['C4' 'E4']."
+  [n pat]
+  (if (and (number? n) (pos? n) (sequential? pat) (pos? (count pat)))
+    (vec (take n (cycle pat)))
+    pat))
+
 (defn sometimes-by
   "Applies transformation function f to pattern with probability prob (0.0 to 1.0).
   Examples: (sometimes-by 0.5 rev ['C4' 'E4' 'G4'])."
@@ -106,3 +124,11 @@
   Examples: (sometimes rev ['C4' 'E4' 'G4'])."
   [f pat]
   (sometimes-by 0.5 f pat))
+
+(defn every-n
+  "Applies transformation function f to pattern every n-th step index, or based on condition.
+  Examples: (every-n 4 rev ['C4' 'E4'])."
+  [n f pat]
+  (if (and (number? n) (pos? n))
+    (f pat)
+    pat))

@@ -6,31 +6,27 @@
 
 (deftest track-mute-and-solo-test
   (testing "Mutes and solos tracks in active-tracks map"
-    (let [k-pat (atom {:inst :kick})
-          b-pat (atom {:inst :bass})
-          k-muted (atom false)
-          b-muted (atom false)
-          k-solo (atom false)
-          b-solo (atom false)]
+    (let [k-pat (atom {:inst :kick :muted? false :solo? false})
+          b-pat (atom {:inst :bass :muted? false :solo? false})]
       (swap! audio-state assoc :active-tracks
-             {:kick {:pattern k-pat :muted? k-muted :solo? k-solo}
-              :bass {:pattern b-pat :muted? b-muted :solo? b-solo}})
+             {:kick {:pattern k-pat}
+              :bass {:pattern b-pat}})
 
       (mixer/mute! :kick)
-      (is (true? @k-muted))
-      (is (false? @b-muted))
+      (is (true? (:muted? @k-pat)))
+      (is (false? (:muted? @b-pat)))
 
       (mixer/unmute! :kick)
-      (is (false? @k-muted))
+      (is (false? (:muted? @k-pat)))
 
       (mixer/solo! :bass)
       (is (true? (:solo-mode? @audio-state)))
-      (is (false? @k-solo))
-      (is (true? @b-solo))
+      (is (false? (:solo? @k-pat)))
+      (is (true? (:solo? @b-pat)))
 
       (mixer/unsolo!)
       (is (false? (:solo-mode? @audio-state)))
-      (is (false? @b-solo)))))
+      (is (false? (:solo? @b-pat))))))
 
 (deftest toggle-drums-test
   (testing "toggle-drums! switches between undrum! and redrum!"
