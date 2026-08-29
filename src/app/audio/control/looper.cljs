@@ -8,6 +8,13 @@
             [app.utils.audio :refer [is-drum-track?]]
             [app.utils.math :refer [clamp]]))
 
+(def ^:private click-pattern
+  {:inst :click
+   :notes ["C6" "G5" "G5" "G5"]
+   :step "4n"
+   :dur "32n"
+   :vel 0.4})
+
 (defn- ensure-transport-running! []
   (when-let [t (:transport (:tone @engine-ctx))]
     (when (not= (.-state ^js t) "started")
@@ -17,6 +24,7 @@
   "Dispatches a single rhythm/melodic hit to Tone.js instrument or drum voice."
   [hit inst-key synth-node dur time vel]
   (cond
+    ;; e.g. [:kick 1.0 "D1"] or [:saw-bass 0.95 "E1"]
     (and (vector? hit) (keyword? (first hit)))
     (let [[k v n] hit
           final-vel (or v vel)]
@@ -24,12 +32,11 @@
         (inst/trigger-drum! k n dur time final-vel)
         (inst/trigger-note! (or (get (:tone @engine-ctx) k) synth-node) n dur time final-vel k)))
 
-    (and (keyword? hit) (is-drum-track? hit))
-    (inst/trigger-drum! hit nil dur time vel)
+    ;; e.g. (:kick, :snare) or (true)
+    (or (is-drum-track? hit) (and (true? hit) (is-drum-track? inst-key)))
+    (inst/trigger-drum! (if (keyword? hit) hit inst-key) nil dur time vel)
 
-    (and (true? hit) (is-drum-track? inst-key))
-    (inst/trigger-drum! inst-key nil dur time vel)
-
+    ;; e.g. ("E2", :eb2) or (["E3" "G3" "B3"])
     :else
     (inst/trigger-note! synth-node hit dur time vel inst-key)))
 
@@ -55,6 +62,12 @@
                    (into-array (range cfg/sequence-length))
                    step))
 
+(defn- mount-track!
+  "Instantiates and registers a Tone.Sequence for an active track."
+  [tk tr-info synth inst-k step]
+  (let [seq-obj (create-track-sequence tr-info synth inst-k step)]
+    (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
+
 (defn loop!
   "Schedules or hot-swaps an audio loop track in the live-coding session.
   Examples: (loop! :bass {:notes (d [1 2 3]) :step \"16n\"})."
@@ -73,15 +86,12 @@
           (do
             (when-let [s (:sequence tr)]
               (try (.dispose ^js s) (catch js/Object _)))
-            (let [tr-info (assoc tr :synth synth :inst-key inst-k)
-                  seq-obj (create-track-sequence tr-info synth inst-k step)]
-              (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
+            (mount-track! tk (assoc tr :synth synth :inst-key inst-k) synth inst-k step))
           (when (not= synth (:synth tr))
             (swap! audio-state assoc-in [:active-tracks tk :synth] synth))))
       (let [pat-atom (atom (assoc pat-data :muted? false :solo? false))
-            tr-info  {:pattern pat-atom :synth synth :inst-key inst-k}
-            seq-obj  (create-track-sequence tr-info synth inst-k step)]
-        (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
+            tr-info  {:pattern pat-atom :synth synth :inst-key inst-k}]
+        (mount-track! tk tr-info synth inst-k step)))
     (ensure-transport-running!)
     (swap! audio-state assoc :active? true)
     tk))
@@ -100,14 +110,12 @@
   "Stops and removes active tracks by keyword(s).
   Examples: (stop-loop! :arp), (stop-loop! :kick :snare :hat)."
   [& track-keys]
-  (let [tks (flatten track-keys)]
-    (doseq [track-key tks]
-      (let [tk (keyword track-key)]
-        (when-let [tr (get (:active-tracks @audio-state) tk)]
-          (when-let [s (:sequence tr)]
-            (try (.dispose ^js s) (catch js/Object _)))
-          (swap! audio-state update :active-tracks dissoc tk))))
-    (vec tks)))
+  (let [kw-set (set (map keyword (flatten track-keys)))]
+    (doseq [tk kw-set]
+      (when-let [s (:sequence (get (:active-tracks @audio-state) tk))]
+        (try (.dispose ^js s) (catch js/Object _))))
+    (swap! audio-state update :active-tracks #(apply dissoc % kw-set))
+    (vec kw-set)))
 
 (def unstack! stop-loop!)
 
@@ -141,36 +149,23 @@
       (stop-loop! :click)
       :click-off)
     (do
-      (loop! :click
-             {:inst :click
-              :notes ["C6" "G5" "G5" "G5"]
-              :step "4n"
-              :dur "32n"
-              :vel 0.4})
+      (loop! :click click-pattern)
       :click-on)))
 
-(defn- parse-stack-args
-  "Transforms variadic arguments, pair vectors, or track maps into a canonical vector of [key spec] pairs."
-  [args]
-  (cond
-    (and (= 1 (count args)) (map? (first args)))
-    (vec (first args))
-
-    (and (= 1 (count args)) (vector? (first (first args))))
-    (first args)
-
-    :else
-    (vec args)))
-
 (defn stack!
-  "Launches multiple live loops simultaneously from variadic vectors or a track map.
+  "Launches multiple live loops simultaneously from variadic vectors, track pairs, or a track map.
   Examples:
     (stack!
       [:kick  (pat \"k . . .  k . . .\")]
-      [:snare (pat \". . . .  s . . .\")])"
+      [:snare (pat \". . . .  s . . .\")])
+    (stack! {:kick (pat \"k . . .\") :snare (pat \"s . . .\")})"
   [& args]
-  (let [pairs (parse-stack-args args)
-        tks   (set (map first pairs))]
+  (let [first-arg (first args)
+        pairs     (cond
+                    (map? first-arg) first-arg
+                    (and (= 1 (count args)) (vector? (first first-arg))) first-arg
+                    :else args)
+        tks       (into #{} (map first) pairs)]
     (when (some #{:kick :snare :hat} tks) (stop-loop! :drums))
     (when (contains? tks :drums) (stop-loop! :kick :snare :hat))
     (doseq [[k spec] pairs]
