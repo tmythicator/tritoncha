@@ -9,9 +9,9 @@
   (if (empty? tracks)
     "0 (idle)"
     (let [details (for [[kw info] tracks]
-                    (let [muted? (boolean @(:muted? info))
-                          solo?  (boolean @(:solo? info))
-                          pat    @(:pattern info)
+                    (let [pat    @(:pattern info)
+                          muted? (boolean (:muted? pat))
+                          solo?  (boolean (:solo? pat))
                           step   (or (:step pat) cfg/default-step)
                           inst   (or (:inst pat) kw)
                           status (cond solo? "[SOLO]" muted? "[MUTED]" :else "live")]

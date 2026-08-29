@@ -20,11 +20,11 @@
           strings-pat (atom {:inst :strings :notes [(chord :e :min7 3)] :oct 3})
           drums-pat   (atom {:inst :drums   :notes [[:kick 1.0 "D1"] [:snare 1.0 "G3"]]})]
       (swap! audio-state assoc :active-tracks
-             {:bass    {:pattern bass-pat    :muted? (atom false) :solo? (atom false)}
-              :sub     {:pattern sub-pat     :muted? (atom false) :solo? (atom false)}
-              :lead    {:pattern lead-pat    :muted? (atom false) :solo? (atom false)}
-              :strings {:pattern strings-pat :muted? (atom false) :solo? (atom false)}
-              :drums   {:pattern drums-pat   :muted? (atom false) :solo? (atom false)}})
+             {:bass    {:pattern bass-pat}
+              :sub     {:pattern sub-pat}
+              :lead    {:pattern lead-pat}
+              :strings {:pattern strings-pat}
+              :drums   {:pattern drums-pat}})
 
       ;; Shift UP by +3 semitones (E -> G)
       (session/transpose-all! 3)
@@ -50,9 +50,9 @@
           lead-pat (atom {:inst :lead :notes (deg :e :phrygian [1 3 5 7] {:octave 3}) :deg [1 3 5 7] :oct 3})
           kick-pat (atom {:inst :kick :notes [:kick nil :kick nil]})]
       (swap! audio-state assoc :active-tracks
-             {:bass {:pattern bass-pat :muted? (atom false) :solo? (atom false)}
-              :lead {:pattern lead-pat :muted? (atom false) :solo? (atom false)}
-              :kick {:pattern kick-pat :muted? (atom false) :solo? (atom false)}})
+             {:bass {:pattern bass-pat}
+              :lead {:pattern lead-pat}
+              :kick {:pattern kick-pat}})
 
       ;; Modulate to D Dorian (2-arg call without octave override)
       (session/modulate-all! :d :dorian)

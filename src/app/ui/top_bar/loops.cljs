@@ -2,7 +2,7 @@
   "Top bar active loops monitor and interactive mute control tags subcomponent.")
 
 (defn- loop-tag-button [lk tr toggle-track-mute!]
-  (let [muted? (boolean @(:muted? tr))]
+  (let [muted? (boolean (:muted? @(:pattern tr)))]
     [:button.loop-tag {:on-click #(toggle-track-mute! lk)
                        :class (if muted? "muted" "active")
                        :title (str "Click to " (if muted? "unmute " "mute ") (name lk))}

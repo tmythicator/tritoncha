@@ -11,9 +11,9 @@
     "bus-master"))
 
 (defn- track-card [kw info]
-  (let [muted?   (boolean @(:muted? info))
-        solo?    (boolean @(:solo? info))
-        pat      @(:pattern info)
+  (let [pat      @(:pattern info)
+        muted?   (boolean (:muted? pat))
+        solo?    (boolean (:solo? pat))
         step     (or (:step pat) "16n")
         dur      (or (:dur pat) step)
         inst     (or (:inst pat) kw)

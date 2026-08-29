@@ -5,14 +5,10 @@
             [app.utils.audio :refer [is-bass-track?]]))
 
 (defn track-audible?
-  "Checks whether a track should produce sound based on its mute/solo state and global solo mode."
-  ([track-info solo-mode?]
-   (let [muted?    (:muted? track-info)
-         solo?     (:solo? track-info)
-         is-muted? (if (and muted? (satisfies? IDeref muted?)) @muted? (boolean muted?))
-         is-solo?  (if (and solo? (satisfies? IDeref solo?)) @solo? (boolean solo?))]
-     (and (not is-muted?)
-          (or (not solo-mode?) is-solo?)))))
+  "Checks whether a track should produce sound based on its pattern and global solo mode."
+  [{:keys [muted? solo?]} solo-mode?]
+  (and (not (boolean muted?))
+       (or (not (boolean solo-mode?)) (boolean solo?))))
 
 (defn normalize-pattern-data
   "Pure transform that canonicalizes pattern specifications, resolving degrees and precalculating arrays.

@@ -6,8 +6,7 @@
             [app.config :as cfg]
             [app.state :refer [audio-state engine-ctx]]
             [app.utils.audio :refer [is-drum-track?]]
-            [app.utils.math :refer [clamp]]
-            [reagent.core :as r]))
+            [app.utils.math :refer [clamp]]))
 
 (defn- ensure-transport-running! []
   (when-let [t (:transport (:tone @engine-ctx))]
@@ -34,12 +33,20 @@
     :else
     (inst/trigger-note! synth-node hit dur time vel inst-key)))
 
+(defn- resolve-track-synth
+  "Pure helper determining the target synthesizer node and instrument key."
+  [track-key pat-data]
+  (let [inst-k (or (:inst pat-data) (:synth pat-data) track-key)
+        synth  (or (get (:tone @engine-ctx) inst-k) (get (:tone @engine-ctx) :saw-bass))]
+    [inst-k synth]))
+
 (defn- execute-step-callback!
   "Zero-allocation step callback executed on each quantization tick of Tone.Sequence."
   [track-info time step-idx synth-node inst-key]
-  (when (sched/track-audible? track-info (:solo-mode? @audio-state))
-    (when-let [{:keys [hit vel dur]} (sched/calculate-step-hit @(:pattern track-info) step-idx)]
-      (trigger-hit! hit inst-key synth-node dur time vel))))
+  (let [pat @(:pattern track-info)]
+    (when (sched/track-audible? pat (:solo-mode? @audio-state))
+      (when-let [{:keys [hit vel dur]} (sched/calculate-step-hit pat step-idx)]
+        (trigger-hit! hit inst-key synth-node dur time vel)))))
 
 (defn- create-track-sequence
   "Helper instantiating a new Tone.Sequence for a track."
@@ -53,30 +60,27 @@
   Examples: (loop! :bass {:notes (d [1 2 3]) :step \"16n\"})."
   [track-name pattern-map]
   (init-audio!)
-  (let [tk       (keyword track-name)
-        pat-data (sched/normalize-pattern-data tk pattern-map)
-        step     (:step pat-data)]
+  (let [tk             (keyword track-name)
+        pat-data       (sched/normalize-pattern-data tk pattern-map)
+        step           (:step pat-data)
+        [inst-k synth] (resolve-track-synth tk pat-data)]
     (if-let [tr (get (:active-tracks @audio-state) tk)]
-      (let [old-step (:step @(:pattern tr))
-            old-inst (:inst-key tr)
-            new-inst (or (:inst pat-data) (:synth pat-data) tk)
-            synth    (if (not= new-inst old-inst)
-                       (or (get (:tone @engine-ctx) new-inst) (get (:tone @engine-ctx) :saw-bass))
-                       (:synth tr))]
-        (reset! (:pattern tr) pat-data)
-        (if (or (not= step old-step) (not= new-inst old-inst))
+      (let [old-pat  @(:pattern tr)
+            old-step (:step old-pat)
+            old-inst (:inst-key tr)]
+        (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false)))
+        (if (or (not= step old-step) (not= inst-k old-inst))
           (do
             (when-let [s (:sequence tr)]
               (try (.dispose ^js s) (catch js/Object _)))
-            (let [tr-info (assoc tr :synth synth :inst-key new-inst)
-                  seq-obj (create-track-sequence tr-info synth new-inst step)]
+            (let [tr-info (assoc tr :synth synth :inst-key inst-k)
+                  seq-obj (create-track-sequence tr-info synth inst-k step)]
               (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
           (when (not= synth (:synth tr))
             (swap! audio-state assoc-in [:active-tracks tk :synth] synth))))
-      (let [inst-k  (or (:inst pat-data) (:synth pat-data) tk)
-            synth   (or (get (:tone @engine-ctx) inst-k) (get (:tone @engine-ctx) :saw-bass))
-            tr-info {:pattern (atom pat-data) :muted? (r/atom false) :solo? (r/atom false) :synth synth :inst-key inst-k}
-            seq-obj (create-track-sequence tr-info synth inst-k step)]
+      (let [pat-atom (atom (assoc pat-data :muted? false :solo? false))
+            tr-info  {:pattern pat-atom :synth synth :inst-key inst-k}
+            seq-obj  (create-track-sequence tr-info synth inst-k step)]
         (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
     (ensure-transport-running!)
     (swap! audio-state assoc :active? true)
