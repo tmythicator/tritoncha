@@ -47,7 +47,7 @@
   [spec]
   (when-let [spec-map (resolve-instrument-spec spec)]
     (let [{:keys [type options maxPolyphony]} spec-map
-          js-opts (or options #js {})]
+          js-opts (if (map? options) (clj->js options) (or options #js {}))]
       (case type
         :synth     (tone/Synth. js-opts)
         :mono      (tone/MonoSynth. js-opts)
@@ -56,7 +56,7 @@
         :membrane  (tone/MembraneSynth. js-opts)
         :noise     (tone/NoiseSynth. js-opts)
         :poly      (let [ps (tone/PolySynth. tone/Synth #js {:maxPolyphony (or maxPolyphony cfg/default-max-polyphony)})]
-                     (when options (.set ps (clj->js options)))
+                     (when options (.set ps js-opts))
                      ps)
         (tone/Synth. js-opts)))))
 
@@ -113,19 +113,15 @@
   (when-let [voice-spec (get core-drum-voices (keyword drum-key))]
     (let [tone-nodes (:tone @engine-ctx)
           v          (or vel 0.9)
-          pulse-val  (:pulse voice-spec 1.0)]
+          pulse-val  (:pulse voice-spec 1.0)
+          layers     (or (:layers voice-spec) [voice-spec])]
       (try
-        (if-let [layers (:layers voice-spec)]
-          (doseq [{:keys [node default-note dur vel-scale]} layers]
-            (let [target-node (get tone-nodes node)
-                  target-note (or pitch default-note)
-                  target-dur  (or dur (:dur voice-spec) cfg/default-step)
-                  target-vel  (* v (or vel-scale 1.0))]
-              (trigger-synth-voice! target-node target-note target-dur time target-vel)))
-          (let [target-node (get tone-nodes (:node voice-spec))
-                target-note (or pitch (:default-note voice-spec))
-                target-dur  (or dur (:dur voice-spec) cfg/default-step)
-                target-vel  (* v (:vel-scale voice-spec 1.0))]
+        (dotimes [i (count layers)]
+          (let [layer       (nth layers i)
+                target-node (get tone-nodes (:node layer))
+                target-note (or pitch (:default-note layer))
+                target-dur  (or dur (:dur layer) (:dur voice-spec) cfg/default-step)
+                target-vel  (* v (or (:vel-scale layer) 1.0))]
             (trigger-synth-voice! target-node target-note target-dur time target-vel)))
         (pulse! pulse-val)
         (catch js/Object e
@@ -139,12 +135,11 @@
           d (or dur cfg/default-step)]
       (try
         (if (vector? note-val)
-          (let [notes (into-array (filter some? note-val))]
-            (when (pos? (alength notes))
-              (if (exists? (.-maxPolyphony synth-node))
-                (.triggerAttackRelease ^js synth-node notes d time v)
-                (doseq [n notes]
-                  (.triggerAttackRelease ^js synth-node n d time v)))))
+          (if (exists? (.-maxPolyphony synth-node))
+            (.triggerAttackRelease ^js synth-node (to-array note-val) d time v)
+            (dotimes [i (count note-val)]
+              (when-let [n (nth note-val i)]
+                (.triggerAttackRelease ^js synth-node n d time v))))
           (.triggerAttackRelease ^js synth-node (if (keyword? note-val) (name note-val) (str note-val)) d time v))
         (pulse! (get inst-pulses (keyword inst-key) 0.8))
         (catch js/Object e
