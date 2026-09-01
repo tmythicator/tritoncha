@@ -18,9 +18,10 @@
    :routes
    [[:bus/drums :master-filter]
     [:bus/bass :distort :master-filter]
-    [:bus/space :delay :reverb :destination]
-    [:bus/direct :destination]
-    [:master-filter :destination]]})
+    [:bus/space :delay :reverb :limiter]
+    [:bus/direct :limiter]
+    [:master-filter :limiter]
+    [:limiter :destination]]})
 
 (def dub-echo-chamber
   "Heavy dub routing with tape delay feedback and cathedral reverb."
@@ -40,9 +41,10 @@
    :routes
    [[:bus/drums :master-filter]
     [:bus/bass :distort :master-filter]
-    [:bus/space :delay :reverb :destination]
-    [:bus/direct :destination]
-    [:master-filter :destination]]})
+    [:bus/space :delay :reverb :limiter]
+    [:bus/direct :limiter]
+    [:master-filter :limiter]
+    [:limiter :destination]]})
 
 (def cyber-glitch
   "Aggressive industrial DSP graph with bitcrusher and resonance filtering."
@@ -63,9 +65,10 @@
    :routes
    [[:bus/drums :crusher :master-filter]
     [:bus/bass :distort :master-filter]
-    [:bus/space :delay :reverb :destination]
-    [:bus/direct :destination]
-    [:master-filter :destination]]})
+    [:bus/space :delay :reverb :limiter]
+    [:bus/direct :limiter]
+    [:master-filter :limiter]
+    [:limiter :destination]]})
 
 (def core-routes
   {:default      default-graph

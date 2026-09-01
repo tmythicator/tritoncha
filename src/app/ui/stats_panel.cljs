@@ -2,6 +2,7 @@
   "Audio engine statistics panel coordinating telemetry, DSP graph and loops monitors."
   (:require
    [app.audio.dsp.telemetry :refer [telemetry-snapshot]]
+   [app.config :as cfg]
    [app.state :refer [audio-state visual-state]]
    [app.ui.stats.loops :refer [active-loops-component]]
    [app.ui.stats.routing-graph :refer [routing-graph-component]]
@@ -28,23 +29,25 @@
    [:span.neo-foot-cmd "> ./tritoncha --stats"]
    [:span.neo-foot-hint "[Press I or click [X] to close]"]])
 
-(defn stats-panel-component [_]
-  (let [tick-atom   (r/atom 0)
-        interval-id (atom nil)]
+(defn stats-panel-component [_props]
+  (let [live-snap (atom (telemetry-snapshot))
+        timer-id  (atom nil)]
     (r/create-class
      {:component-did-mount
-      (fn [_]
-        (reset! interval-id (js/setInterval #(swap! tick-atom inc) 200)))
-
+      (fn [this]
+        (reset! timer-id
+                (js/setInterval (fn []
+                                  (reset! live-snap (telemetry-snapshot))
+                                  (r/force-update this))
+                                cfg/stats-refresh-interval-ms)))
       :component-will-unmount
-      (fn [_]
-        (when-let [id @interval-id]
-          (js/clearInterval id)))
-
+      (fn [_this]
+        (when-let [id @timer-id]
+          (js/clearInterval id)
+          (reset! timer-id nil)))
       :reagent-render
       (fn [{:keys [on-close]}]
-        (let [_            @tick-atom
-              snap         (telemetry-snapshot)
+        (let [snap         @live-snap
               tracks-map   (or (:active-tracks @audio-state) {})
               key-data     (:key @audio-state)
               key-str      (format-key key-data)

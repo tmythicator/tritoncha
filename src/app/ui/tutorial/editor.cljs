@@ -1,9 +1,31 @@
 (ns app.ui.tutorial.editor
-  "Live code editor subcomponent."
+  "Live code editor subcomponent with state persistence."
   (:require [app.eval.buffer :as buffer]))
 
-(defn editor-component [{:keys [code-atom on-eval-line on-eval-all]}]
-  (let [handle-key-down
+(defonce editor-state
+  (atom {:scroll-top  0
+         :selection-s 0
+         :selection-e 0}))
+
+(defn editor-component [{:keys [on-eval-line on-eval-all default-content]}]
+  (let [textarea-ref (atom nil)
+        sync-state!
+        (fn [^js ta]
+          (when ta
+            (reset! editor-state {:scroll-top  (.-scrollTop ta)
+                                  :selection-s (.-selectionStart ta)
+                                  :selection-e (.-selectionEnd ta)})))
+
+        restore-state!
+        (fn [^js ta]
+          (when ta
+            (let [{:keys [scroll-top selection-s selection-e]} @editor-state]
+              (set! (.-scrollTop ta) scroll-top)
+              (set! (.-selectionStart ta) selection-s)
+              (set! (.-selectionEnd ta) selection-e)
+              (.focus ta))))
+
+        handle-key-down
         (fn [^js e]
           (let [k (.-key e)
                 target (.-target e)]
@@ -12,12 +34,12 @@
               (do
                 (.preventDefault e)
                 (.stopPropagation e)
+                (sync-state! target)
                 (if (.-shiftKey e)
-                  (on-eval-all @code-atom)
-                  (let [sel-start (.-selectionStart target)
-                        sel-end   (.-selectionEnd target)
-                        expr      (buffer/get-code-at-cursor @code-atom sel-start sel-end)]
-                    (on-eval-line expr))))
+                  (on-eval-all (.-value target))
+                  (let [expr (buffer/get-code-at-cursor (.-value target) (.-selectionStart target) (.-selectionEnd target))]
+                    (on-eval-line expr)))
+                (js/requestAnimationFrame #(restore-state! target)))
 
               (= k "Tab")
               (do
@@ -27,13 +49,15 @@
                       end   (.-selectionEnd target)
                       val   (.-value target)
                       {:keys [text cursor]} (buffer/insert-tab val start end)]
-                  (reset! code-atom text)
-                  (js/setTimeout (fn []
-                                   (set! (.-selectionStart target) cursor)
-                                   (set! (.-selectionEnd target) cursor)) 0)))
+                  (set! (.-value target) text)
+                  (set! (.-selectionStart target) cursor)
+                  (set! (.-selectionEnd target) cursor)
+                  (sync-state! target)))
 
               :else
-              (.stopPropagation e))))]
+              (do
+                (sync-state! target)
+                (.stopPropagation e)))))]
 
     [:div.scratchpad-container
      [:div.scratchpad-toolbar
@@ -41,21 +65,34 @@
       [:div.scratchpad-btn-group
        [:button.neo-run-btn
         {:on-click (fn [_]
-                     (let [el (.querySelector js/document ".neo-code-editor")
-                           start (when el (.-selectionStart el))
-                           end   (when el (.-selectionEnd el))]
-                       (on-eval-line (buffer/get-code-at-cursor @code-atom start end))))
+                     (when-let [ta @textarea-ref]
+                       (sync-state! ta)
+                       (let [start (.-selectionStart ta)
+                             end   (.-selectionEnd ta)]
+                         (on-eval-line (buffer/get-code-at-cursor (.-value ta) start end)))
+                       (js/requestAnimationFrame #(restore-state! ta))))
          :title "Evaluate line or form under cursor (Ctrl+Enter)"}
         "EVAL LINE"]
        [:button.neo-run-btn.btn-all
-        {:on-click (fn [_] (on-eval-all @code-atom))
+        {:on-click (fn [_]
+                     (when-let [ta @textarea-ref]
+                       (sync-state! ta)
+                       (on-eval-all (.-value ta))
+                       (js/requestAnimationFrame #(restore-state! ta))))
          :title "Evaluate full script buffer (Ctrl+Shift+Enter)"}
         "EVAL ALL"]]]
 
      [:textarea.neo-code-editor
-      {:value       @code-atom
-       :on-change   #(reset! code-atom (.. % -target -value))
-       :on-key-down handle-key-down
-       :placeholder "Type ClojureScript expressions here..."
-       :spell-check false
-       :rows 22}]]))
+      {:id            "tutorial-editor"
+       :ref           (fn [el]
+                        (when el
+                          (reset! textarea-ref el)
+                          (restore-state! el)))
+       :default-value default-content
+       :on-scroll     (fn [^js e] (sync-state! (.-target e)))
+       :on-click      (fn [^js e] (sync-state! (.-target e)))
+       :on-key-up     (fn [^js e] (sync-state! (.-target e)))
+       :on-key-down   handle-key-down
+       :placeholder   "Type ClojureScript expressions here..."
+       :spell-check   false
+       :rows          22}]]))

@@ -3,7 +3,7 @@
    [app.audio.control.looper :refer [toggle-click!]]
    [app.audio.control.mixer :refer [toggle-drums!]]
    [app.audio.control.tracker :refer [cycle-jam! toggle-play!]]
-   [app.state :refer [audio-state engine-ctx ui-state]]
+   [app.state :refer [audio-state engine-ctx ui-state visual-state]]
    [app.ui.bottom-bar :refer [bottom-bar-component]]
    [app.ui.mobile-notice :refer [mobile-notice-component]]
    [app.ui.stats-panel :refer [stats-panel-component]]
@@ -12,6 +12,8 @@
    [app.utils.dom :refer [mobile?]]
    [app.visuals.engine :refer [cycle-scene! toggle-wireframe!]]
    [reagent.dom.client :as rdom]))
+
+(declare request-ui-render!)
 
 (defn toggle-hud! []
   (swap! ui-state update :hud-visible? not))
@@ -24,7 +26,8 @@
 
 (defn- toggle-track-mute! [track-key]
   (when-let [tr (get (:active-tracks @audio-state) (keyword track-key))]
-    (swap! (:pattern tr) update :muted? not)))
+    (swap! (:pattern tr) update :muted? not)
+    (swap! audio-state update :tracks-ver (fnil inc 0))))
 
 (defn hud-component []
   (let [{:keys [hud-visible? stats-visible? tutorial-visible? mobile-notice-dismissed?]} @ui-state]
@@ -62,8 +65,27 @@
                               :toggle-tutorial!  toggle-tutorial!
                               :toggle-hud!       toggle-hud!}]]]]))
 
+(defonce ^:private render-scheduled? (atom false))
+
 (defn render-ui! []
   (when-let [el (.getElementById js/document "app")]
-    (when-not (:root @engine-ctx)
-      (swap! engine-ctx assoc :root (rdom/create-root el)))
-    (rdom/render (:root @engine-ctx) [hud-component])))
+    (if-let [root (:root @engine-ctx)]
+      (rdom/render root [hud-component])
+      (let [root (rdom/create-root el)]
+        (swap! engine-ctx assoc :root root)
+        (rdom/render root [hud-component])))))
+
+(defn request-ui-render! []
+  (when (and (exists? js/window) (not @render-scheduled?))
+    (reset! render-scheduled? true)
+    (js/requestAnimationFrame
+     (fn []
+       (reset! render-scheduled? false)
+       (render-ui!)))))
+
+(defonce ^:private _watches
+  (do
+    (add-watch ui-state :ui-render (fn [_ _ _ _] (request-ui-render!)))
+    (add-watch audio-state :audio-ui-render (fn [_ _ _ _] (request-ui-render!)))
+    (add-watch visual-state :visual-ui-render (fn [_ _ _ _] (request-ui-render!)))
+    true))

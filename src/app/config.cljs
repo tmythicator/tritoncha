@@ -14,6 +14,7 @@
 (def default-max-polyphony 32)
 (def sequence-length 384)
 (def max-looper-steps 64)
+(def stats-refresh-interval-ms 500)
 
 (def default-filter-frequency 8000)
 (def default-filter-type "lowpass")
@@ -26,9 +27,9 @@
 (def default-limiter-threshold -0.5)
 (def default-bitcrusher-bits 8)
 
-(def lookahead-desktop 0.25)
-(def lookahead-mobile  0.55)
-(def lookahead-bg      0.65)
+(def lookahead-desktop 0.10)
+(def lookahead-mobile  0.10)
+(def lookahead-bg      0.25)
 
 (def max-dpr-desktop 2.0)
 (def max-dpr-mobile  1.5)

@@ -5,7 +5,10 @@
             [app.audio.dsp.routing :refer [build-audio-graph!]]
             [app.config :as cfg]
             [app.state :refer [audio-state engine-ctx]]
-            [app.utils.dom :refer [active-lookahead]]))
+            [app.utils.dom :as dom]))
+
+(when (exists? js/window)
+  (set! (.-Tone js/window) tone))
 
 (defn resume-audio-context!
   "Resumes the WebAudio context if currently suspended."
@@ -18,25 +21,65 @@
     (tone/start)
     (catch js/Object _)))
 
+(defn- configure-audio-context!
+  "Configures Tone.js audio context with device-adaptive latencyHint and lookahead buffer."
+  []
+  (when (exists? js/window)
+    (let [target-hint (if (dom/mobile?) "playback" "interactive")
+          lookahead   (dom/active-lookahead)
+          ctx         (.-context tone)]
+      (when (and ctx (not= (or (.-latencyHint ctx) (some-> ctx .-rawContext .-latencyHint)) target-hint))
+        (try
+          (tone/setContext (tone/Context. #js {:latencyHint target-hint
+                                               :lookAhead   lookahead}))
+          (catch js/Object _)))
+      (when-let [active-ctx (.-context tone)]
+        (set! (.-lookAhead active-ctx) lookahead)))))
+
+(defn- configure-destination!
+  "Initializes master destination volume and unmutes output."
+  []
+  (when (fn? (.-getDestination tone))
+    (let [dest (tone/getDestination)]
+      (set! (.-mute dest) false)
+      (set! (.. dest -volume -value) 0.0))))
+
+(defn- start-engine-graph!
+  "Compiles the DSP routing graph, initializes default instruments, and registers nodes in engine-ctx."
+  []
+  (let [busses      (build-audio-graph!)
+        instruments (create-default-instruments! busses)
+        transport   (if (fn? (.-getTransport tone)) (tone/getTransport) (.-Transport tone))
+        engine-map  (merge busses instruments {:transport transport})]
+    (swap! engine-ctx assoc :tone engine-map)))
+
+(defn- attach-state-auto-resume!
+  "Automatically restores WebAudio playback if mobile OS puts context into interrupted or suspended state."
+  []
+  (when (exists? js/window)
+    (try
+      (when-let [ctx (.-context tone)]
+        (let [raw-ctx    (or (.-rawContext ^js ctx) ctx)
+              native-ctx (or (when raw-ctx (.-_nativeAudioContext ^js raw-ctx)) raw-ctx)]
+          (when native-ctx
+            (set! (.-onstatechange ^js native-ctx)
+                  (fn []
+                    (when (and (:active? @audio-state)
+                               (not= (.-state ^js native-ctx) "running"))
+                      (try (.resume ^js native-ctx) (catch js/Object _))))))))
+      (catch js/Object _))))
+
 (defn init-audio!
   "Idempotently initializes Tone.js audio context, lookahead buffer, and routing graph."
   []
   (resume-audio-context!)
   (when-not (:initialized? @audio-state)
     (try
-      (let [ctx (.-context tone)]
-        (when ctx
-          (set! (.-lookAhead ctx) (active-lookahead)))
-        (when (fn? (.-getDestination tone))
-          (let [dest (tone/getDestination)]
-            (set! (.-mute dest) false)
-            (set! (.. dest -volume -value) 0.0)))
-        (let [busses      (build-audio-graph!)
-              instruments (create-default-instruments! busses)
-              transport   (if (fn? (.-getTransport tone)) (tone/getTransport) (.-Transport tone))
-              engine-map  (merge busses instruments {:transport transport})]
-          (swap! engine-ctx assoc :tone engine-map)
-          (swap! audio-state assoc :initialized? true)))
+      (configure-audio-context!)
+      (configure-destination!)
+      (start-engine-graph!)
+      (attach-state-auto-resume!)
+      (swap! audio-state assoc :initialized? true)
       (catch js/Object e
         (println "Failed to start Tone.js audio engine:" e)))))
 

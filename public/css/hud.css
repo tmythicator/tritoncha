@@ -199,11 +199,17 @@
 .neo-btn-stats,
 .neo-link-btn,
 .neo-action-btn {
-    &:hover,
-    &.active {
+    &:hover {
         color: var(--text-brand);
         border-color: var(--border-primary);
         background: var(--bg-interactive-hover);
+    }
+
+    &.active {
+        color: var(--color-primary);
+        border-color: var(--border-primary);
+        background: var(--bg-primary-subtle);
+        box-shadow: var(--glow-primary);
     }
 }
 
@@ -212,6 +218,7 @@
         color: var(--text-success);
         border-color: var(--border-success);
         background: var(--bg-success-subtle);
+        box-shadow: var(--glow-success);
     }
 }
 
@@ -220,9 +227,24 @@
     padding: var(--space-2xs) var(--space-xs);
 
     &.active {
+        color: var(--color-primary);
+        border-color: var(--border-primary);
+        background: var(--bg-primary-subtle);
+        box-shadow: var(--glow-primary);
+    }
+
+    &.active-success {
         color: var(--text-success);
         border-color: var(--border-success);
         background: var(--bg-success-subtle);
+        box-shadow: var(--glow-success);
+    }
+
+    &.active-danger {
+        color: var(--text-danger);
+        border-color: var(--border-danger);
+        background: var(--bg-danger-subtle);
+        box-shadow: var(--glow-danger);
     }
 }
 
