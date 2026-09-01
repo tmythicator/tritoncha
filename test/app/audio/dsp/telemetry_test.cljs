@@ -14,6 +14,10 @@
       (is (contains? snap :transport-state))
       (is (contains? snap :hardware-clock))
       (is (contains? snap :clock-drift))
+      (is (contains? snap :latency-hint))
+      (is (contains? snap :xrun-count))
+      (is (contains? snap :min-headroom-ms))
+      (is (contains? snap :output-latency))
       (is (contains? snap :active-tracks)))))
 
 (deftest audio-status-printer-test
@@ -22,3 +26,7 @@
       (is (map? res))
       (is (string? (:bpm-str res)))
       (is (string? (:clock-drift res))))))
+
+(deftest reset-telemetry-metrics-test
+  (testing "Resets accumulated metrics"
+    (is (= :reset (telemetry/reset-telemetry-metrics!)))))

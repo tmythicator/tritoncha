@@ -4,9 +4,9 @@
             [app.audio.dsp.engine :refer [create-sequence init-audio!]]
             [app.audio.dsp.instruments :as inst]
             [app.config :as cfg]
-            [app.state :refer [audio-state engine-ctx]]
+            [app.state :refer [audio-metrics audio-state engine-ctx]]
             [app.utils.audio :refer [is-drum-track?]]
-            [app.utils.math :refer [clamp]]))
+            [app.utils.math :refer [clamp sec->ms]]))
 
 (def ^:private click-pattern
   {:inst :click
@@ -50,6 +50,15 @@
 (defn- execute-step-callback!
   "Zero-allocation step callback executed on each quantization tick of Tone.Sequence."
   [track-info time step-idx synth-node inst-key]
+  (when synth-node
+    (when-let [^js ctx (.-context ^js synth-node)]
+      (let [^js raw-ctx (or (.-rawContext ctx) ctx)
+            hw-now      (.-currentTime raw-ctx)
+            head-ms     (sec->ms (- time hw-now))]
+        (when (neg? head-ms)
+          (swap! audio-metrics update :xrun-count (fnil inc 0)))
+        (when (or (neg? head-ms) (zero? step-idx))
+          (swap! audio-metrics update :min-headroom-ms (fn [old] (if old (min old head-ms) head-ms)))))))
   (let [pat @(:pattern track-info)]
     (when (sched/track-audible? pat (:solo-mode? @audio-state))
       (when-let [{:keys [hit vel dur]} (sched/calculate-step-hit pat step-idx)]

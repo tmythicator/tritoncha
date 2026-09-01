@@ -137,5 +137,6 @@
 ;; Realtime Diagnostics + UI HUD Overlays
 (def stat telemetry/audio-status)
 (def status! telemetry/audio-status)
+(def reset-stats! telemetry/reset-telemetry-metrics!)
 (defn stats! [] (swap! state/ui-state update :stats-visible? not))
 (defn hud! [] (swap! state/ui-state update :hud-visible? not))
