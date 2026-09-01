@@ -48,6 +48,7 @@
   (doseq [k track-keys]
     (when-let [tr (get (:active-tracks @audio-state) (keyword k))]
       (swap! (:pattern tr) assoc :muted? true)))
+  (swap! audio-state update :tracks-ver (fnil inc 0))
   (keys (:active-tracks @audio-state)))
 
 (defn unmute!
@@ -60,6 +61,7 @@
     (doseq [k track-keys]
       (when-let [tr (get (:active-tracks @audio-state) (keyword k))]
         (swap! (:pattern tr) assoc :muted? false))))
+  (swap! audio-state update :tracks-ver (fnil inc 0))
   (keys (:active-tracks @audio-state)))
 
 (defn solo!
