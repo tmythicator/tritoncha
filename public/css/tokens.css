@@ -106,6 +106,7 @@
     --radius-sm:               2px;
     --blur-glass:              blur(16px);
     --shadow-modal:            0 16px 48px rgba(0, 0, 0, 0.85);
+    --glow-primary:            0 0 8px rgba(0, 229, 255, 0.5);
     --glow-success:            0 0 8px rgba(0, 255, 136, 0.6);
     --glow-danger:             0 0 8px rgba(255, 0, 127, 0.6);
     --glow-focus:              0 0 12px rgba(0, 229, 255, 0.22);
