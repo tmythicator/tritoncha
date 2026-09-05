@@ -5,29 +5,40 @@
 .neo-tutorial-card {
     position: fixed;
     top: var(--tutorial-card-top);
-    left: var(--tutorial-card-left);
+    right: var(--tutorial-card-right);
+    left: auto;
     width: var(--tutorial-card-width);
-    max-width: calc(100vw - 16px);
+    max-width: calc(100vw - 20px);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
     padding: var(--tutorial-card-padding);
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: var(--space-md);
     z-index: 60;
     pointer-events: auto;
     max-height: var(--tutorial-max-height);
     box-shadow: var(--shadow-modal);
     border-radius: var(--radius-sm);
 
-    @media (max-width: 640px) {
-        top: var(--space-md);
-        left: var(--space-md);
-        right: var(--space-md);
-        padding: var(--space-sm) var(--space-lg);
-        gap: var(--space-sm);
+    @media (max-width: 768px) {
+        top: clamp(84px, 13vh, 110px);
+        left: var(--space-xs);
+        right: var(--space-xs);
+        width: auto;
+        padding: var(--space-sm) var(--space-md);
+        gap: var(--space-xs);
+        max-height: calc(100dvh - 100px);
     }
+}
+
+.neo-tutorial-card .neo-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .neo-modal-tabs {
@@ -48,7 +59,7 @@
     color: var(--text-tertiary);
     cursor: pointer;
     border-radius: var(--radius-sm);
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
 
     &:hover {
         color: var(--text-brand);
@@ -60,8 +71,10 @@
 .scratchpad-container {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: var(--space-sm);
     width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .scratchpad-toolbar {
@@ -105,7 +118,7 @@
     color: var(--text-success);
     cursor: pointer;
     border-radius: var(--radius-sm);
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
 
     &:hover {
         background: var(--color-success);
@@ -124,36 +137,92 @@
     }
 }
 
-.neo-code-editor {
+.neo-editor-stage {
+    position: relative;
     width: 100%;
-    box-sizing: border-box;
-    display: block;
-    font-family: inherit;
-    font-size: var(--font-size-md);
-    line-height: var(--line-height-editor);
-    background: var(--bg-input);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    padding: var(--space-md) var(--space-xl);
-    resize: vertical;
-    border-radius: var(--radius-sm);
-    outline: none;
     min-height: var(--editor-min-height);
     max-height: var(--editor-max-height);
+    flex: 1 1 auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--editor-bg);
+    overflow: hidden;
+    box-sizing: border-box;
+
+    &:focus-within {
+        border-color: var(--border-primary);
+        box-shadow: var(--glow-focus);
+    }
+}
+
+.neo-editor-highlight,
+.neo-code-editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: var(--space-xl) var(--space-2xl);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-lg);
+    line-height: var(--editor-line-height);
+    tab-size: 2;
+    box-sizing: border-box;
     white-space: pre;
+    word-wrap: normal;
     overflow: auto;
+    border: none;
+    outline: none;
+    letter-spacing: 0;
     scrollbar-width: thin;
     scrollbar-color: var(--bg-scrollbar-thumb) var(--bg-scrollbar-track);
 
     &::-webkit-scrollbar { width: var(--space-xs); height: var(--space-xs); }
     &::-webkit-scrollbar-track { background: var(--bg-scrollbar-track); }
     &::-webkit-scrollbar-thumb { background: var(--bg-scrollbar-thumb); border-radius: var(--radius-sm); }
+}
 
-    &:focus {
-        border-color: var(--border-primary);
-        box-shadow: var(--glow-focus);
+.neo-editor-highlight {
+    pointer-events: none;
+    background: transparent !important;
+    color: var(--editor-text-default);
+    z-index: 2;
+
+    code {
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        tab-size: inherit;
+        display: block;
     }
 }
+
+.neo-code-editor {
+    background: var(--editor-bg) !important;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    caret-color: var(--editor-caret) !important;
+    z-index: 1;
+    resize: none;
+
+    &::selection {
+        background: var(--editor-selection) !important;
+    }
+}
+
+/* High-Contrast Cyberpunk Syntax Highlighting Tokens */
+.syn-comment  { color: var(--syn-comment) !important; font-style: italic; font-weight: 500; }
+.syn-string   { color: var(--syn-string) !important; font-weight: 600; text-shadow: var(--syn-string-glow); }
+.syn-keyword  { color: var(--syn-keyword) !important; font-weight: 700; text-shadow: var(--syn-keyword-glow); }
+.syn-number   { color: var(--syn-number) !important; font-weight: 600; }
+.syn-paren    { color: var(--syn-paren) !important; font-weight: 700; }
+.syn-bracket  { color: var(--syn-bracket) !important; font-weight: 700; }
+.syn-brace    { color: var(--syn-brace) !important; font-weight: 700; }
+.syn-live     { color: var(--syn-live) !important; font-weight: 800; text-shadow: var(--syn-live-glow); }
+.syn-core     { color: var(--syn-core) !important; font-weight: 700; }
+.syn-const    { color: var(--syn-const) !important; font-weight: 700; }
+.syn-ident    { color: var(--syn-ident) !important; font-weight: 500; }
 
 .neo-output-container {
     display: flex;
@@ -172,7 +241,7 @@
     display: flex;
     align-items: flex-start;
     gap: var(--space-sm);
-    max-height: calc(var(--space-3xl) * 3);
+    max-height: var(--console-max-height);
     overflow-y: auto;
     border-radius: var(--radius-sm);
 

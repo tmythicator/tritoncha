@@ -33,12 +33,69 @@
 
   ;; Live Stack: Launch and hot-swap all tracks in a single form
   (stack!
-   [:kick  (pat "k . . .  k . . .  . . k .  . . . .")]
-   [:snare (pat ". . . .  s . . .  . . . .  s . . g")]
+   [:kick  (pat "k! . . k_  k! . . .  . . k! .  . k_ . .")]
+   [:snare (pat ". . s_ .  s! . s_ .  . s_ . s_  s! . s_ s!")]
    [:hat   {:inst :hh-c :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}]
    [:bass  {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}]
    [:sub   {:notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}]
    [:arp   {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.8}])
+
+  ;; Jojo Mayer + Nerve Live Breakbeat Masterclass: Articulations and Ghost Rudiments
+  ;;
+  ;; Mini-notation modifiers:
+  ;;   ! -> Accent (punchy rimshot / hit: vel 1.15)
+  ;;   _ -> Ghost note (soft, delicate touch: vel 0.35)
+  ;;   (no suffix) -> Normal hit (vel 0.90)
+  ;;   . or _ (standalone) -> Musical rest (nil)
+  ;;
+  ;; Expanded drum palette:
+  ;;   k (kick)           s (snare)          rb (ride bell)      ride (ride body)
+  ;;   th (tom high)      tm (tom mid)       tl (tom low)
+  ;;   cr16 / cr17 / cr18 (crashes)          sp (splash)         ch (china)
+  ;;   cb (cowbell)       h (hat-closed)     o (hat-open)
+
+  ;; Interlocking syncopated kick, backbeat rim accents, and rolling ghost taps
+  (b! 168)
+  (l! :drums
+      {:inst :drums
+       :notes (pat "k! . s_ .  s_ k_ s! s_  . s_ k! .  s! s_ s_ s!")
+       :step "16n"})
+
+  ;; Reverse Paradiddle Snare Rudiment
+  ;; Pure snare phrasing with alternating accents and ghost rolls
+  (l! :snare
+      {:inst :snare
+       :notes (pat "s! s_ s_ s!  s_ s! s! s_  s_ s_ s! s_  s! s_ s_ s!")
+       :step "16n"})
+
+  ;; Polyrhythmic Ride Bell and Cymbal Matrix
+  ;; Off-beat ride bell, splash cuts, and trashy china accents
+  (l! :cymb
+      {:inst :drums
+       :notes (pat "rb! . rb_ .  rb! . sp! .  rb_ rb! . rb_  cr16! . ch! .")
+       :step "16n"})
+
+  ;; 3-Tom Linear Chops (High, Mid, Low Floor Tom)
+  (l! :toms
+      {:inst :drums
+       :notes (pat "th! tm_ tl! k!  th_ tm! tl_ k_  th! tm_ tl! s!  cr18! . . .")
+       :step "16n"})
+
+  ;; 32nd-Note Linear Fill (using fast 2x into the drop)
+  (l! :fill
+      {:inst :drums
+       :notes (fast 2 (pat "s! s_ s_ k!  th! tm_ tl! k!  s! s_ s_ s!  cr16! . . ."))
+       :step "16n"})
+
+  ;; Full Breakbeat Stack
+  (stack!
+   [:kick  (pat "k! . . k_  . k_ k! .  k! . . k_  . k! . .")]
+   [:snare (pat ". . s_ .  s! s_ . s_  . s_ s_ s!  s_ . s! s_")]
+   [:ride  (pat "rb! . rb_ .  rb! . rb_ rb_  rb! . sp! .  rb_ rb! ch! .")]
+   [:toms  (pat ". . . .  . . . .  . . . .  th! tm_ tl! .")]
+   [:bass  {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 1) :step "16n" :dur "16n" :vel 0.95}]
+   [:sub   {:notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _] 1) :step "16n" :dur "8n" :vel 1.0}]
+   [:pad   {:notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35}])
 
   ;; Time Manipulation on the Fly (fast, slow, rev)
 
@@ -192,13 +249,14 @@
 
   ;; Live Sound Design in REPL (definst! -> demo!)
   (definst! :supersaw-cus
-    {:type :mono
-     :bus :bus/space
-     :options {:oscillator {:type "fatsawtooth" :count 5 :spread 30}
-               :filter {:Q 4 :type "lowpass" :rolloff -24}
-               :filterEnvelope {:attack 0.01 :decay 0.2 :sustain 0.4 :release 0.2 :baseFrequency 300 :octaves 3}
-               :envelope {:attack 0.01 :decay 0.2 :sustain 0.7 :release 0.25}
-               :portamento 0.03}})
+    {:category :leads
+     :type     :mono
+     :bus      :bus/space
+     :osc      {:type :supersaw :sub-level 0.4 :drift 0.2}
+     :filter   {:type :lowpass :cutoff 1400 :q 0.5 :drive 0.25 :env-amount 3000 :key-track 2.0}
+     :amp-env  {:attack 0.01 :decay 0.2 :sustain 0.7 :release 0.25}
+     :mod-env  {:attack 0.01 :decay 0.2}
+     :glide    0.03})
 
   ;; Preview instrument
   (demo! :supersaw-cus)

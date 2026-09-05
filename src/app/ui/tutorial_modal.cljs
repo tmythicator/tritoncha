@@ -3,20 +3,18 @@
   (:require-macros [app.macros :refer [load-tutorial-content]])
   (:require [app.eval.core :as eval-engine]
             [app.ui.tutorial.editor :refer [editor-component]]
-            [app.ui.tutorial.output :refer [output-component]]))
+            [app.ui.tutorial.output :refer [output-component]]
+            [reagent.core :as r]))
 
 (def ^:private tutorial-source-code (load-tutorial-content))
-(defonce ^:private eval-output (atom {:ok? true :text "Ready. Place cursor on any line and press Ctrl+Enter."}))
+(defonce ^:private eval-output (r/atom {:ok? true :text "Ready. Place cursor on any line and press Ctrl+Enter."}))
+(defonce ^:private editor-content-atom (r/atom tutorial-source-code))
 
 (defn- handle-eval! [code-str]
-  (let [res (eval-engine/run-code code-str)]
-    (reset! eval-output res)
-    (when-let [out-el (.querySelector js/document ".output-text")]
-      (set! (.-textContent out-el) (or (:text res) "")))
-    (when-let [out-box (.querySelector js/document ".neo-output-console")]
-      (set! (.-className out-box) (str "neo-output-console " (if (:ok? res) "output-ok" "output-err"))))))
+  (reset! eval-output (eval-engine/run-code code-str)))
 
 (defn- handle-reset! []
+  (reset! editor-content-atom tutorial-source-code)
   (when-let [el (.querySelector js/document ".neo-code-editor")]
     (set! (.-value el) tutorial-source-code)
     (set! (.-scrollTop el) 0)
@@ -38,7 +36,9 @@
       "[X]"]]]
 
    [:div.neo-body
-    [editor-component {:default-content tutorial-source-code
+    [editor-component {:content-atom   editor-content-atom
+                       :default-content tutorial-source-code
+                       :on-eval-sexp   handle-eval!
                        :on-eval-line   handle-eval!
                        :on-eval-all    handle-eval!}]
 
