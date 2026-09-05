@@ -9,7 +9,6 @@ pub const DEFAULT_DELAY_SAMPLES: usize = 16000;
 pub const DEFAULT_FEEDBACK: f32 = 0.35;
 pub const DEFAULT_WET: f32 = 0.25;
 pub const DAMPING_COEFF: f32 = 0.35;
-pub const INVERSE_DAMPING_COEFF: f32 = 1.0 - DAMPING_COEFF;
 pub const MIN_WET_THRESHOLD: f32 = 0.001;
 
 /// Stereo Ping-Pong Dub Delay with Lowpass Analog Damping.

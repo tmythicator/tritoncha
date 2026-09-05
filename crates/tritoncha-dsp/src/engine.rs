@@ -68,7 +68,6 @@ pub const INST_DRUM_SPLASH: i32 = 71;
 pub const INST_DRUM_CHINA: i32 = 72;
 pub const INST_DRUM_COWBELL: i32 = 73;
 
-pub const DEFAULT_TOM_FREQ_HZ: f32 = 130.0;
 pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
 pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
 

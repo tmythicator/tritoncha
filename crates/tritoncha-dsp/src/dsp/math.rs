@@ -1,7 +1,5 @@
 //! Pure mathematical primitives and DSP utilities.
 
-pub const MIN_AUDIBLE_FREQ_HZ: f32 = 20.0;
-pub const MAX_AUDIBLE_FREQ_HZ: f32 = 20000.0;
 pub const STANDARD_TUNING_A4_HZ: f32 = 440.0;
 pub const MIDI_NOTE_A4: f32 = 69.0;
 pub const SEMITONES_PER_OCTAVE: f32 = 12.0;
