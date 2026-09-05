@@ -1,10 +1,11 @@
 (ns app.lib.tracks-test
-  (:require [app.lib.tracks :refer [core-tracks]]
+  (:require [app.config :as cfg]
+            [app.lib.tracks :refer [core-tracks]]
             [cljs.test :refer [deftest is testing]]))
 
 (deftest core-tracks-catalog-test
   (testing "All core presets are defined and structurally valid"
-    (let [presets [:roller :sub-roller :acid-roller :ambient-drift]]
+    (let [presets cfg/jam-presets]
       (doseq [preset-kw presets]
         (let [track (get core-tracks preset-kw)]
           (is (some? track) (str "Preset " preset-kw " must exist"))

@@ -1,6 +1,7 @@
 (ns app.audio.theory.patterns
   "Algorithmic rhythm generators, mini-notation parser, and temporal pattern combinators."
-  (:require [app.utils.coll :as coll]
+  (:require [app.lib.drums :refer [mini-notation-aliases]]
+            [app.utils.coll :as coll]
             [clojure.string :as str]))
 
 (defn euclid
@@ -32,28 +33,69 @@
                                      :else (apply concat paired)))))]
            (vec (build-pattern init-ones init-zeros))))))))
 
+(def ^:private mini-alias-pattern
+  (let [aliases (sort-by (comp - count) (keys mini-notation-aliases))
+        escaped (map #(str/replace % #"([.*+?^${}()|\[\]/\\])" "\\\\$1") aliases)]
+    (re-pattern (str "(?:" (str/join "|" escaped) "|[a-zA-Z0-9.-])[!_]?"))))
+
+(defn- token-with-suffix? [tok]
+  (let [clean (cond
+                (str/ends-with? tok "!")
+                (subs tok 0 (dec (count tok)))
+
+                (and (> (count tok) 1) (str/ends-with? tok "_"))
+                (subs tok 0 (dec (count tok)))
+
+                :else tok)]
+    (or (contains? mini-notation-aliases clean)
+        (contains? #{"" "." "_" "-" "0" "x" "1" "b"} clean))))
+
+(defn- expand-mini-tokens [tokens]
+  (mapcat (fn [tok]
+            (cond
+              (or (<= (count tok) 1)
+                  (token-with-suffix? tok))
+              [tok]
+
+              (re-matches #"^[a-zA-Z0-9._\-!]+$" tok)
+              (or (re-seq mini-alias-pattern tok)
+                  [tok])
+
+              :else
+              [tok]))
+          tokens))
+
 (defn pattern
   "Parses a compact mini-notation string into a pattern vector of drum keywords and rests.
-  Examples: (pattern \"k . . .  s . . .\") -> [:kick nil nil nil :snare nil nil nil]."
+  Supports articulation modifiers: ! for accents and _ for ghost notes.
+  Examples:
+    (pattern \"k! . . .  s! . . .  . . s_ .  s! . s_ .\")
+    (pattern \"cr16! . . .  rb . rb_ .  th! tm_ tl! cb_\")."
   [s]
   (if (sequential? s)
     (vec s)
-    (let [tokens (str/split (str/trim (str s)) #"\s+")]
+    (let [raw-tokens (str/split (str/trim (str s)) #"\s+")
+          tokens     (expand-mini-tokens raw-tokens)]
       (mapv (fn [tok]
-              (case tok
-                ("." "_" "~" "-" "0") nil
-                ("x" "1") true
-                "k" :kick
-                "s" :snare
-                ("rs" "sn-rs") :sn-rs
-                ("c" "clk" "sn-clk") :sn-clk
-                ("g" "gh" "sn-gh") :sn-gh
-                ("roll" "sn-roll") :sn-roll
-                ("h" "hh" "hh-c") :hh-c
-                ("o" "oh" "hh-o") :hh-o
-                ("hc" "hh-clk") :hh-clk
-                "b" :bass
-                (keyword tok)))
+              (let [has-accent? (str/ends-with? tok "!")
+                    has-ghost?  (and (> (count tok) 1) (str/ends-with? tok "_"))
+                    clean       (cond
+                                  has-accent? (subs tok 0 (dec (count tok)))
+                                  has-ghost?  (subs tok 0 (dec (count tok)))
+                                  :else tok)
+                    suffix      (cond
+                                  has-accent? "!"
+                                  has-ghost?  "_"
+                                  :else "")]
+                (cond
+                  (contains? #{"" "." "_" "-" "0"} clean) nil
+                  (= clean "x") (if (seq suffix) (keyword (str "x" suffix)) true)
+                  (= clean "1") (if (seq suffix) (keyword (str "1" suffix)) true)
+                  (= clean "b") (keyword (str "bass" suffix))
+                  :else
+                  (if-let [alias-kw (get mini-notation-aliases clean)]
+                    (keyword (str (name alias-kw) suffix))
+                    (keyword tok)))))
             tokens))))
 
 (defn fast

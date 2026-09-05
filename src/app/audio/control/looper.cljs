@@ -1,108 +1,74 @@
 (ns app.audio.control.looper
-  "Live looper, scheduler and master transport engine."
+  "Live looper, scheduler and master transport engine driving the Rust WASM audio core."
   (:require [app.audio.control.scheduler :as sched]
-            [app.audio.dsp.engine :refer [create-sequence init-audio!]]
-            [app.audio.dsp.instruments :as inst]
+            [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.engine :refer [init-audio!]]
+            [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
-            [app.state :refer [audio-metrics audio-state engine-ctx]]
-            [app.utils.audio :refer [is-drum-track?]]
-            [app.utils.math :refer [clamp sec->ms]]))
+            [app.state :refer [audio-state]]
+            [app.utils.audio :as audio-utils]
+            [app.utils.math :refer [clamp]]
+            [reagent.core :as r]))
 
 (def ^:private click-pattern
   {:inst :click
    :notes ["C6" "G5" "G5" "G5"]
    :step "4n"
    :dur "32n"
-   :vel 0.4})
+   :vel 0.85})
 
-(defn- ensure-transport-running! []
-  (when-let [t (:transport (:tone @engine-ctx))]
-    (when (not= (.-state ^js t) "started")
-      (.start ^js t "+0.05"))))
+(defn track-slot
+  "Returns the hardware sequencer track slot index for a track keyword."
+  [track-key]
+  (worklet/track-slot track-key))
 
-(defn- trigger-hit!
-  "Dispatches a single rhythm/melodic hit to Tone.js instrument or drum voice."
-  [hit inst-key synth-node dur time vel]
-  (cond
-    ;; e.g. [:kick 1.0 "D1"] or [:saw-bass 0.95 "E1"]
-    (and (vector? hit) (keyword? (first hit)))
-    (let [[k v n] hit
-          final-vel (or v vel)]
-      (if (is-drum-track? k)
-        (inst/trigger-drum! k n dur time final-vel)
-        (inst/trigger-note! (or (get (:tone @engine-ctx) k) synth-node) n dur time final-vel k)))
+(defn sync-track-to-worklet!
+  "Sends normalized pattern data to the Rust WASM sequencer."
+  [tk pat-data]
+  (let [slot     (worklet/get-or-assign-track-slot! tk)
+        inst-k   (or (:inst pat-data) (:synth pat-data) tk)
+        hits     (or (:notes pat-data) (:hits-vec pat-data) [true])
+        notes    (if (sequential? hits) hits [hits])
+        step-m   (audio-utils/step->mult (:step pat-data))
+        bpm      (:bpm @audio-state 168)
+        dur-raw  (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
+        dur-s    (audio-utils/dur->seconds dur-raw bpm)]
+    (worklet/set-track! slot inst-k (vec notes) step-m dur-s)))
 
-    ;; e.g. (:kick, :snare) or (true)
-    (or (is-drum-track? hit) (and (true? hit) (is-drum-track? inst-key)))
-    (inst/trigger-drum! (if (keyword? hit) hit inst-key) nil dur time vel)
+(defn sync-all-active-tracks!
+  "Re-transmits all active session tracks to the Rust WASM sequencer."
+  []
+  (let [active (:active-tracks @audio-state)]
+    (doseq [[tk tr] active]
+      (let [pat-atom (:pattern tr)
+            pat-data (if (satisfies? IDeref pat-atom) @pat-atom pat-atom)]
+        (when pat-data
+          (sync-track-to-worklet! tk pat-data))))
+    (when (and (:active? @audio-state) (seq active))
+      (worklet/set-playing! true))))
 
-    ;; e.g. ("E2", :eb2) or (["E3" "G3" "B3"])
-    :else
-    (inst/trigger-note! synth-node hit dur time vel inst-key)))
-
-(defn- resolve-track-synth
-  "Pure helper determining the target synthesizer node and instrument key."
-  [track-key pat-data]
-  (let [inst-k (or (:inst pat-data) (:synth pat-data) track-key)
-        synth  (or (get (:tone @engine-ctx) inst-k) (get (:tone @engine-ctx) :saw-bass))]
-    [inst-k synth]))
-
-(defn- execute-step-callback!
-  "Zero-allocation step callback executed on each quantization tick of Tone.Sequence."
-  [track-info time step-idx synth-node inst-key]
-  (when synth-node
-    (when-let [^js ctx (.-context ^js synth-node)]
-      (let [^js raw-ctx (or (.-rawContext ctx) ctx)
-            hw-now      (.-currentTime raw-ctx)
-            head-ms     (sec->ms (- time hw-now))]
-        (when (neg? head-ms)
-          (swap! audio-metrics update :xrun-count (fnil inc 0)))
-        (when (or (neg? head-ms) (zero? step-idx))
-          (swap! audio-metrics update :min-headroom-ms (fn [old] (if old (min old head-ms) head-ms)))))))
-  (let [pat @(:pattern track-info)]
-    (when (sched/track-audible? pat (:solo-mode? @audio-state))
-      (when-let [{:keys [hit vel dur]} (sched/calculate-step-hit pat step-idx)]
-        (trigger-hit! hit inst-key synth-node dur time vel)))))
-
-(defn- create-track-sequence
-  "Helper instantiating a new Tone.Sequence for a track."
-  [track-info synth inst-k step]
-  (create-sequence #(execute-step-callback! track-info %1 %2 synth inst-k)
-                   (into-array (range cfg/sequence-length))
-                   step))
-
-(defn- mount-track!
-  "Instantiates and registers a Tone.Sequence for an active track."
-  [tk tr-info synth inst-k step]
-  (let [seq-obj (create-track-sequence tr-info synth inst-k step)]
-    (swap! audio-state assoc-in [:active-tracks tk] (assoc tr-info :sequence seq-obj))))
+(worklet/on-worklet-ready! sync-all-active-tracks!)
 
 (defn loop!
   "Schedules or hot-swaps an audio loop track in the live-coding session.
   Examples: (loop! :bass {:notes (d [1 2 3]) :step \"16n\"})."
   [track-name pattern-map]
   (init-audio!)
-  (let [tk             (keyword track-name)
-        pat-data       (sched/normalize-pattern-data tk pattern-map)
-        step           (:step pat-data)
-        [inst-k synth] (resolve-track-synth tk pat-data)]
+  (let [tk       (keyword track-name)
+        pat-data (sched/normalize-pattern-data tk pattern-map)
+        inst-k   (or (:inst pat-data) (:synth pat-data) tk)]
     (if-let [tr (get (:active-tracks @audio-state) tk)]
-      (let [old-pat  @(:pattern tr)
-            old-step (:step old-pat)
-            old-inst (:inst-key tr)]
-        (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false)))
-        (if (or (not= step old-step) (not= inst-k old-inst))
-          (do
-            (when-let [s (:sequence tr)]
-              (try (.dispose ^js s) (catch js/Object _)))
-            (mount-track! tk (assoc tr :synth synth :inst-key inst-k) synth inst-k step))
-          (when (not= synth (:synth tr))
-            (swap! audio-state assoc-in [:active-tracks tk :synth] synth))))
-      (let [pat-atom (atom (assoc pat-data :muted? false :solo? false))
-            tr-info  {:pattern pat-atom :synth synth :inst-key inst-k}]
-        (mount-track! tk tr-info synth inst-k step)))
-    (ensure-transport-running!)
-    (swap! audio-state assoc :active? true)
+      (let [old-pat @(:pattern tr)]
+        (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false))))
+      (let [pat-atom (r/atom (assoc pat-data :muted? false :solo? false))
+            tr-info  {:pattern pat-atom :inst-key inst-k}]
+        (swap! audio-state assoc-in [:active-tracks tk] tr-info)))
+    (sync-track-to-worklet! tk pat-data)
+    (worklet/set-playing! true)
+    (let [hw-now (if-let [ctx (worklet/get-audio-context)] (.-currentTime ctx) 0.0)]
+      (swap! audio-state (fn [st]
+                           (cond-> (assoc st :active? true)
+                             (nil? (:transport-start st)) (assoc :transport-start hw-now)))))
     tk))
 
 (defn set-bpm!
@@ -110,8 +76,7 @@
   Examples: (set-bpm! 174)."
   [bpm]
   (let [clamped-bpm (clamp bpm cfg/min-bpm cfg/max-bpm)]
-    (when-let [t (:transport (:tone @engine-ctx))]
-      (set! (.. ^js t -bpm -value) clamped-bpm))
+    (worklet/set-bpm! clamped-bpm)
     (swap! audio-state assoc :bpm clamped-bpm)
     clamped-bpm))
 
@@ -121,9 +86,13 @@
   [& track-keys]
   (let [kw-set (set (map keyword (flatten track-keys)))]
     (doseq [tk kw-set]
-      (when-let [s (:sequence (get (:active-tracks @audio-state) tk))]
-        (try (.dispose ^js s) (catch js/Object _))))
+      (when-let [slot (worklet/track-slot tk)]
+        (worklet/deactivate-track! slot)
+        (swap! worklet/track-slot-assignments dissoc tk)))
     (swap! audio-state update :active-tracks #(apply dissoc % kw-set))
+    (when (empty? (:active-tracks @audio-state))
+      (worklet/set-playing! false)
+      (swap! audio-state assoc :active? false :transport-start nil))
     (vec kw-set)))
 
 (def unstack! stop-loop!)
@@ -131,22 +100,16 @@
 (defn clear-loops!
   "Stops and deletes all active loops."
   []
-  (doseq [[_ tr] (:active-tracks @audio-state)]
-    (when-let [s (:sequence tr)]
-      (try (.dispose ^js s) (catch js/Object _))))
+  (worklet/clear-tracks!)
   (swap! audio-state assoc :active-tracks {})
   :cleared)
 
 (defn stop!
-  "Stops Tone.js Transport and cancels all active loops."
+  "Stops playback and cancels all active loops."
   []
-  (when-let [t (:transport (:tone @engine-ctx))]
-    (try
-      (.stop ^js t)
-      (.cancel ^js t)
-      (catch js/Object _)))
+  (worklet/set-playing! false)
   (clear-loops!)
-  (swap! audio-state assoc :active? false :solo-mode? false)
+  (swap! audio-state assoc :active? false :solo-mode? false :transport-start nil)
   :stopped)
 
 (defn toggle-click!
@@ -175,8 +138,12 @@
                     (and (= 1 (count args)) (vector? (first first-arg))) first-arg
                     :else args)
         tks       (into #{} (map first) pairs)]
-    (when (some #{:kick :snare :hat} tks) (stop-loop! :drums))
-    (when (contains? tks :drums) (stop-loop! :kick :snare :hat))
+    (when (some (fn [k] (and (busses/drum? k) (not= k :drums))) tks)
+      (stop-loop! :drums))
+    (when (contains? tks :drums)
+      (doseq [k (filter (fn [k] (and (busses/drum? k) (not= k :drums)))
+                        (keys (:active-tracks @audio-state)))]
+        (stop-loop! k)))
     (doseq [[k spec] pairs]
       (when (and k spec) (loop! k spec)))
     (mapv first pairs)))

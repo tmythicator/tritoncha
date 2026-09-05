@@ -2,9 +2,10 @@
   "Track presets registry, playback orchestrator, and instrument preview demos."
   (:require [app.audio.control.looper :refer [loop! set-bpm! stop! stop-loop!]]
             [app.audio.control.session :as session]
+            [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
             [app.audio.dsp.fx :refer [set-filter-cutoff!]]
-            [app.audio.dsp.instruments :refer [all-drum-keys reload-instruments!]]
+            [app.audio.dsp.instruments :refer [reload-instruments!]]
             [app.audio.theory.harmony :refer [chord]]
             [app.audio.theory.patterns :refer [pattern]]
             [app.config :as cfg]
@@ -60,12 +61,35 @@
     (stop!)
     (play-preset! (:current-jam @audio-state :roller))))
 
-(defn cycle-jam!
+(defn next-jam!
   "Cycles to the next built-in jam track preset.
-  Examples: (cycle-jam!)."
+  Examples: (next-jam!)."
   []
   (let [next-jam (coll/cycle-next (:current-jam @audio-state :roller) cfg/jam-presets)]
     (play-preset! next-jam)))
+
+(defn prev-jam!
+  "Cycles to the previous built-in jam track preset.
+  Examples: (prev-jam!)."
+  []
+  (let [prev-jam (coll/cycle-prev (:current-jam @audio-state :roller) cfg/jam-presets)]
+    (play-preset! prev-jam)))
+
+(def cycle-jam! next-jam!)
+
+(defn jam-list
+  "Returns a vector of metadata maps for all available jam presets.
+  Useful for UI dropdowns, modals, and preset preview cards."
+  []
+  (let [all (all-tracks)]
+    (mapv (fn [k]
+            (let [t (get all k)]
+              {:id    k
+               :name  (or (:name t) (name k))
+               :bpm   (or (:bpm t) 168)
+               :scale (or (:scale t) [:e :minor 1])
+               :geom  (or (:geom t) :torus-knot)}))
+          cfg/jam-presets)))
 
 (defn reload-track!
   "Reloads and restarts the currently active track preset with updated track data."
@@ -88,10 +112,10 @@
   (let [kw   (keyword inst-key)
         root (:root (session/current-key) :e)]
     (cond
-      (contains? (all-drum-keys) kw)
+      (busses/drum? kw)
       (loop! :demo {:inst kw :notes (pattern "k . . .  k . . .  . . k .  . . . .") :step cfg/default-step})
 
-      (contains? #{:dark-pad :pad :ambient-glass} kw)
+      (busses/pad? kw)
       (loop! :demo {:inst kw :notes [(chord root :min9 3) (chord root :maj7 3)] :step "1m" :dur "1m" :vel 0.4})
 
       :else

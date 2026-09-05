@@ -21,7 +21,19 @@
     (is (= [:hh-c :hh-o :hh-clk :sn-rs]
            (pat/pattern "h o hc rs")))
     (is (= [true nil true nil]
-           (pat/pattern "x . 1 0")))))
+           (pat/pattern "x . 1 0"))))
+
+  (testing "Articulation modifiers (! for accent, _ for ghost notes)"
+    (is (= [:kick! nil nil nil :snare! nil :snare_ nil]
+           (pat/pattern "k! . . .  s! . s_ .")))
+    (is (= [:kick! nil nil nil :snare! nil nil :snare_ nil nil]
+           (pat/pattern "k!...s!..s_.."))))
+
+  (testing "Expanded drum tokens with articulation"
+    (is (= [:crash-16! nil :ride-bell_ nil :tom-high! :tom-mid_ :tom-low! :cowbell_]
+           (pat/pattern "cr16! . rb_ . th! tm_ tl! cb_")))
+    (is (= [:splash! nil :china_ nil :crash-17! :crash-18_]
+           (pat/pattern "sp! . ch_ . cr17! cr18_")))))
 
 (deftest fast-and-slow-combinators-test
   (testing "fast repeats sequence"
