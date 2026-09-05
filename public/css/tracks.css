@@ -1,0 +1,99 @@
+/* ==========================================================================
+   Track Presets Library Modal
+   ========================================================================== */
+
+.track-browser-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(680px, 94vw);
+    max-height: 85vh;
+    background: var(--bg-surface);
+    backdrop-filter: var(--blur-glass);
+    border: 1px solid var(--border-strong);
+    padding: var(--stats-card-padding);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-modal);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 60;
+    pointer-events: auto;
+}
+
+.track-browser-list {
+    overflow-y: auto;
+    padding: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    max-height: calc(85vh - 90px);
+}
+
+.track-browser-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.12s ease;
+
+    &:hover {
+        border-color: var(--border-primary-subtle);
+        background: var(--bg-interactive-hover);
+    }
+
+    &.active {
+        background: var(--bg-primary-tint);
+        border-color: var(--color-primary);
+    }
+}
+
+.track-item-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.track-item-num {
+    color: var(--color-primary);
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+.track-item-title {
+    color: var(--text-secondary);
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+
+    &.active {
+        color: var(--text-primary);
+        font-weight: 700;
+    }
+}
+
+.track-item-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.track-item-btn {
+    padding: var(--space-2xs) var(--space-md);
+    font-size: var(--font-size-base);
+
+    &.active {
+        background: var(--color-primary);
+        color: var(--text-inverse);
+    }
+}
+
+.track-browser-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-lg);
+}

@@ -159,6 +159,7 @@
 
     &.bus-drums  { background: var(--bus-drums-bg); color: var(--bus-drums-color); border: 1px solid var(--bus-drums-border); }
     &.bus-bass   { background: var(--bus-bass-bg); color: var(--bus-bass-color); border: 1px solid var(--bus-bass-border); }
+    &.bus-lead   { background: var(--bus-lead-bg); color: var(--bus-lead-color); border: 1px solid var(--bus-lead-border); }
     &.bus-space  { background: var(--bus-space-bg); color: var(--bus-space-color); border: 1px solid var(--bus-space-border); }
     &.bus-direct { background: var(--bus-direct-bg); color: var(--bus-direct-color); border: 1px solid var(--bus-direct-border); }
     &.bus-master { background: var(--bus-master-bg); color: var(--bus-master-color); border: 1px solid var(--bus-master-border); }

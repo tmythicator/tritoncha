@@ -3,15 +3,69 @@
    ========================================================================== */
 
 :root {
+    /* --------------------------------------------------------------------------
+       1. Primitive Color Palette
+       -------------------------------------------------------------------------- */
     --palette-black:           #000000;
+    --palette-midnight:        #060913;
+    --palette-slate-dark:      #06060e;
+    --palette-slate-gray:      #8fa3bf;
+    --palette-slate-light:     #f8fafc;
     --palette-white:           #ffffff;
-    --palette-cyan:            #00e5ff;
-    --palette-green:           #00ff88;
-    --palette-pink:            #ff007f;
-    --palette-purple:          #c77dff;
-    --palette-amber:           #ffaa00;
-    --palette-blue:            #0088ff;
 
+    --palette-cyan:            #00e5ff;
+    --palette-cyan-bright:     #00ffff;
+    --palette-blue:            #0088ff;
+    --palette-blue-sky:        #38bdf8;
+    --palette-blue-soft:       #60a5fa;
+
+    --palette-green:           #00ff88;
+    --palette-lime:            #4ade80;
+
+    --palette-pink:            #ff007f;
+    --palette-magenta:         #ff2d87;
+    --palette-rose:            #fb7185;
+
+    --palette-purple:          #c77dff;
+    --palette-purple-core:     #c084fc;
+    --palette-magenta-soft:    #e879f9;
+
+    --palette-amber:           #ffaa00;
+    --palette-orange:          #ff9f43;
+    --palette-yellow:          #ffe066;
+
+    /* --------------------------------------------------------------------------
+       2. Primitive RGB Triplet Channels (for alpha transparency)
+       -------------------------------------------------------------------------- */
+    --rgb-black:               0, 0, 0;
+    --rgb-midnight:            6, 9, 19;
+    --rgb-slate-dark:          6, 6, 14;
+    --rgb-white:               255, 255, 255;
+
+    --rgb-cyan:                0, 229, 255;
+    --rgb-cyan-bright:         0, 255, 255;
+    --rgb-blue:                0, 136, 255;
+    --rgb-sky:                 56, 189, 248;
+    --rgb-blue-soft:           96, 165, 250;
+
+    --rgb-green:               0, 255, 136;
+    --rgb-lime:                74, 222, 128;
+
+    --rgb-pink:                255, 0, 127;
+    --rgb-magenta:             255, 45, 135;
+    --rgb-rose:                251, 113, 133;
+
+    --rgb-purple:              199, 125, 255;
+    --rgb-purple-core:         192, 132, 252;
+    --rgb-magenta-soft:        232, 121, 249;
+
+    --rgb-amber:               255, 170, 0;
+    --rgb-orange:              255, 159, 67;
+    --rgb-yellow:              255, 224, 102;
+
+    /* --------------------------------------------------------------------------
+       3. Semantic Status & Role Colors
+       -------------------------------------------------------------------------- */
     --color-primary:           var(--palette-cyan);
     --color-secondary:         var(--palette-purple);
     --color-accent:            var(--palette-pink);
@@ -20,29 +74,35 @@
     --color-danger:            var(--palette-pink);
     --color-info:              var(--palette-blue);
 
+    /* --------------------------------------------------------------------------
+       4. Background Surfaces & Tints
+       -------------------------------------------------------------------------- */
     --bg-root:                 var(--palette-black);
-    --bg-surface:              rgba(6, 6, 14, 0.94);
-    --bg-surface-subtle:       rgba(0, 0, 0, 0.4);
-    --bg-surface-track:        rgba(0, 0, 0, 0.45);
-    --bg-input:                rgba(0, 0, 0, 0.65);
-    --bg-console:              rgba(0, 0, 0, 0.55);
+    --bg-surface:              rgba(var(--rgb-slate-dark), 0.94);
+    --bg-surface-subtle:       rgba(var(--rgb-black), 0.4);
+    --bg-surface-track:        rgba(var(--rgb-black), 0.45);
+    --bg-input:                rgba(var(--rgb-black), 0.65);
+    --bg-console:              rgba(var(--rgb-black), 0.55);
 
-    --bg-interactive-hover:    rgba(0, 229, 255, 0.08);
-    --bg-primary-subtle:       rgba(0, 229, 255, 0.05);
-    --bg-primary-tint:         rgba(0, 229, 255, 0.15);
-    --bg-success-subtle:       rgba(0, 255, 136, 0.12);
-    --bg-success-tint:         rgba(0, 255, 136, 0.15);
-    --bg-danger-subtle:        rgba(255, 0, 127, 0.12);
-    --bg-danger-tint:          rgba(255, 0, 127, 0.15);
-    --bg-warning-subtle:       rgba(255, 170, 0, 0.1);
-    --bg-warning-tint:         rgba(255, 170, 0, 0.22);
-    --bg-secondary-subtle:     rgba(199, 125, 255, 0.12);
-    --bg-scrollbar-thumb:      rgba(0, 229, 255, 0.35);
-    --bg-scrollbar-track:      rgba(255, 255, 255, 0.02);
+    --bg-interactive-hover:    rgba(var(--rgb-cyan), 0.08);
+    --bg-primary-subtle:       rgba(var(--rgb-cyan), 0.05);
+    --bg-primary-tint:         rgba(var(--rgb-cyan), 0.15);
+    --bg-success-subtle:       rgba(var(--rgb-green), 0.12);
+    --bg-success-tint:         rgba(var(--rgb-green), 0.15);
+    --bg-danger-subtle:        rgba(var(--rgb-pink), 0.12);
+    --bg-danger-tint:          rgba(var(--rgb-pink), 0.15);
+    --bg-warning-subtle:       rgba(var(--rgb-amber), 0.1);
+    --bg-warning-tint:         rgba(var(--rgb-amber), 0.22);
+    --bg-secondary-subtle:     rgba(var(--rgb-purple), 0.12);
+    --bg-scrollbar-thumb:      rgba(var(--rgb-cyan), 0.35);
+    --bg-scrollbar-track:      rgba(var(--rgb-white), 0.02);
 
+    /* --------------------------------------------------------------------------
+       5. Typography Colors
+       -------------------------------------------------------------------------- */
     --text-primary:            var(--palette-white);
-    --text-secondary:          rgba(255, 255, 255, 0.75);
-    --text-tertiary:           rgba(255, 255, 255, 0.45);
+    --text-secondary:          rgba(var(--rgb-white), 0.75);
+    --text-tertiary:           rgba(var(--rgb-white), 0.45);
     --text-inverse:            var(--palette-black);
 
     --text-brand:              var(--color-primary);
@@ -52,39 +112,76 @@
     --text-accent:             var(--color-accent);
     --text-secondary-accent:   var(--color-secondary);
 
-    --border-subtle:           rgba(255, 255, 255, 0.12);
-    --border-strong:           rgba(255, 255, 255, 0.35);
+    /* --------------------------------------------------------------------------
+       6. Borders & Outlines
+       -------------------------------------------------------------------------- */
+    --border-subtle:           rgba(var(--rgb-white), 0.12);
+    --border-strong:           rgba(var(--rgb-white), 0.35);
 
     --border-primary:          var(--color-primary);
-    --border-primary-subtle:   rgba(0, 229, 255, 0.35);
+    --border-primary-subtle:   rgba(var(--rgb-cyan), 0.35);
     --border-success:          var(--color-success);
-    --border-success-subtle:   rgba(0, 255, 136, 0.3);
+    --border-success-subtle:   rgba(var(--rgb-green), 0.3);
     --border-danger:           var(--color-danger);
-    --border-danger-subtle:    rgba(255, 0, 127, 0.3);
+    --border-danger-subtle:    rgba(var(--rgb-pink), 0.3);
     --border-warning:          var(--color-warning);
-    --border-warning-subtle:   rgba(255, 170, 0, 0.35);
-    --border-secondary-subtle: rgba(199, 125, 255, 0.4);
+    --border-warning-subtle:   rgba(var(--rgb-amber), 0.35);
+    --border-secondary-subtle: rgba(var(--rgb-purple), 0.4);
 
+    /* --------------------------------------------------------------------------
+       7. Audio Bus Channels & Routing
+       -------------------------------------------------------------------------- */
     --bus-drums-color:         var(--color-accent);
-    --bus-drums-bg:            rgba(255, 0, 127, 0.2);
-    --bus-drums-border:        rgba(255, 0, 127, 0.4);
+    --bus-drums-bg:            rgba(var(--rgb-pink), 0.2);
+    --bus-drums-border:        rgba(var(--rgb-pink), 0.4);
 
     --bus-bass-color:          var(--color-primary);
-    --bus-bass-bg:             rgba(0, 229, 255, 0.2);
-    --bus-bass-border:         rgba(0, 229, 255, 0.4);
+    --bus-bass-bg:             rgba(var(--rgb-cyan), 0.2);
+    --bus-bass-border:         rgba(var(--rgb-cyan), 0.4);
 
     --bus-space-color:         var(--color-secondary);
-    --bus-space-bg:            rgba(199, 125, 255, 0.2);
-    --bus-space-border:        rgba(199, 125, 255, 0.4);
+    --bus-space-bg:            rgba(var(--rgb-purple), 0.2);
+    --bus-space-border:        rgba(var(--rgb-purple), 0.4);
+
+    --bus-lead-color:          var(--palette-blue-sky);
+    --bus-lead-bg:             rgba(var(--rgb-sky), 0.2);
+    --bus-lead-border:         rgba(var(--rgb-sky), 0.4);
 
     --bus-direct-color:        var(--color-warning);
-    --bus-direct-bg:           rgba(255, 170, 0, 0.2);
-    --bus-direct-border:       rgba(255, 170, 0, 0.4);
+    --bus-direct-bg:           rgba(var(--rgb-amber), 0.2);
+    --bus-direct-border:       rgba(var(--rgb-amber), 0.4);
 
     --bus-master-color:        var(--text-secondary);
-    --bus-master-bg:           rgba(255, 255, 255, 0.1);
+    --bus-master-bg:           rgba(var(--rgb-white), 0.1);
     --bus-master-border:       var(--border-subtle);
 
+    /* --------------------------------------------------------------------------
+       8. Code Editor & Cyberpunk Syntax Tokens
+       -------------------------------------------------------------------------- */
+    --editor-bg:               var(--palette-midnight);
+    --editor-caret:            var(--palette-cyan);
+    --editor-selection:        rgba(var(--rgb-cyan), 0.28);
+    --editor-text-default:     var(--palette-slate-light);
+    --editor-line-height:      var(--line-height-editor);
+
+    --syn-comment:             var(--palette-slate-gray);
+    --syn-string:              var(--palette-yellow);
+    --syn-string-glow:         0 0 10px rgba(var(--rgb-yellow), 0.45);
+    --syn-keyword:             var(--palette-cyan-bright);
+    --syn-keyword-glow:        0 0 8px rgba(var(--rgb-cyan-bright), 0.5);
+    --syn-number:              var(--palette-orange);
+    --syn-paren:               var(--palette-blue-soft);
+    --syn-bracket:             var(--palette-magenta-soft);
+    --syn-brace:               var(--palette-lime);
+    --syn-live:                var(--palette-magenta);
+    --syn-live-glow:           0 0 12px rgba(var(--rgb-magenta), 0.6);
+    --syn-core:                var(--palette-purple-core);
+    --syn-const:               var(--palette-rose);
+    --syn-ident:               var(--editor-text-default);
+
+    /* --------------------------------------------------------------------------
+       9. Layout & Spacing Scale
+       -------------------------------------------------------------------------- */
     --space-2xs:               2px;
     --space-xs:                4px;
     --space-sm:                6px;
@@ -94,6 +191,9 @@
     --space-2xl:               18px;
     --space-3xl:               24px;
 
+    /* --------------------------------------------------------------------------
+       10. Typography Scale & Fonts
+       -------------------------------------------------------------------------- */
     --font-mono:               ui-monospace, 'SF Mono', 'Fira Code', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
     --font-size-2xs:           8px;
     --font-size-xs:            9.5px;
@@ -103,14 +203,28 @@
     --font-size-lg:            13px;
     --line-height-editor:      1.6;
 
+    /* --------------------------------------------------------------------------
+       11. Radii, Lighting, Glows & Shadows
+       -------------------------------------------------------------------------- */
     --radius-sm:               2px;
+    --radius-md:               4px;
     --blur-glass:              blur(16px);
-    --shadow-modal:            0 16px 48px rgba(0, 0, 0, 0.85);
-    --glow-primary:            0 0 8px rgba(0, 229, 255, 0.5);
-    --glow-success:            0 0 8px rgba(0, 255, 136, 0.6);
-    --glow-danger:             0 0 8px rgba(255, 0, 127, 0.6);
-    --glow-focus:              0 0 12px rgba(0, 229, 255, 0.22);
+    --shadow-modal:            0 16px 48px rgba(var(--rgb-black), 0.85);
+    --glow-primary:            0 0 8px rgba(var(--rgb-cyan), 0.5);
+    --glow-success:            0 0 8px rgba(var(--rgb-green), 0.6);
+    --glow-danger:             0 0 8px rgba(var(--rgb-pink), 0.6);
+    --glow-focus:              0 0 12px rgba(var(--rgb-cyan), 0.22);
 
+    /* --------------------------------------------------------------------------
+       12. Animation & Transitions
+       -------------------------------------------------------------------------- */
+    --transition-fast:         0.15s ease;
+    --transition-normal:       0.2s ease;
+    --transition-smooth:       0.3s ease;
+
+    /* --------------------------------------------------------------------------
+       13. Responsive Modals & Panels Layout
+       -------------------------------------------------------------------------- */
     --hud-padding-y:           clamp(8px, 2vh, 20px);
     --hud-padding-x:           clamp(10px, 3vw, 24px);
 
@@ -122,11 +236,13 @@
     --stats-grid-cols:         repeat(auto-fit, minmax(180px, 1fr));
     --stats-loops-height:      clamp(110px, 20vh, 180px);
 
-    --tutorial-card-width:     min(860px, calc(100vw - 16px));
-    --tutorial-card-top:       clamp(8px, 4vh, 46px);
-    --tutorial-card-left:      clamp(8px, 2vw, 20px);
-    --tutorial-card-padding:   clamp(8px, 1.5vw, 18px);
-    --tutorial-max-height:     calc(100dvh - 16px);
-    --editor-min-height:       clamp(180px, 35vh, 380px);
-    --editor-max-height:       calc(100dvh - 240px);
+    --tutorial-card-width:     min(760px, calc(100vw - 32px));
+    --tutorial-card-top:       clamp(92px, 11.5vh, 110px);
+    --tutorial-card-right:     clamp(12px, 2vw, 24px);
+    --tutorial-card-bottom:    clamp(12px, 2.5vh, 24px);
+    --tutorial-card-padding:   clamp(10px, 1.4vw, 16px);
+    --tutorial-max-height:     calc(100dvh - var(--tutorial-card-top) - var(--tutorial-card-bottom));
+    --editor-min-height:       clamp(280px, 46vh, 560px);
+    --editor-max-height:       calc(var(--tutorial-max-height) - 170px);
+    --console-max-height:      clamp(60px, 12vh, 110px);
 }

@@ -30,15 +30,14 @@
    [:span.neo-foot-hint "[Press I or click [X] to close]"]])
 
 (defn stats-panel-component [_props]
-  (let [live-snap (atom (telemetry-snapshot))
+  (let [live-snap (r/atom (telemetry-snapshot))
         timer-id  (atom nil)]
     (r/create-class
      {:component-did-mount
-      (fn [this]
+      (fn [_this]
         (reset! timer-id
                 (js/setInterval (fn []
-                                  (reset! live-snap (telemetry-snapshot))
-                                  (r/force-update this))
+                                  (reset! live-snap (telemetry-snapshot)))
                                 cfg/stats-refresh-interval-ms)))
       :component-will-unmount
       (fn [_this]
