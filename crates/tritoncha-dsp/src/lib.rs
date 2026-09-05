@@ -338,8 +338,8 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch(
             glide,
             filter_drive,
             noise_level,
-            pitch_env_amt,
-            pitch_env_decay,
+            pitch_snap: pitch_env_amt,
+            pitch_snap_decay: pitch_env_decay,
             analog_drift,
         };
         engine.set_voice_patch(patch_id as usize, patch);

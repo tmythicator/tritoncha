@@ -131,8 +131,8 @@ fn test_custom_voice_patch_reconfiguration() {
         glide: 0.0,
         filter_drive: 0.35,
         noise_level: 0.05,
-        pitch_env_amt: 12.0,
-        pitch_env_decay: 0.015,
+        pitch_snap: 12.0,
+        pitch_snap_decay: 0.015,
         analog_drift: 0.2,
     };
     engine.set_voice_patch(20, patch20);
@@ -168,10 +168,10 @@ fn test_analog_primitives_drive_noise_pitch_snap() {
         bus_id: 1,    // bus_id = bass
         polyphony: 1, // mono
         glide: 0.02,
-        filter_drive: 0.80,  // heavy filter_drive
-        noise_level: 0.10,   // audible noise
-        pitch_env_amt: 24.0, // strong 2-octave pitch attack punch
-        pitch_env_decay: 0.018,
+        filter_drive: 0.80, // heavy filter_drive
+        noise_level: 0.10,  // audible noise
+        pitch_snap: 24.0,   // strong 2-octave pitch attack punch
+        pitch_snap_decay: 0.018,
         analog_drift: 0.50,
     };
     engine.set_voice_patch(21, patch21);

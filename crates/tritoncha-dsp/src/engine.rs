@@ -1,11 +1,13 @@
+//! Core real-time DSP audio engine and mixer orchestration.
+
 use crate::dsp::delay::StereoDelay;
 use crate::dsp::effects::{BitcrusherDrive, SidechainPump, StereoChorus};
 use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{midi_to_freq, soft_clip};
+use crate::dsp::math::{db_to_gain, midi_to_freq, soft_clip};
 use crate::dsp::reverb::StereoReverb;
 use crate::sequencer::track::{
     TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
-    MAX_STEPS, MAX_TRACKS, REST_NOTE,
+    MAX_STEPS, MAX_TRACKS,
 };
 use crate::synth::drums::DrumMachine;
 use crate::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
@@ -39,6 +41,7 @@ pub const MAX_MASTER_RESONANCE: f32 = 0.95;
 pub const MIN_AUDIBLE_RESONANCE: f32 = 0.01;
 pub const MIN_SWEEP_DURATION_S: f32 = 0.01;
 pub const MAX_BUS_LINEAR_GAIN: f32 = 4.0;
+pub const MASTER_HEADROOM_GAIN: f32 = 0.95;
 
 // Drum Voice Identifiers
 pub const INST_DRUM_KICK: i32 = 0;
@@ -80,6 +83,7 @@ pub fn is_drum_inst(inst_id: i32) -> bool {
     )
 }
 
+/// Mixer bus state controlling volume, mutes, and effects sends.
 #[derive(Clone, Copy)]
 pub struct AudioBus {
     pub gain: f32,
@@ -99,6 +103,7 @@ impl AudioBus {
     }
 }
 
+/// Tritoncha Real-Time Audio Engine.
 pub struct TritonchaEngine {
     pub sample_rate: f32,
     pub playing: bool,
@@ -225,10 +230,7 @@ impl TritonchaEngine {
 
         // If track has no notes or all notes are rests, deactivate it
         if len == 0 || notes.iter().all(|&n| n < 0) {
-            tr.active = false;
-            tr.length = 0;
-            tr.notes = [REST_NOTE; MAX_STEPS];
-            tr.inst_kinds = [DEFAULT_SYNTH_PATCH_ID; MAX_STEPS];
+            tr.clear();
             return;
         }
 
@@ -237,38 +239,34 @@ impl TritonchaEngine {
         tr.step_multiplier = step_mult.max(1);
 
         for i in 0..len {
-            tr.inst_kinds[i] = if i < inst_ids.len() {
+            let inst = if i < inst_ids.len() {
                 inst_ids[i]
             } else {
                 DEFAULT_SYNTH_PATCH_ID
             };
-            tr.notes[i] = notes[i];
-            tr.velocities[i] = if i < vels.len() {
+            let vel = if i < vels.len() {
                 vels[i]
             } else {
                 DEFAULT_STEP_VELOCITY
             };
-            tr.durations[i] = if i < durs.len() {
+            let dur = if i < durs.len() {
                 durs[i]
             } else {
                 DEFAULT_STEP_DURATION_S
             };
+            tr.set_step(i, inst, notes[i], vel, dur);
         }
     }
 
     pub fn deactivate_track(&mut self, track_idx: usize) {
         if track_idx < MAX_TRACKS {
-            let tr = &mut self.tracks[track_idx];
-            tr.active = false;
-            tr.length = 0;
-            tr.notes = [REST_NOTE; MAX_STEPS];
-            tr.inst_kinds = [DEFAULT_SYNTH_PATCH_ID; MAX_STEPS];
+            self.tracks[track_idx].clear();
         }
     }
 
     pub fn clear_tracks(&mut self) {
         for tr in &mut self.tracks {
-            tr.active = false;
+            tr.clear();
             tr.muted = false;
             tr.solo = false;
         }
@@ -297,7 +295,7 @@ impl TritonchaEngine {
         send_reverb: f32,
     ) {
         if bus_idx < NUM_BUSSES {
-            let linear_gain = 10.0_f32.powf(gain_db / 20.0);
+            let linear_gain = db_to_gain(gain_db);
             self.busses[bus_idx].gain = linear_gain.clamp(0.0, MAX_BUS_LINEAR_GAIN);
             self.busses[bus_idx].muted = muted;
             self.busses[bus_idx].send_delay = send_delay.clamp(0.0, 1.0);
@@ -494,7 +492,7 @@ impl TritonchaEngine {
         let mut count = 0;
 
         for tr in &self.tracks {
-            if !tr.active || (self.solo_active && !tr.solo) || tr.muted {
+            if !tr.is_audible(self.solo_active) {
                 continue;
             }
 
@@ -561,7 +559,7 @@ impl TritonchaEngine {
             let mut bus_accum = [0.0_f32; NUM_BUSSES];
 
             // Accumulate drums into bus 0
-            let drum_sample = self.drums.process_sample(self.sample_rate);
+            let drum_sample = self.drums.process(self.sample_rate);
             bus_accum[BUS_DRUMS] += drum_sample;
 
             // Accumulate synth voices into their respective target bus
@@ -637,8 +635,85 @@ impl TritonchaEngine {
             };
 
             // 9. Master soft-clipping analog limiter
-            out_l[i] = soft_clip(filtered_l * 0.95);
-            out_r[i] = soft_clip(filtered_r * 0.95);
+            out_l[i] = soft_clip(filtered_l * MASTER_HEADROOM_GAIN);
+            out_r[i] = soft_clip(filtered_r * MASTER_HEADROOM_GAIN);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::synth::patch::PATCH_SAW_BASS;
+
+    #[test]
+    fn test_engine_initial_state() {
+        let engine = TritonchaEngine::new(48000.0);
+        assert_eq!(engine.bpm, DEFAULT_BPM);
+        assert!(!engine.playing);
+        assert_eq!(engine.voices.len(), NUM_VOICES);
+        assert_eq!(engine.busses.len(), NUM_BUSSES);
+    }
+
+    #[test]
+    fn test_engine_bpm_and_timing() {
+        let mut engine = TritonchaEngine::new(48000.0);
+        engine.set_bpm(174.0);
+        assert_eq!(engine.bpm, 174.0);
+
+        // Clamping check
+        engine.set_bpm(10.0);
+        assert_eq!(engine.bpm, 174.0); // Out of bounds, ignored
+    }
+
+    #[test]
+    fn test_engine_bus_parameters() {
+        let mut engine = TritonchaEngine::new(48000.0);
+        engine.set_bus_params(BUS_DRUMS, -6.0, true, 0.1, 0.2);
+        assert!(engine.busses[BUS_DRUMS].muted);
+        assert!((engine.busses[BUS_DRUMS].gain - db_to_gain(-6.0)).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_engine_trigger_drum_and_synth() {
+        let mut engine = TritonchaEngine::new(48000.0);
+        engine.trigger_note(INST_DRUM_KICK, 60.0, 0.9, 0.1);
+        assert!(engine.drums.kick.active);
+
+        engine.trigger_note(PATCH_SAW_BASS as i32, 55.0, 0.85, 0.2);
+        assert!(engine.voices.iter().any(|v| v.active));
+    }
+
+    #[test]
+    fn test_engine_process_block_silence_and_sound() {
+        let mut engine = TritonchaEngine::new(48000.0);
+        let mut out_l = [0.0; 128];
+        let mut out_r = [0.0; 128];
+
+        // Process silence
+        engine.process_block(&mut out_l, &mut out_r);
+        assert!(out_l.iter().all(|&s| s == 0.0));
+
+        // Trigger kick and process block
+        engine.trigger_note(INST_DRUM_KICK, 60.0, 1.0, 0.1);
+        engine.process_block(&mut out_l, &mut out_r);
+
+        let max_amp = out_l.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));
+        assert!(max_amp > 0.0);
+        assert!(max_amp <= 1.0);
+    }
+
+    #[test]
+    fn test_engine_master_filter_sweep() {
+        let mut engine = TritonchaEngine::new(48000.0);
+        engine.sweep_master_filter(400.0, 4000.0, 0.05);
+        assert!(engine.sweep_active);
+
+        let mut out_l = [0.0; 2400];
+        let mut out_r = [0.0; 2400];
+        engine.process_block(&mut out_l, &mut out_r);
+
+        assert!(!engine.sweep_active);
+        assert_eq!(engine.master_cutoff_hz, 4000.0);
     }
 }

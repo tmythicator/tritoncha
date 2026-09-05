@@ -1,3 +1,5 @@
+//! Declarative modular synthesizer voice patch specifications and sound design presets.
+
 pub const MAX_PATCHES: usize = 64;
 
 // Standard Modular Patch Identifiers
@@ -47,6 +49,47 @@ pub const OSC_BLADE: u8 = 10;
 pub const OSC_HOOVER: u8 = 11;
 pub const OSC_CLICK: u8 = 12;
 
+/// Strongly typed oscillator waveform selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u8)]
+pub enum OscillatorType {
+    #[default]
+    Saw = 0,
+    Pulse = 1,
+    Triangle = 2,
+    Sine = 3,
+    Supersaw = 4,
+    Karplus = 5,
+    Organ = 6,
+    Chiptune = 7,
+    Fm = 8,
+    Reese = 9,
+    Blade = 10,
+    Hoover = 11,
+    Click = 12,
+}
+
+impl From<u8> for OscillatorType {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            1 => OscillatorType::Pulse,
+            2 => OscillatorType::Triangle,
+            3 => OscillatorType::Sine,
+            4 => OscillatorType::Supersaw,
+            5 => OscillatorType::Karplus,
+            6 => OscillatorType::Organ,
+            7 => OscillatorType::Chiptune,
+            8 => OscillatorType::Fm,
+            9 => OscillatorType::Reese,
+            10 => OscillatorType::Blade,
+            11 => OscillatorType::Hoover,
+            12 => OscillatorType::Click,
+            _ => OscillatorType::Saw,
+        }
+    }
+}
+
 // Filter Types
 pub const FILTER_LOWPASS: u8 = 0;
 pub const FILTER_HIGHPASS: u8 = 1;
@@ -59,6 +102,31 @@ pub const BUS_BASS: u8 = 1;
 pub const BUS_SPACE: u8 = 2;
 pub const BUS_LEAD: u8 = 3;
 pub const BUS_DIRECT: u8 = 4;
+
+/// Strongly typed mixer bus routing targets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u8)]
+pub enum BusTarget {
+    #[default]
+    Drums = 0,
+    Bass = 1,
+    Space = 2,
+    Lead = 3,
+    Direct = 4,
+}
+
+impl From<u8> for BusTarget {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            1 => BusTarget::Bass,
+            2 => BusTarget::Space,
+            3 => BusTarget::Lead,
+            4 => BusTarget::Direct,
+            _ => BusTarget::Drums,
+        }
+    }
+}
 
 // Audio and Voice Timing Constants
 pub const MIN_FREQ_HZ: f32 = 20.0;
@@ -76,11 +144,12 @@ pub const MAX_PITCH_SNAP_SEMITONES: f32 = 48.0;
 pub const MIN_PITCH_SNAP_DECAY_SEC: f32 = 0.002;
 pub const MAX_PITCH_SNAP_DECAY_SEC: f32 = 0.150;
 pub const DEFAULT_PITCH_SNAP_DECAY_SEC: f32 = 0.015;
-pub const MAX_ANALOG_DRIFT_SEMITONES: f32 = 0.15; // ±15 cents max subtle VCO drift
+pub const MAX_ANALOG_DRIFT_SEMITONES: f32 = 0.15;
 
+/// Modular sound design patch specification.
 #[derive(Clone, Copy)]
 pub struct ModularPatch {
-    pub osc_type: u8,          // OSC_* constants
+    pub osc_type: u8,          // OSC_* constants / OscillatorType
     pub sub_level: f32,        // 0.0 .. 1.0
     pub pulse_width: f32,      // 0.05 .. 0.95
     pub filter_type: u8,       // FILTER_* constants
@@ -98,767 +167,881 @@ pub struct ModularPatch {
     pub polyphony: u8,         // 1=Mono, >1=Max polyphony voices (e.g. 8)
     pub glide: f32,            // Portamento / pitch slide time in seconds (e.g. 0.04)
     pub filter_drive: f32,     // 0.0 .. 1.0 (analog saturation in SVF integrator feedback)
-    pub noise_level: f32,      // 0.0 .. 1.0 (per-voice white noise injection level)
-    pub pitch_env_amt: f32,    // 0.0 .. 48.0 (pitch attack transient snap in semitones)
-    pub pitch_env_decay: f32,  // 0.005 .. 0.100 (seconds: pitch snap decay time)
-    pub analog_drift: f32,     // 0.0 .. 1.0 (organic per-voice VCO drift/slop)
+    pub noise_level: f32,      // 0.0 .. 1.0 (analog noise injection)
+    pub pitch_snap: f32,       // 0.0 .. 48.0 semitones (laser/punch initial transient)
+    pub pitch_snap_decay: f32, // seconds (pitch snap exponential decay rate)
+    pub analog_drift: f32,     // 0.0 .. 1.0 (subtle LFO pitch drift modeling analog VCOs)
+}
+
+impl ModularPatch {
+    pub fn default_lead() -> Self {
+        Self {
+            osc_type: OSC_SAW,
+            sub_level: 0.25,
+            pulse_width: 0.5,
+            filter_type: FILTER_LOWPASS,
+            cutoff_base: 2800.0,
+            cutoff_env_amt: 3500.0,
+            cutoff_key_track: 1.0,
+            resonance: 0.45,
+            attack: 0.005,
+            decay: 0.12,
+            sustain: 0.6,
+            release: 0.18,
+            mod_attack: 0.005,
+            mod_decay: 0.12,
+            bus_id: BUS_LEAD,
+            polyphony: 4,
+            glide: 0.0,
+            filter_drive: 0.2,
+            noise_level: 0.0,
+            pitch_snap: 0.0,
+            pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+            analog_drift: 0.05,
+        }
+    }
+
+    /// Clamps and sanitizes all patch parameters to ensure numerical stability.
+    pub fn sanitized(&self) -> Self {
+        Self {
+            osc_type: self.osc_type.min(12),
+            sub_level: self.sub_level.clamp(0.0, 1.0),
+            pulse_width: self.pulse_width.clamp(0.05, 0.95),
+            filter_type: self.filter_type.min(3),
+            cutoff_base: self.cutoff_base.clamp(20.0, 20000.0),
+            cutoff_env_amt: self.cutoff_env_amt.clamp(-20000.0, 20000.0),
+            cutoff_key_track: self.cutoff_key_track.clamp(0.0, 4.0),
+            resonance: self.resonance.clamp(0.0, 0.98),
+            attack: self.attack.clamp(MIN_ATTACK_SEC, 10.0),
+            decay: self.decay.clamp(MIN_DECAY_SEC, 10.0),
+            sustain: self.sustain.clamp(0.0, 1.0),
+            release: self.release.clamp(MIN_RELEASE_SEC, 10.0),
+            mod_attack: self.mod_attack.clamp(0.001, 10.0),
+            mod_decay: self.mod_decay.clamp(0.005, 10.0),
+            bus_id: self.bus_id.min(4),
+            polyphony: self.polyphony.clamp(1, 16),
+            glide: self.glide.clamp(0.0, 2.0),
+            filter_drive: self.filter_drive.clamp(0.0, 1.0),
+            noise_level: self.noise_level.clamp(0.0, 1.0),
+            pitch_snap: self
+                .pitch_snap
+                .clamp(MIN_PITCH_SNAP_SEMITONES, MAX_PITCH_SNAP_SEMITONES),
+            pitch_snap_decay: self
+                .pitch_snap_decay
+                .clamp(MIN_PITCH_SNAP_DECAY_SEC, MAX_PITCH_SNAP_DECAY_SEC),
+            analog_drift: self.analog_drift.clamp(0.0, 1.0),
+        }
+    }
+
+    /// Retrieves the curated factory default patch for a given patch index.
+    pub fn default_for(patch_id: usize) -> Self {
+        let all = init_default_patches();
+        if patch_id < MAX_PATCHES {
+            all[patch_id]
+        } else {
+            ModularPatch::default()
+        }
+    }
 }
 
 impl Default for ModularPatch {
     fn default() -> Self {
-        Self {
-            osc_type: OSC_SAW,
-            sub_level: 0.0,
-            pulse_width: 0.5,
-            filter_type: FILTER_LOWPASS,
-            cutoff_base: 2000.0,
-            cutoff_env_amt: 1000.0,
-            cutoff_key_track: 1.0,
-            resonance: 0.2,
-            attack: 0.01,
-            decay: 0.2,
-            sustain: 0.5,
-            release: 0.2,
-            mod_attack: 0.01,
-            mod_decay: 0.2,
-            bus_id: BUS_LEAD,
-            polyphony: 8,
-            glide: 0.0,
-            filter_drive: 0.0,
-            noise_level: 0.0,
-            pitch_env_amt: 0.0,
-            pitch_env_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
-            analog_drift: 0.0,
-        }
+        Self::default_lead()
     }
 }
 
-impl ModularPatch {
-    #[must_use]
-    pub fn sanitized(mut self) -> Self {
-        self.sub_level = self.sub_level.clamp(0.0, 1.0);
-        self.pulse_width = self.pulse_width.clamp(0.05, 0.95);
-        self.cutoff_base = self.cutoff_base.clamp(MIN_FREQ_HZ, MAX_FREQ_HZ);
-        self.cutoff_env_amt = self.cutoff_env_amt.clamp(-12000.0, 12000.0);
-        self.cutoff_key_track = self.cutoff_key_track.clamp(0.0, 10.0);
-        self.resonance = self.resonance.clamp(0.0, 0.98);
-        self.attack = self.attack.max(MIN_ATTACK_SEC);
-        self.decay = self.decay.max(MIN_DECAY_SEC);
-        self.sustain = self.sustain.clamp(0.0, 1.0);
-        self.release = self.release.max(MIN_RELEASE_SEC);
-        self.mod_attack = self.mod_attack.max(0.001);
-        self.mod_decay = self.mod_decay.max(0.005);
-        self.bus_id = self.bus_id.min(4);
-        self.polyphony = self.polyphony.max(1);
-        self.glide = self.glide.clamp(0.0, 2.0);
-        self.filter_drive = self.filter_drive.clamp(0.0, 1.0);
-        self.noise_level = self.noise_level.clamp(0.0, 1.0);
-        self.pitch_env_amt = self
-            .pitch_env_amt
-            .clamp(MIN_PITCH_SNAP_SEMITONES, MAX_PITCH_SNAP_SEMITONES);
-        self.pitch_env_decay = self
-            .pitch_env_decay
-            .clamp(MIN_PITCH_SNAP_DECAY_SEC, MAX_PITCH_SNAP_DECAY_SEC);
-        self.analog_drift = self.analog_drift.clamp(0.0, 1.0);
-        self
+pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
+    let mut patches = [ModularPatch::default(); MAX_PATCHES];
+
+    // Patch 4: Saw Bass (Classic Phrygian Roller Bass)
+    patches[PATCH_SAW_BASS] = ModularPatch {
+        osc_type: OSC_SAW,
+        sub_level: 0.55,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 320.0,
+        cutoff_env_amt: 1600.0,
+        cutoff_key_track: 0.6,
+        resonance: 0.35,
+        attack: 0.005,
+        decay: 0.14,
+        sustain: 0.45,
+        release: 0.12,
+        mod_attack: 0.005,
+        mod_decay: 0.10,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.035,
+        filter_drive: 0.4,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.05,
+    };
+
+    // Patch 5: Acid Bass (Resonant 303 Screamer)
+    patches[PATCH_ACID_BASS] = ModularPatch {
+        osc_type: OSC_SAW,
+        sub_level: 0.2,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 450.0,
+        cutoff_env_amt: 4800.0,
+        cutoff_key_track: 1.2,
+        resonance: 0.88,
+        attack: 0.005,
+        decay: 0.18,
+        sustain: 0.2,
+        release: 0.1,
+        mod_attack: 0.005,
+        mod_decay: 0.14,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.05,
+        filter_drive: 0.65,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.1,
+    };
+
+    // Patch 6: Sub Sine (Deep seismic 808 sub)
+    patches[PATCH_SUB_SINE] = ModularPatch {
+        osc_type: OSC_SINE,
+        sub_level: 0.8,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 180.0,
+        cutoff_env_amt: 150.0,
+        cutoff_key_track: 0.2,
+        resonance: 0.1,
+        attack: 0.01,
+        decay: 0.25,
+        sustain: 0.8,
+        release: 0.2,
+        mod_attack: 0.01,
+        mod_decay: 0.2,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.06,
+        filter_drive: 0.15,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.0,
+    };
+
+    // Patch 7: Dark Pad (Atmospheric minor chord pad)
+    patches[PATCH_DARK_PAD] = ModularPatch {
+        osc_type: OSC_SUPERSAW,
+        sub_level: 0.3,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 850.0,
+        cutoff_env_amt: 1400.0,
+        cutoff_key_track: 0.8,
+        resonance: 0.3,
+        attack: 0.25,
+        decay: 0.6,
+        sustain: 0.7,
+        release: 1.2,
+        mod_attack: 0.3,
+        mod_decay: 0.8,
+        bus_id: BUS_SPACE,
+        polyphony: 8,
+        glide: 0.0,
+        filter_drive: 0.1,
+        noise_level: 0.02,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.12,
+    };
+
+    // Patch 8: Lead (Cutting sync lead)
+    patches[PATCH_LEAD] = ModularPatch::default_lead();
+
+    // Patch 9: FM Chime / Metallic Perc
+    patches[PATCH_FM] = ModularPatch {
+        osc_type: OSC_FM,
+        sub_level: 0.0,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 3800.0,
+        cutoff_env_amt: 4000.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.3,
+        attack: 0.005,
+        decay: 0.3,
+        sustain: 0.1,
+        release: 0.3,
+        mod_attack: 0.005,
+        mod_decay: 0.25,
+        bus_id: BUS_SPACE,
+        polyphony: 6,
+        glide: 0.0,
+        filter_drive: 0.15,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.02,
+    };
+
+    // Patch 10: Reese Bass (Dark detuned jungle reese)
+    patches[PATCH_REESE] = ModularPatch {
+        osc_type: OSC_REESE,
+        sub_level: 0.45,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 420.0,
+        cutoff_env_amt: 1200.0,
+        cutoff_key_track: 0.5,
+        resonance: 0.4,
+        attack: 0.01,
+        decay: 0.3,
+        sustain: 0.8,
+        release: 0.2,
+        mod_attack: 0.01,
+        mod_decay: 0.2,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.04,
+        filter_drive: 0.55,
+        noise_level: 0.01,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.15,
+    };
+
+    // Patch 11: Click (Metronome click downbeat/beat)
+    patches[PATCH_CLICK] = ModularPatch {
+        osc_type: OSC_CLICK,
+        sub_level: 0.0,
+        pulse_width: 0.5,
+        filter_type: FILTER_HIGHPASS,
+        cutoff_base: 1500.0,
+        cutoff_env_amt: 2000.0,
+        cutoff_key_track: 0.0,
+        resonance: 0.1,
+        attack: 0.001,
+        decay: 0.015,
+        sustain: 0.0,
+        release: 0.01,
+        mod_attack: 0.001,
+        mod_decay: 0.01,
+        bus_id: BUS_DIRECT,
+        polyphony: 2,
+        glide: 0.0,
+        filter_drive: 0.0,
+        noise_level: 0.0,
+        pitch_snap: 12.0,
+        pitch_snap_decay: 0.005,
+        analog_drift: 0.0,
+    };
+
+    // Patch 12: Supersaw (Trance/Hardcore detuned stack)
+    patches[PATCH_SUPERSAW] = ModularPatch {
+        osc_type: OSC_SUPERSAW,
+        sub_level: 0.35,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 2200.0,
+        cutoff_env_amt: 4500.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.35,
+        attack: 0.01,
+        decay: 0.2,
+        sustain: 0.6,
+        release: 0.25,
+        mod_attack: 0.01,
+        mod_decay: 0.2,
+        bus_id: BUS_LEAD,
+        polyphony: 4,
+        glide: 0.02,
+        filter_drive: 0.3,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.08,
+    };
+
+    // Patch 13: Blade Runner Brass Lead
+    patches[PATCH_BLADE] = ModularPatch {
+        osc_type: OSC_BLADE,
+        sub_level: 0.2,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 950.0,
+        cutoff_env_amt: 3200.0,
+        cutoff_key_track: 1.1,
+        resonance: 0.5,
+        attack: 0.08,
+        decay: 0.4,
+        sustain: 0.7,
+        release: 0.8,
+        mod_attack: 0.1,
+        mod_decay: 0.5,
+        bus_id: BUS_SPACE,
+        polyphony: 4,
+        glide: 0.08,
+        filter_drive: 0.25,
+        noise_level: 0.02,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.15,
+    };
+
+    // Patch 14: Hoover Synth (Alpha Juno Mentasm)
+    patches[PATCH_HOOVER] = ModularPatch {
+        osc_type: OSC_HOOVER,
+        sub_level: 0.4,
+        pulse_width: 0.4,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 1800.0,
+        cutoff_env_amt: 3600.0,
+        cutoff_key_track: 0.8,
+        resonance: 0.55,
+        attack: 0.01,
+        decay: 0.25,
+        sustain: 0.6,
+        release: 0.2,
+        mod_attack: 0.01,
+        mod_decay: 0.2,
+        bus_id: BUS_LEAD,
+        polyphony: 2,
+        glide: 0.06,
+        filter_drive: 0.45,
+        noise_level: 0.0,
+        pitch_snap: 24.0,
+        pitch_snap_decay: 0.045,
+        analog_drift: 0.12,
+    };
+
+    // Patch 15: Karplus-Strong Acoustic Pluck
+    patches[PATCH_KARPLUS] = ModularPatch {
+        osc_type: OSC_KARPLUS,
+        sub_level: 0.0,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 6000.0,
+        cutoff_env_amt: 0.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.1,
+        attack: 0.002,
+        decay: 0.4,
+        sustain: 0.0,
+        release: 0.3,
+        mod_attack: 0.002,
+        mod_decay: 0.3,
+        bus_id: BUS_SPACE,
+        polyphony: 6,
+        glide: 0.0,
+        filter_drive: 0.0,
+        noise_level: 0.8,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.0,
+    };
+
+    // Patch 16: Tonewheel Organ (Gospel / House Organ)
+    patches[PATCH_ORGAN] = ModularPatch {
+        osc_type: OSC_ORGAN,
+        sub_level: 0.5,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 4500.0,
+        cutoff_env_amt: 1000.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.2,
+        attack: 0.003,
+        decay: 0.05,
+        sustain: 0.9,
+        release: 0.05,
+        mod_attack: 0.003,
+        mod_decay: 0.05,
+        bus_id: BUS_LEAD,
+        polyphony: 6,
+        glide: 0.0,
+        filter_drive: 0.35,
+        noise_level: 0.0,
+        pitch_snap: 12.0,
+        pitch_snap_decay: 0.008,
+        analog_drift: 0.02,
+    };
+
+    // Patch 17: Chiptune NES Square (8-bit Arpeggiator Lead)
+    patches[PATCH_CHIPTUNE] = ModularPatch {
+        osc_type: OSC_CHIPTUNE,
+        sub_level: 0.0,
+        pulse_width: 0.25,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 8000.0,
+        cutoff_env_amt: 0.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.0,
+        attack: 0.001,
+        decay: 0.08,
+        sustain: 0.7,
+        release: 0.04,
+        mod_attack: 0.001,
+        mod_decay: 0.08,
+        bus_id: BUS_DIRECT,
+        polyphony: 2,
+        glide: 0.0,
+        filter_drive: 0.1,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.0,
+    };
+
+    // Patch 19: Ambient Glass Drift (Shimmering crystal pad)
+    patches[PATCH_AMBIENT_GLASS] = ModularPatch {
+        osc_type: OSC_SINE,
+        sub_level: 0.2,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 1400.0,
+        cutoff_env_amt: 2200.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.25,
+        attack: 0.4,
+        decay: 0.8,
+        sustain: 0.7,
+        release: 1.6,
+        mod_attack: 0.5,
+        mod_decay: 1.0,
+        bus_id: BUS_SPACE,
+        polyphony: 8,
+        glide: 0.0,
+        filter_drive: 0.05,
+        noise_level: 0.01,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.18,
+    };
+
+    // Patch 27: Ethereal Pad
+    patches[PATCH_ETHEREAL_PAD] = ModularPatch {
+        osc_type: OSC_SUPERSAW,
+        sub_level: 0.3,
+        pulse_width: 0.5,
+        filter_type: FILTER_BANDPASS,
+        cutoff_base: 1100.0,
+        cutoff_env_amt: 1800.0,
+        cutoff_key_track: 0.8,
+        resonance: 0.45,
+        attack: 0.35,
+        decay: 0.7,
+        sustain: 0.65,
+        release: 1.4,
+        mod_attack: 0.4,
+        mod_decay: 0.9,
+        bus_id: BUS_SPACE,
+        polyphony: 8,
+        glide: 0.0,
+        filter_drive: 0.1,
+        noise_level: 0.02,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.14,
+    };
+
+    // Patch 28: Ice Pad (Cold, sharp digital pad)
+    patches[PATCH_ICE_PAD] = ModularPatch {
+        osc_type: OSC_PULSE,
+        sub_level: 0.1,
+        pulse_width: 0.2,
+        filter_type: FILTER_HIGHPASS,
+        cutoff_base: 650.0,
+        cutoff_env_amt: 1200.0,
+        cutoff_key_track: 0.9,
+        resonance: 0.3,
+        attack: 0.2,
+        decay: 0.5,
+        sustain: 0.7,
+        release: 1.0,
+        mod_attack: 0.25,
+        mod_decay: 0.6,
+        bus_id: BUS_SPACE,
+        polyphony: 8,
+        glide: 0.0,
+        filter_drive: 0.05,
+        noise_level: 0.03,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.08,
+    };
+
+    // Patch 29: Warm Strings (Analog polyphonic string ensemble)
+    patches[PATCH_WARM_STRINGS] = ModularPatch {
+        osc_type: OSC_SAW,
+        sub_level: 0.25,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 1250.0,
+        cutoff_env_amt: 2100.0,
+        cutoff_key_track: 0.9,
+        resonance: 0.25,
+        attack: 0.15,
+        decay: 0.4,
+        sustain: 0.75,
+        release: 0.8,
+        mod_attack: 0.2,
+        mod_decay: 0.5,
+        bus_id: BUS_SPACE,
+        polyphony: 8,
+        glide: 0.0,
+        filter_drive: 0.2,
+        noise_level: 0.01,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.16,
+    };
+
+    // Patch 30: Choir Pad (Vocal formant simulation)
+    patches[PATCH_CHOIR_PAD] = ModularPatch {
+        osc_type: OSC_PULSE,
+        sub_level: 0.3,
+        pulse_width: 0.35,
+        filter_type: FILTER_BANDPASS,
+        cutoff_base: 800.0,
+        cutoff_env_amt: 950.0,
+        cutoff_key_track: 0.6,
+        resonance: 0.65,
+        attack: 0.3,
+        decay: 0.6,
+        sustain: 0.7,
+        release: 1.2,
+        mod_attack: 0.35,
+        mod_decay: 0.7,
+        bus_id: BUS_SPACE,
+        polyphony: 8,
+        glide: 0.0,
+        filter_drive: 0.15,
+        noise_level: 0.02,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.12,
+    };
+
+    // Patch 31: Space Drone (Continuous atmospheric evolving drone)
+    patches[PATCH_SPACE_DRONE] = ModularPatch {
+        osc_type: OSC_SUPERSAW,
+        sub_level: 0.6,
+        pulse_width: 0.5,
+        filter_type: FILTER_NOTCH,
+        cutoff_base: 550.0,
+        cutoff_env_amt: 800.0,
+        cutoff_key_track: 0.3,
+        resonance: 0.75,
+        attack: 0.8,
+        decay: 1.5,
+        sustain: 0.9,
+        release: 2.5,
+        mod_attack: 1.0,
+        mod_decay: 2.0,
+        bus_id: BUS_SPACE,
+        polyphony: 4,
+        glide: 0.15,
+        filter_drive: 0.3,
+        noise_level: 0.05,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.25,
+    };
+
+    // Patch 32: Pluck Lead (Bright fast EDM/Trance pluck)
+    patches[PATCH_PLUCK_LEAD] = ModularPatch {
+        osc_type: OSC_PULSE,
+        sub_level: 0.2,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 1200.0,
+        cutoff_env_amt: 5200.0,
+        cutoff_key_track: 1.2,
+        resonance: 0.5,
+        attack: 0.002,
+        decay: 0.12,
+        sustain: 0.0,
+        release: 0.1,
+        mod_attack: 0.002,
+        mod_decay: 0.09,
+        bus_id: BUS_LEAD,
+        polyphony: 4,
+        glide: 0.0,
+        filter_drive: 0.25,
+        noise_level: 0.0,
+        pitch_snap: 12.0,
+        pitch_snap_decay: 0.01,
+        analog_drift: 0.04,
+    };
+
+    // Patch 33: Neuro Bass (Heavy distorted modulated neurofunk bass)
+    patches[PATCH_NEURO_BASS] = ModularPatch {
+        osc_type: OSC_REESE,
+        sub_level: 0.5,
+        pulse_width: 0.5,
+        filter_type: FILTER_BANDPASS,
+        cutoff_base: 380.0,
+        cutoff_env_amt: 2200.0,
+        cutoff_key_track: 0.8,
+        resonance: 0.72,
+        attack: 0.008,
+        decay: 0.2,
+        sustain: 0.7,
+        release: 0.18,
+        mod_attack: 0.01,
+        mod_decay: 0.16,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.045,
+        filter_drive: 0.85,
+        noise_level: 0.02,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.15,
+    };
+
+    // Patch 34: 808 Sub (Pure sub-bass with punchy pitch envelope)
+    patches[PATCH_808_SUB] = ModularPatch {
+        osc_type: OSC_SINE,
+        sub_level: 0.9,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 120.0,
+        cutoff_env_amt: 80.0,
+        cutoff_key_track: 0.1,
+        resonance: 0.0,
+        attack: 0.005,
+        decay: 0.45,
+        sustain: 0.6,
+        release: 0.35,
+        mod_attack: 0.005,
+        mod_decay: 0.3,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.05,
+        filter_drive: 0.3,
+        noise_level: 0.0,
+        pitch_snap: 36.0,
+        pitch_snap_decay: 0.025,
+        analog_drift: 0.0,
+    };
+
+    // Patch 35: Slap Bass (Percussive funk slap bass)
+    patches[PATCH_SLAP_BASS] = ModularPatch {
+        osc_type: OSC_PULSE,
+        sub_level: 0.3,
+        pulse_width: 0.4,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 650.0,
+        cutoff_env_amt: 3800.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.55,
+        attack: 0.003,
+        decay: 0.14,
+        sustain: 0.3,
+        release: 0.08,
+        mod_attack: 0.003,
+        mod_decay: 0.1,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.02,
+        filter_drive: 0.4,
+        noise_level: 0.05,
+        pitch_snap: 24.0,
+        pitch_snap_decay: 0.015,
+        analog_drift: 0.05,
+    };
+
+    // Patch 36: Organ Bass (Deep house M1-style organ bass)
+    patches[PATCH_ORGAN_BASS] = ModularPatch {
+        osc_type: OSC_ORGAN,
+        sub_level: 0.4,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 850.0,
+        cutoff_env_amt: 1800.0,
+        cutoff_key_track: 0.8,
+        resonance: 0.3,
+        attack: 0.003,
+        decay: 0.16,
+        sustain: 0.5,
+        release: 0.1,
+        mod_attack: 0.003,
+        mod_decay: 0.12,
+        bus_id: BUS_BASS,
+        polyphony: 1,
+        glide: 0.03,
+        filter_drive: 0.3,
+        noise_level: 0.0,
+        pitch_snap: 12.0,
+        pitch_snap_decay: 0.012,
+        analog_drift: 0.03,
+    };
+
+    // Patch 37: Acid Lead (High resonant squealing 303 lead)
+    patches[PATCH_ACID_LEAD] = ModularPatch {
+        osc_type: OSC_SAW,
+        sub_level: 0.1,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 950.0,
+        cutoff_env_amt: 6200.0,
+        cutoff_key_track: 1.3,
+        resonance: 0.92,
+        attack: 0.004,
+        decay: 0.15,
+        sustain: 0.25,
+        release: 0.12,
+        mod_attack: 0.004,
+        mod_decay: 0.12,
+        bus_id: BUS_LEAD,
+        polyphony: 2,
+        glide: 0.06,
+        filter_drive: 0.75,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.12,
+    };
+
+    // Patch 38: FM Bell (Bright crystalline FM bell)
+    patches[PATCH_FM_BELL] = ModularPatch {
+        osc_type: OSC_FM,
+        sub_level: 0.0,
+        pulse_width: 0.5,
+        filter_type: FILTER_BANDPASS,
+        cutoff_base: 2400.0,
+        cutoff_env_amt: 3500.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.6,
+        attack: 0.002,
+        decay: 0.65,
+        sustain: 0.0,
+        release: 0.5,
+        mod_attack: 0.002,
+        mod_decay: 0.45,
+        bus_id: BUS_SPACE,
+        polyphony: 6,
+        glide: 0.0,
+        filter_drive: 0.1,
+        noise_level: 0.0,
+        pitch_snap: 0.0,
+        pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+        analog_drift: 0.02,
+    };
+
+    // Patch 39: Glass Keys (Delicate ambient electric piano keys)
+    patches[PATCH_GLASS_KEYS] = ModularPatch {
+        osc_type: OSC_SINE,
+        sub_level: 0.25,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 2800.0,
+        cutoff_env_amt: 2400.0,
+        cutoff_key_track: 1.0,
+        resonance: 0.2,
+        attack: 0.004,
+        decay: 0.35,
+        sustain: 0.3,
+        release: 0.4,
+        mod_attack: 0.004,
+        mod_decay: 0.3,
+        bus_id: BUS_SPACE,
+        polyphony: 6,
+        glide: 0.0,
+        filter_drive: 0.1,
+        noise_level: 0.0,
+        pitch_snap: 12.0,
+        pitch_snap_decay: 0.006,
+        analog_drift: 0.04,
+    };
+
+    // Patch 40: Siren (Dub sound system laser siren)
+    patches[PATCH_SIREN] = ModularPatch {
+        osc_type: OSC_SAW,
+        sub_level: 0.3,
+        pulse_width: 0.5,
+        filter_type: FILTER_BANDPASS,
+        cutoff_base: 1800.0,
+        cutoff_env_amt: 3200.0,
+        cutoff_key_track: 0.0,
+        resonance: 0.8,
+        attack: 0.01,
+        decay: 0.4,
+        sustain: 0.6,
+        release: 0.4,
+        mod_attack: 0.01,
+        mod_decay: 0.35,
+        bus_id: BUS_SPACE,
+        polyphony: 1,
+        glide: 0.12,
+        filter_drive: 0.5,
+        noise_level: 0.0,
+        pitch_snap: 48.0,
+        pitch_snap_decay: 0.12,
+        analog_drift: 0.2,
+    };
+
+    // Patch 41: Laser (High sci-fi arcade zap)
+    patches[PATCH_LASER] = ModularPatch {
+        osc_type: OSC_PULSE,
+        sub_level: 0.0,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 5000.0,
+        cutoff_env_amt: 6000.0,
+        cutoff_key_track: 0.0,
+        resonance: 0.65,
+        attack: 0.001,
+        decay: 0.08,
+        sustain: 0.0,
+        release: 0.06,
+        mod_attack: 0.001,
+        mod_decay: 0.06,
+        bus_id: BUS_DIRECT,
+        polyphony: 2,
+        glide: 0.0,
+        filter_drive: 0.4,
+        noise_level: 0.0,
+        pitch_snap: 48.0,
+        pitch_snap_decay: 0.035,
+        analog_drift: 0.0,
+    };
+
+    patches
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_oscillator_type_from_u8() {
+        assert_eq!(OscillatorType::from(0), OscillatorType::Saw);
+        assert_eq!(OscillatorType::from(4), OscillatorType::Supersaw);
+        assert_eq!(OscillatorType::from(8), OscillatorType::Fm);
+        assert_eq!(OscillatorType::from(12), OscillatorType::Click);
+        assert_eq!(OscillatorType::from(99), OscillatorType::Saw);
     }
 
-    #[must_use]
-    pub fn default_for(patch_id: usize) -> Self {
-        match patch_id {
-            // SawBass (Mono)
-            PATCH_SAW_BASS => Self {
-                osc_type: OSC_SAW,
-                sub_level: 0.45,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 800.0,
-                cutoff_env_amt: 3500.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.45,
-                attack: 0.005,
-                decay: 0.18,
-                sustain: 0.2,
-                release: 0.15,
-                mod_attack: 0.005,
-                mod_decay: 0.18,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.0,
-                pitch_env_amt: 7.0,
-                pitch_env_decay: 0.012,
-                filter_drive: 0.25,
-                ..Default::default()
-            },
-            // AcidBass (Mono + 303 Portamento Glide)
-            PATCH_ACID_BASS => Self {
-                osc_type: OSC_SAW,
-                sub_level: 0.3,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 400.0,
-                cutoff_env_amt: 5500.0,
-                cutoff_key_track: 1.5,
-                resonance: 0.78,
-                attack: 0.003,
-                decay: 0.15,
-                sustain: 0.0,
-                release: 0.1,
-                mod_attack: 0.003,
-                mod_decay: 0.15,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.04,
-                filter_drive: 0.35,
-                ..Default::default()
-            },
-            // SubSine (Mono)
-            PATCH_SUB_SINE => Self {
-                osc_type: OSC_SINE,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 400.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.0,
-                attack: 0.006,
-                decay: 0.24,
-                sustain: 0.6,
-                release: 0.2,
-                mod_attack: 0.006,
-                mod_decay: 0.24,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Dark Pad (8-Voice Polyphonic - dark warm saw pad)
-            PATCH_DARK_PAD => Self {
-                osc_type: OSC_SAW,
-                sub_level: 0.35,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 1200.0,
-                cutoff_env_amt: 600.0,
-                cutoff_key_track: 0.8,
-                resonance: 0.25,
-                attack: 0.08,
-                decay: 0.5,
-                sustain: 0.70,
-                release: 0.60,
-                mod_attack: 0.08,
-                mod_decay: 0.5,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                noise_level: 0.03,
-                analog_drift: 0.30,
-                ..Default::default()
-            },
-            // Lead (16-Voice Polyphonic)
-            8 => Self {
-                osc_type: 1,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 1200.0,
-                cutoff_env_amt: 4500.0,
-                cutoff_key_track: 3.0,
-                resonance: 0.5,
-                attack: 0.003,
-                decay: 0.18,
-                sustain: 0.1,
-                release: 0.15,
-                mod_attack: 0.003,
-                mod_decay: 0.18,
-                bus_id: 3,
-                polyphony: 16,
-                glide: 0.0,
-                pitch_env_amt: 12.0,
-                pitch_env_decay: 0.010,
-                filter_drive: 0.18,
-                ..Default::default()
-            },
-            // FmSynth (8-Voice Polyphonic)
-            9 => Self {
-                osc_type: 8,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 1500.0,
-                cutoff_env_amt: 3000.0,
-                cutoff_key_track: 2.5,
-                resonance: 0.3,
-                attack: 0.003,
-                decay: 0.16,
-                sustain: 0.2,
-                release: 0.15,
-                mod_attack: 0.003,
-                mod_decay: 0.16,
-                bus_id: 3,
-                polyphony: 8,
-                glide: 0.0,
-                pitch_env_amt: 12.0,
-                pitch_env_decay: 0.015,
-                filter_drive: 0.32,
-                ..Default::default()
-            },
-            // Reese (Mono Bass)
-            10 => Self {
-                osc_type: 9,
-                sub_level: 0.4,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 900.0,
-                cutoff_env_amt: 2800.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.5,
-                attack: 0.008,
-                decay: 0.35,
-                sustain: 0.5,
-                release: 0.3,
-                mod_attack: 0.008,
-                mod_decay: 0.35,
-                bus_id: 1,
-                polyphony: 1,
-                glide: 0.0,
-                filter_drive: 0.22,
-                analog_drift: 0.25,
-                ..Default::default()
-            },
-            // Click (Direct 2-voice)
-            11 => Self {
-                osc_type: 12,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 2800.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 0.0,
-                resonance: 0.4,
-                attack: 0.001,
-                decay: 0.015,
-                sustain: 0.0,
-                release: 0.01,
-                mod_attack: 0.001,
-                mod_decay: 0.015,
-                bus_id: 4,
-                polyphony: 2,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // SuperSaw (8-Voice Polyphonic)
-            12 => Self {
-                osc_type: 4,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 2000.0,
-                cutoff_env_amt: 5000.0,
-                cutoff_key_track: 3.0,
-                resonance: 0.4,
-                attack: 0.004,
-                decay: 0.22,
-                sustain: 0.4,
-                release: 0.3,
-                mod_attack: 0.004,
-                mod_decay: 0.22,
-                bus_id: 3,
-                polyphony: 8,
-                glide: 0.0,
-                filter_drive: 0.25,
-                analog_drift: 0.22,
-                ..Default::default()
-            },
-            // Blade (8-Voice Polyphonic)
-            13 => Self {
-                osc_type: 10,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 1800.0,
-                cutoff_env_amt: 1800.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.25,
-                attack: 0.08,
-                decay: 0.6,
-                sustain: 0.7,
-                release: 1.4,
-                mod_attack: 0.08,
-                mod_decay: 0.6,
-                bus_id: 2,
-                polyphony: 8,
-                glide: 0.0,
-                filter_drive: 0.20,
-                noise_level: 0.02,
-                analog_drift: 0.32,
-                ..Default::default()
-            },
-            // Hoover (4-Voice Polyphonic)
-            14 => Self {
-                osc_type: 11,
-                sub_level: 0.3,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 1200.0,
-                cutoff_env_amt: 4000.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.65,
-                attack: 0.004,
-                decay: 0.25,
-                sustain: 0.5,
-                release: 0.3,
-                mod_attack: 0.004,
-                mod_decay: 0.25,
-                bus_id: 3,
-                polyphony: 4,
-                glide: 0.0,
-                filter_drive: 0.35,
-                analog_drift: 0.20,
-                ..Default::default()
-            },
-            // Karplus (8-Voice Polyphonic)
-            15 => Self {
-                osc_type: 5,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 4000.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 8.0,
-                resonance: 0.1,
-                attack: 0.001,
-                decay: 0.8,
-                sustain: 0.0,
-                release: 0.4,
-                mod_attack: 0.001,
-                mod_decay: 0.8,
-                bus_id: 3,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Organ (8-Voice Polyphonic)
-            16 => Self {
-                osc_type: 6,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 14000.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 0.0,
-                resonance: 0.0,
-                attack: 0.002,
-                decay: 0.20,
-                sustain: 0.8,
-                release: 0.2,
-                mod_attack: 0.002,
-                mod_decay: 0.20,
-                bus_id: 3,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Chiptune (4-Voice Polyphonic)
-            17 => Self {
-                osc_type: 7,
-                sub_level: 0.0,
-                pulse_width: 0.25,
-                filter_type: 0,
-                cutoff_base: 4000.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 4.0,
-                resonance: 0.2,
-                attack: 0.002,
-                decay: 0.18,
-                sustain: 0.3,
-                release: 0.15,
-                mod_attack: 0.002,
-                mod_decay: 0.18,
-                bus_id: 3,
-                polyphony: 4,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // AmbientGlass (Crystalline sine chime with fast clean decay)
-            19 => Self {
-                osc_type: 3,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 3200.0,
-                cutoff_env_amt: 1200.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.15,
-                attack: 0.005,
-                decay: 0.18,
-                sustain: 0.0,
-                release: 0.15,
-                mod_attack: 0.005,
-                mod_decay: 0.18,
-                bus_id: 2,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Ethereal Pad (Bright SuperSaw pad)
-            PATCH_ETHEREAL_PAD => Self {
-                osc_type: OSC_SUPERSAW,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 2400.0,
-                cutoff_env_amt: 1200.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.20,
-                attack: 0.05,
-                decay: 0.4,
-                sustain: 0.70,
-                release: 0.50,
-                mod_attack: 0.05,
-                mod_decay: 0.4,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                analog_drift: 0.20,
-                ..Default::default()
-            },
-            // Ice Pad (Shimmering bandpass triangle pad)
-            PATCH_ICE_PAD => Self {
-                osc_type: OSC_TRIANGLE,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_BANDPASS,
-                cutoff_base: 1800.0,
-                cutoff_env_amt: 800.0,
-                cutoff_key_track: 1.2,
-                resonance: 0.45,
-                attack: 0.04,
-                decay: 0.35,
-                sustain: 0.70,
-                release: 0.45,
-                mod_attack: 0.04,
-                mod_decay: 0.35,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Warm Strings (Lush smooth supersaw strings)
-            PATCH_WARM_STRINGS => Self {
-                osc_type: OSC_SUPERSAW,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 2100.0,
-                cutoff_env_amt: 900.0,
-                cutoff_key_track: 0.9,
-                resonance: 0.14,
-                attack: 0.07,
-                decay: 0.45,
-                sustain: 0.75,
-                release: 0.60,
-                mod_attack: 0.07,
-                mod_decay: 0.45,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                analog_drift: 0.25,
-                ..Default::default()
-            },
-            // Choir Pad (Vocal formant bandpass pulse)
-            PATCH_CHOIR_PAD => Self {
-                osc_type: OSC_PULSE,
-                sub_level: 0.0,
-                pulse_width: 0.35,
-                filter_type: FILTER_BANDPASS,
-                cutoff_base: 1950.0,
-                cutoff_env_amt: 950.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.48,
-                attack: 0.05,
-                decay: 0.4,
-                sustain: 0.70,
-                release: 0.45,
-                mod_attack: 0.05,
-                mod_decay: 0.4,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                noise_level: 0.04,
-                analog_drift: 0.35,
-                ..Default::default()
-            },
-            // Space Drone (Deep rumbling sub-saw drone)
-            PATCH_SPACE_DRONE => Self {
-                osc_type: OSC_SAW,
-                sub_level: 0.45,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 800.0,
-                cutoff_env_amt: 500.0,
-                cutoff_key_track: 0.8,
-                resonance: 0.35,
-                attack: 0.10,
-                decay: 0.6,
-                sustain: 0.80,
-                release: 0.80,
-                mod_attack: 0.10,
-                mod_decay: 0.6,
-                bus_id: BUS_SPACE,
-                polyphony: 4,
-                glide: 0.0,
-                filter_drive: 0.25,
-                noise_level: 0.03,
-                analog_drift: 0.32,
-                ..Default::default()
-            },
-            // Pluck Lead (Fast percussive lead)
-            PATCH_PLUCK_LEAD => Self {
-                osc_type: OSC_PULSE,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 1200.0,
-                cutoff_env_amt: 4500.0,
-                cutoff_key_track: 3.0,
-                resonance: 0.5,
-                attack: 0.003,
-                decay: 0.18,
-                sustain: 0.1,
-                release: 0.15,
-                mod_attack: 0.003,
-                mod_decay: 0.18,
-                bus_id: BUS_LEAD,
-                polyphony: 16,
-                glide: 0.0,
-                pitch_env_amt: 12.0,
-                pitch_env_decay: 0.015,
-                ..Default::default()
-            },
-            // Neuro Bass (Resonant notch Reese)
-            PATCH_NEURO_BASS => Self {
-                osc_type: OSC_REESE,
-                sub_level: 0.45,
-                pulse_width: 0.5,
-                filter_type: FILTER_NOTCH,
-                cutoff_base: 1000.0,
-                cutoff_env_amt: 2500.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.58,
-                attack: 0.006,
-                decay: 0.28,
-                sustain: 0.45,
-                release: 0.22,
-                mod_attack: 0.006,
-                mod_decay: 0.28,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.0,
-                filter_drive: 0.40,
-                analog_drift: 0.15,
-                ..Default::default()
-            },
-            // 808 Sub (Pure deep sub)
-            PATCH_808_SUB => Self {
-                osc_type: OSC_SINE,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 350.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 1.5,
-                resonance: 0.0,
-                attack: 0.004,
-                decay: 0.45,
-                sustain: 0.4,
-                release: 0.35,
-                mod_attack: 0.004,
-                mod_decay: 0.45,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.0,
-                filter_drive: 0.15,
-                pitch_env_amt: 24.0,
-                pitch_env_decay: 0.018,
-                ..Default::default()
-            },
-            // Slap Bass (Punchy funky triangle)
-            PATCH_SLAP_BASS => Self {
-                osc_type: OSC_TRIANGLE,
-                sub_level: 0.4,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 1600.0,
-                cutoff_env_amt: 3200.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.45,
-                attack: 0.002,
-                decay: 0.15,
-                sustain: 0.15,
-                release: 0.10,
-                mod_attack: 0.002,
-                mod_decay: 0.15,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.0,
-                filter_drive: 0.22,
-                pitch_env_amt: 12.0,
-                pitch_env_decay: 0.010,
-                ..Default::default()
-            },
-            // Organ Bass
-            PATCH_ORGAN_BASS => Self {
-                osc_type: OSC_ORGAN,
-                sub_level: 0.3,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 950.0,
-                cutoff_env_amt: 0.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.1,
-                attack: 0.003,
-                decay: 0.20,
-                sustain: 0.6,
-                release: 0.15,
-                mod_attack: 0.003,
-                mod_decay: 0.20,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Acid Lead
-            PATCH_ACID_LEAD => Self {
-                osc_type: OSC_SAW,
-                sub_level: 0.25,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 600.0,
-                cutoff_env_amt: 5000.0,
-                cutoff_key_track: 1.5,
-                resonance: 0.82,
-                attack: 0.005,
-                decay: 0.16,
-                sustain: 0.1,
-                release: 0.08,
-                mod_attack: 0.005,
-                mod_decay: 0.14,
-                bus_id: BUS_BASS,
-                polyphony: 1,
-                glide: 0.03,
-                filter_drive: 0.35,
-                ..Default::default()
-            },
-            // FM Bell
-            PATCH_FM_BELL => Self {
-                osc_type: OSC_FM,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 4000.0,
-                cutoff_env_amt: 3000.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.25,
-                attack: 0.002,
-                decay: 0.7,
-                sustain: 0.05,
-                release: 0.6,
-                mod_attack: 0.002,
-                mod_decay: 0.7,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Glass Keys
-            PATCH_GLASS_KEYS => Self {
-                osc_type: OSC_SINE,
-                sub_level: 0.1,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 2600.0,
-                cutoff_env_amt: 1200.0,
-                cutoff_key_track: 1.5,
-                resonance: 0.15,
-                attack: 0.008,
-                decay: 0.35,
-                sustain: 0.2,
-                release: 0.4,
-                mod_attack: 0.008,
-                mod_decay: 0.35,
-                bus_id: BUS_SPACE,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Siren (Dub laser siren)
-            PATCH_SIREN => Self {
-                osc_type: OSC_SAW,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 3200.0,
-                cutoff_env_amt: 4000.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.55,
-                attack: 0.02,
-                decay: 0.35,
-                sustain: 0.4,
-                release: 0.6,
-                mod_attack: 0.02,
-                mod_decay: 0.35,
-                bus_id: BUS_SPACE,
-                polyphony: 4,
-                glide: 0.0,
-                ..Default::default()
-            },
-            // Laser (Sci-Fi resonant zap)
-            PATCH_LASER => Self {
-                osc_type: OSC_PULSE,
-                sub_level: 0.0,
-                pulse_width: 0.5,
-                filter_type: FILTER_LOWPASS,
-                cutoff_base: 8000.0,
-                cutoff_env_amt: -6000.0,
-                cutoff_key_track: 1.0,
-                resonance: 0.70,
-                attack: 0.002,
-                decay: 0.12,
-                sustain: 0.0,
-                release: 0.08,
-                mod_attack: 0.002,
-                mod_decay: 0.12,
-                bus_id: BUS_LEAD,
-                polyphony: 8,
-                glide: 0.0,
-                pitch_env_amt: 36.0,
-                pitch_env_decay: 0.025,
-                filter_drive: 0.40,
-                ..Default::default()
-            },
-            // Default user fallback
-            _ => Self {
-                osc_type: 0,
-                sub_level: 0.3,
-                pulse_width: 0.5,
-                filter_type: 0,
-                cutoff_base: 1200.0,
-                cutoff_env_amt: 3000.0,
-                cutoff_key_track: 2.0,
-                resonance: 0.4,
-                attack: 0.005,
-                decay: 0.2,
-                sustain: 0.3,
-                release: 0.2,
-                mod_attack: 0.005,
-                mod_decay: 0.2,
-                bus_id: 3,
-                polyphony: 8,
-                glide: 0.0,
-                ..Default::default()
-            },
-        }
+    #[test]
+    fn test_bus_target_from_u8() {
+        assert_eq!(BusTarget::from(0), BusTarget::Drums);
+        assert_eq!(BusTarget::from(1), BusTarget::Bass);
+        assert_eq!(BusTarget::from(2), BusTarget::Space);
+        assert_eq!(BusTarget::from(3), BusTarget::Lead);
+        assert_eq!(BusTarget::from(4), BusTarget::Direct);
+        assert_eq!(BusTarget::from(99), BusTarget::Drums);
+    }
+
+    #[test]
+    fn test_init_default_patches() {
+        let patches = init_default_patches();
+        assert_eq!(patches[PATCH_SAW_BASS].osc_type, OSC_SAW);
+        assert_eq!(patches[PATCH_ACID_BASS].polyphony, 1);
+        assert_eq!(patches[PATCH_DARK_PAD].polyphony, 8);
+        assert!(patches[PATCH_808_SUB].pitch_snap > 0.0);
     }
 }
