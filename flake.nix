@@ -34,6 +34,13 @@
               jdk21_headless
               clj-kondo
               cljfmt
+              cargo
+              rustc
+              rustfmt
+              clippy
+              rust-analyzer
+              cargo-watch
+              lld
             ];
 
             shellHook = ''

@@ -1,0 +1,14 @@
+# Tritoncha Rust DSP Workspace Configuration
+
+[alias]
+# Run strict Clippy linter across all targets
+lint = "clippy --manifest-path crates/tritoncha-dsp/Cargo.toml --all-targets -- -D warnings"
+
+# Check code formatting rules without applying changes
+fmt-check = "fmt --manifest-path crates/tritoncha-dsp/Cargo.toml -- --check"
+
+# Build optimized WebAssembly DSP binary artifact
+wasm = "build --manifest-path crates/tritoncha-dsp/Cargo.toml --target wasm32-unknown-unknown --release"
+
+# Run all DSP engine unit tests
+test-dsp = "test --manifest-path crates/tritoncha-dsp/Cargo.toml"
