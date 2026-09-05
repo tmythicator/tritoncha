@@ -5,11 +5,13 @@
   {:busses
    {:bus/drums  {:type :volume :volume 0}
     :bus/bass   {:type :volume :volume 0}
+    :bus/lead   {:type :volume :volume 0}
     :bus/space  {:type :volume :volume 0}
     :bus/direct {:type :volume :volume 0}}
 
    :processors
    {:distort       {:type :distortion :distortion 0.35 :wet 0.8}
+    :chorus        {:type :chorus :rate 0.8 :depth 0.4 :wet 0.35}
     :master-filter {:type :filter :frequency 3400 :filter-type "lowpass"}
     :delay         {:type :delay :time "8n." :feedback 0.38 :wet 0.35}
     :reverb        {:type :reverb :roomSize 0.75 :dampening 3000 :wet 0.35}
@@ -18,6 +20,7 @@
    :routes
    [[:bus/drums :master-filter]
     [:bus/bass :distort :master-filter]
+    [:bus/lead :chorus :master-filter]
     [:bus/space :delay :reverb :limiter]
     [:bus/direct :limiter]
     [:master-filter :limiter]
@@ -28,11 +31,13 @@
   {:busses
    {:bus/drums  {:type :volume :volume 0}
     :bus/bass   {:type :volume :volume 0}
+    :bus/lead   {:type :volume :volume 0}
     :bus/space  {:type :volume :volume 0}
     :bus/direct {:type :volume :volume 0}}
 
    :processors
    {:distort       {:type :distortion :distortion 0.28 :wet 0.65}
+    :chorus        {:type :chorus :rate 0.6 :depth 0.5 :wet 0.4}
     :master-filter {:type :filter :frequency 4200 :filter-type "lowpass"}
     :delay         {:type :delay :time "8n." :feedback 0.55 :wet 0.6}
     :reverb        {:type :reverb :roomSize 0.9 :dampening 2400 :wet 0.5}
@@ -41,6 +46,7 @@
    :routes
    [[:bus/drums :master-filter]
     [:bus/bass :distort :master-filter]
+    [:bus/lead :chorus :master-filter]
     [:bus/space :delay :reverb :limiter]
     [:bus/direct :limiter]
     [:master-filter :limiter]
@@ -51,12 +57,14 @@
   {:busses
    {:bus/drums  {:type :volume :volume 0}
     :bus/bass   {:type :volume :volume 0}
+    :bus/lead   {:type :volume :volume 0}
     :bus/space  {:type :volume :volume 0}
     :bus/direct {:type :volume :volume 0}}
 
    :processors
    {:crusher       {:type :bitcrusher :bits 6 :wet 0.7}
     :distort       {:type :distortion :distortion 0.45 :wet 0.8}
+    :chorus        {:type :chorus :rate 1.2 :depth 0.6 :wet 0.5}
     :master-filter {:type :filter :frequency 5000 :filter-type "lowpass"}
     :delay         {:type :delay :time "16n" :feedback 0.4 :wet 0.3}
     :reverb        {:type :reverb :roomSize 0.6 :dampening 4000 :wet 0.25}
@@ -65,6 +73,7 @@
    :routes
    [[:bus/drums :crusher :master-filter]
     [:bus/bass :distort :master-filter]
+    [:bus/lead :chorus :master-filter]
     [:bus/space :delay :reverb :limiter]
     [:bus/direct :limiter]
     [:master-filter :limiter]

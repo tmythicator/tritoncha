@@ -6,9 +6,9 @@
    [cljs.test :refer [deftest is testing]]))
 
 (def ^:private test-instrument-aliases
-  {:bass :saw-bass
-   :sub  :sub-sine
-   :pad  :dark-pad})
+  {:bass :bass-analog
+   :sub  :sub-pure
+   :pad  :pad-cinema})
 
 (defn- all-test-instruments []
   (merge core-instruments user-instruments (:instruments @repl-registry)))
@@ -26,17 +26,20 @@
 
 (deftest core-instruments-catalog-test
   (testing "Core instruments catalog contains standard melodic synthesizer voices"
-    (let [required-voices [:saw-bass :acid-bass :sub-sine :fm-growl :dark-pad :ambient-glass :pluck-lead :siren]]
-      (doseq [inst-key required-voices]
+    (let [mnemonic-voices [:bass-analog :bass-303 :sub-pure :sub-808 :bass-reese :bass-slap :bass-neuro
+                           :pad-cinema :pad-strings :pad-shimmer :pad-vocal :pad-glass :pad-drone
+                           :lead-pluck :lead-supersaw :lead-fm :lead-blade :lead-hoover :lead-string :lead-8bit :lead-bell
+                           :click :fx-siren :fx-laser]]
+      (doseq [inst-key mnemonic-voices]
         (let [spec (get core-instruments inst-key)]
           (is (some? spec) (str "Instrument " inst-key " must exist in core-instruments"))
           (is (keyword? (:type spec)) (str "Instrument " inst-key " must specify a keyword :type")))))))
 
 (deftest instrument-alias-resolution-test
   (testing "Standard aliases :bass, :sub, :pad resolve to canonical specs"
-    (is (= (get core-instruments :saw-bass) (resolve-test-instrument-spec :bass)))
-    (is (= (get core-instruments :sub-sine) (resolve-test-instrument-spec :sub)))
-    (is (= (get core-instruments :dark-pad) (resolve-test-instrument-spec :pad)))))
+    (is (= (get core-instruments :bass-analog) (resolve-test-instrument-spec :bass)))
+    (is (= (get core-instruments :sub-pure) (resolve-test-instrument-spec :sub)))
+    (is (= (get core-instruments :pad-cinema) (resolve-test-instrument-spec :pad)))))
 
 (deftest dynamic-instrument-registration-test
   (testing "Custom instrument preset can be registered live and resolved"

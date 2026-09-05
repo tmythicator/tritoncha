@@ -1,12 +1,12 @@
 (ns app.audio.dsp.instruments
   "Instrument lifecycle, node factory, bus routing, and audio trigger dispatcher."
-  (:require ["tone" :as tone]
-            [app.audio.dsp.busses :as busses]
-            [app.config :as cfg]
+  (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.worklet :as worklet]
             [app.custom.instruments :refer [user-instruments]]
             [app.lib.drums :refer [core-drum-instruments core-drum-voices]]
             [app.lib.instruments :refer [core-instruments]]
-            [app.state :refer [engine-ctx pulse! repl-registry]]))
+            [app.state :refer [audio-state pulse! repl-registry]]
+            [app.utils.audio :as audio-utils]))
 
 (defn all-drum-keys
   "Returns a set of all valid drum voice keywords."
@@ -15,7 +15,7 @@
 
 (defn register-instrument!
   "Registers or updates a dynamic user instrument preset in the REPL registry.
-  Examples: (register-instrument! :supersaw {:type :mono :bus :bus/space :options {...}})."
+  Examples: (register-instrument! :supersaw {:type :mono :bus :bus/space :osc {:type :supersaw}})."
   [inst-key spec]
   (swap! repl-registry assoc-in [:instruments inst-key] spec)
   inst-key)
@@ -26,10 +26,36 @@
   []
   (merge core-instruments core-drum-instruments user-instruments (:instruments @repl-registry)))
 
-(def ^:private instrument-aliases
-  {:bass :saw-bass
-   :sub  :sub-sine
-   :pad  :dark-pad})
+(def instrument-aliases
+  {;; Generic shortcuts
+   :bass         :bass-analog
+   :sub          :sub-pure
+   :pad          :pad-cinema
+   :lead         :lead-pluck
+   :strings      :pad-strings
+   :acid         :bass-303
+   :tb303        :bass-303
+   :reese        :bass-reese
+   :slap         :bass-slap
+   :neuro        :bass-neuro
+   :808          :sub-808
+   :shimmer      :pad-shimmer
+   :choir        :pad-vocal
+   :glass        :pad-glass
+   :drone        :pad-drone
+   :pluck        :lead-pluck
+   :supersaw     :lead-supersaw
+   :fm           :lead-fm
+   :blade        :lead-blade
+   :cs80         :lead-blade
+   :hoover       :lead-hoover
+   :chiptune     :lead-8bit
+   :8bit         :lead-8bit
+   :karplus      :lead-string
+   :bell         :lead-bell
+   :laser        :fx-laser
+   :siren        :fx-siren
+   :util-click   :click})
 
 (defn resolve-instrument-spec
   "Resolves an instrument keyword or map, expanding canonical aliases (:bass, :sub, :pad).
@@ -37,110 +63,107 @@
   [spec]
   (cond
     (map? spec) spec
-    (keyword? spec) (let [canonical (get instrument-aliases spec spec)]
-                      (get (all-instruments) canonical spec))
+    (keyword? spec)
+    (let [canonical  (get instrument-aliases spec spec)
+          repl-insts (:instruments @repl-registry)
+          all        (all-instruments)]
+      (or (get repl-insts spec)
+          (get repl-insts canonical)
+          (get all canonical)
+          (get all spec)))
     :else spec))
 
-(defn create-instrument
-  "Instantiates a Tone.js audio node from an instrument preset map or preset keyword.
-  Examples: (create-instrument :acid-bass), (create-instrument :bass)."
-  [spec]
-  (when-let [spec-map (resolve-instrument-spec spec)]
-    (let [{:keys [type options maxPolyphony]} spec-map
-          js-opts (if (map? options) (clj->js options) (or options #js {}))]
-      (case type
-        :synth     (tone/Synth. js-opts)
-        :mono      (tone/MonoSynth. js-opts)
-        :fm        (tone/FMSynth. js-opts)
-        :am        (tone/AMSynth. js-opts)
-        :membrane  (tone/MembraneSynth. js-opts)
-        :noise     (tone/NoiseSynth. js-opts)
-        :poly      (let [ps (tone/PolySynth. tone/Synth #js {:maxPolyphony (or maxPolyphony cfg/default-max-polyphony)})]
-                     (when options (.set ps js-opts))
-                     ps)
-        (tone/Synth. js-opts)))))
+(defn defsynth!
+  "Declares a synthesizer preset in ClojureScript and immediately syncs it with the Rust WASM modular voice engine.
+  Examples: (defsynth! :fat-saw {:osc {:type :saw :sub-level 0.4} :filter {:cutoff 1800 :q 0.75} :amp-env {:attack 0.01 :decay 0.2}})."
+  [synth-name spec]
+  (let [sk       (keyword synth-name)
+        patch-id (worklet/register-custom-patch-id! sk)]
+    (register-instrument! sk spec)
+    (worklet/set-worklet-voice-patch! patch-id spec)
+    sk))
 
-(defn- connect-to-bus!
-  "Connects a synth audio node output directly to its target bus volume node or master destination."
-  [^js synth bus-key busses]
-  (when synth
-    (let [norm-bus (busses/normalize-bus-key bus-key)
-          bus-node (or (get busses norm-bus)
-                       (get busses :bus/direct)
-                       (tone/getDestination))]
-      (when bus-node
-        (.connect synth bus-node)))))
+(defn patch!
+  "Tweaks a parameter on an existing synthesizer sound design live in REPL.
+  Examples: (patch! :bass :cutoff 2400), (patch! :lead :q 0.85)."
+  ([synth-name param-key val]
+   (let [sk        (keyword synth-name)
+         canonical (get instrument-aliases sk sk)
+         old-spec  (resolve-instrument-spec sk)
+         new-spec  (assoc old-spec param-key val)]
+     (defsynth! sk new-spec)
+     (when (not= sk canonical)
+       (defsynth! canonical new-spec))
+     new-spec))
+  ([synth-name spec-map]
+   (let [sk        (keyword synth-name)
+         canonical (get instrument-aliases sk sk)
+         old-spec  (resolve-instrument-spec sk)
+         new-spec  (merge old-spec spec-map)]
+     (defsynth! sk new-spec)
+     (when (not= sk canonical)
+       (defsynth! canonical new-spec))
+     new-spec)))
 
-(defn create-default-instruments!
-  "Initializes all default core, user and drum instruments, connecting them to their respective bus channels."
-  [busses]
-  (let [inst-map (all-instruments)
-        synths   (reduce-kv (fn [acc k spec]
-                              (let [synth (create-instrument spec)]
-                                (connect-to-bus! synth (:bus spec :bus/direct) busses)
-                                (assoc acc k synth)))
-                            {}
-                            inst-map)
-        aliases  {:bass (get synths :saw-bass)
-                  :sub  (get synths :sub-sine)
-                  :pad  (get synths :dark-pad)}]
-    (merge synths aliases)))
+(defn reset-instrument!
+  "Resets an instrument's parameters back to its original baseline catalog definition.
+  Examples: (reset-instrument! :ethereal-pad), (reset-instrument! :saw-bass)."
+  [synth-name]
+  (let [sk        (keyword synth-name)
+        canonical (get instrument-aliases sk sk)
+        orig-spec (or (get core-instruments canonical)
+                      (get core-drum-instruments canonical)
+                      (get user-instruments canonical))]
+    (when orig-spec
+      ;; Dissoc user overrides from the REPL registry
+      (swap! repl-registry update :instruments dissoc sk canonical)
+      ;; Re-sync WASM voice patch with the original definition
+      (let [pid (worklet/inst-keyword->id canonical)]
+        (when (and (number? pid) (not (busses/drum? orig-spec)))
+          (worklet/set-worklet-voice-patch! pid orig-spec)))
+      orig-spec)))
 
 (defn reload-instruments!
   "Recompiles and replaces all instruments in the active audio engine context."
   []
-  (when-let [{:keys [busses]} (:tone @engine-ctx)]
-    (let [new-instruments (create-default-instruments! busses)]
-      (swap! engine-ctx update :tone merge new-instruments)
-      :reloaded)))
+  (doseq [[inst-key spec] (all-instruments)]
+    (let [pid (worklet/inst-keyword->id inst-key)]
+      (when (and (map? spec)
+                 (not (busses/drum? spec)))
+        (worklet/set-worklet-voice-patch! pid spec))))
+  :reloaded)
 
 (def ^:private inst-pulses
-  {:kick 2.6 :snare 1.8 :hh-o 1.2 :bass 1.4 :saw-bass 1.4 :sub 1.5 :sub-sine 1.5 :pad 1.1})
-
-(defn- trigger-synth-voice!
-  [^js node note dur time vel]
-  (when (and node (some? (.-triggerAttackRelease node)))
-    (try
-      (if (exists? (.-noise node))
-        (.triggerAttackRelease ^js node (or dur cfg/default-step) time (or vel 0.9))
-        (when note
-          (.triggerAttackRelease ^js node note (or dur cfg/default-step) time (or vel 0.9))))
-      (catch js/Object _))))
+  {:kick 2.6 :snare 1.8 :hh-o 1.2 :bass 1.4 :bass-analog 1.4 :sub 1.5 :sub-pure 1.5 :pad 1.1 :pad-cinema 1.1 :worklet 1.4 :worklet-synth 1.4})
 
 (defn trigger-drum!
-  "Triggers a composite drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.) with layered synthesis."
-  [drum-key pitch dur time vel]
-  (when-let [voice-spec (get core-drum-voices (keyword drum-key))]
-    (let [tone-nodes (:tone @engine-ctx)
-          v          (or vel 0.9)
-          pulse-val  (:pulse voice-spec 1.0)
-          layers     (or (:layers voice-spec) [voice-spec])]
-      (try
-        (dotimes [i (count layers)]
-          (let [layer       (nth layers i)
-                target-node (get tone-nodes (:node layer))
-                target-note (or pitch (:default-note layer))
-                target-dur  (or dur (:dur layer) (:dur voice-spec) cfg/default-step)
-                target-vel  (* v (or (:vel-scale layer) 1.0))]
-            (trigger-synth-voice! target-node target-note target-dur time target-vel)))
-        (pulse! pulse-val)
-        (catch js/Object e
-          (println "Drum trigger error for" drum-key ":" e))))))
+  "Triggers an analog drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.)."
+  ([drum-key] (trigger-drum! drum-key 0.9))
+  ([drum-key vel]
+   (let [v (or vel 0.9)]
+     (worklet/trigger-worklet-note! drum-key "C3" v)
+     (pulse! (get inst-pulses (keyword drum-key) 1.5))))
+  ([drum-key _pitch _dur _time vel]
+   (trigger-drum! drum-key vel)))
 
 (defn trigger-note!
-  "Triggers a note or chord on an instrument node with velocity, duration, and visual pulse."
-  [^js synth-node note-val dur time vel inst-key]
-  (when (and synth-node note-val (some? (.-triggerAttackRelease synth-node)))
-    (let [v (or vel 0.9)
-          d (or dur cfg/default-step)]
-      (try
-        (if (vector? note-val)
-          (if (exists? (.-maxPolyphony synth-node))
-            (.triggerAttackRelease ^js synth-node (to-array note-val) d time v)
-            (dotimes [i (count note-val)]
-              (when-let [n (nth note-val i)]
-                (.triggerAttackRelease ^js synth-node n d time v))))
-          (.triggerAttackRelease ^js synth-node (if (keyword? note-val) (name note-val) (str note-val)) d time v))
-        (pulse! (get inst-pulses (keyword inst-key) 0.8))
-        (catch js/Object e
-          (println "Note trigger error for" inst-key note-val ":" e))))))
+  "Triggers a note or chord on an instrument with velocity, duration, and visual pulse."
+  ([inst-key note-val] (trigger-note! inst-key note-val "16n" 0.9))
+  ([inst-key note-val dur] (trigger-note! inst-key note-val dur 0.9))
+  ([inst-key note-val dur vel]
+   (let [kw    (keyword inst-key)
+         v     (or vel 0.9)
+         bpm   (:bpm @audio-state 168)
+         dur-s (audio-utils/dur->seconds (or dur "16n") bpm)]
+     (if (vector? note-val)
+       (let [chord-notes (filterv some? note-val)
+             n-count     (count chord-notes)
+             scale       (if (> n-count 1) (/ 1.0 (js/Math.sqrt n-count)) 1.0)
+             chord-v     (* v scale)]
+         (doseq [n chord-notes]
+           (worklet/trigger-worklet-note! kw n chord-v dur-s)))
+       (when note-val
+         (worklet/trigger-worklet-note! kw note-val v dur-s)))
+     (pulse! (get inst-pulses kw 1.0))))
+  ([_synth-node note-val dur _time vel inst-key]
+   (trigger-note! inst-key note-val dur vel)))
