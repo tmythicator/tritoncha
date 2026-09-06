@@ -6,6 +6,7 @@
   (case (busses/normalize-bus-key bus-kw)
     :bus/drums  "bus-drums"
     :bus/bass   "bus-bass"
+    :bus/lead   "bus-lead"
     :bus/space  "bus-space"
     :bus/direct "bus-direct"
     "bus-master"))
