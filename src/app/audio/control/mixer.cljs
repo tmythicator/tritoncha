@@ -1,7 +1,6 @@
 (ns app.audio.control.mixer
   "Audio bus mixer, levels, track mutes, solo, and performance undrum/redrum."
-  (:require [app.audio.control.looper :as looper]
-            [app.audio.dsp.busses :as busses]
+  (:require [app.audio.dsp.busses :as busses]
             [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
             [app.state :refer [audio-state]]))
@@ -13,8 +12,15 @@
    :bus/lead   {:delay 0.15 :reverb 0.10}
    :bus/direct {:delay 0.0  :reverb 0.0}})
 
+(def default-bus-levels
+  {:bus/drums   0.0
+   :bus/bass    0.0
+   :bus/space   0.0
+   :bus/lead    0.0
+   :bus/direct  0.0})
+
 (defn- sync-bus-to-worklet! [b-key]
-  (let [db     (get-in @audio-state [:bus-levels b-key] 0.0)
+  (let [db     (get-in @audio-state [:bus-levels b-key] (get default-bus-levels b-key 0.0))
         muted? (get-in @audio-state [:bus-mutes b-key] false)
         del    (get-in @audio-state [:bus-sends b-key :delay] (get-in default-bus-sends [b-key :delay] 0.15))
         rev    (get-in @audio-state [:bus-sends b-key :reverb] (get-in default-bus-sends [b-key :reverb] 0.20))]
@@ -69,14 +75,14 @@
   (let [kw (keyword k)]
     (when-let [tr (get (:active-tracks @audio-state) kw)]
       (swap! (:pattern tr) assoc :muted? muted?))
-    (when-let [slot (looper/track-slot kw)]
+    (doseq [slot (worklet/track-slots-for kw)]
       (worklet/mute-track! slot muted?))))
 
 (defn- set-track-solo! [k solo?]
   (let [kw (keyword k)]
     (when-let [tr (get (:active-tracks @audio-state) kw)]
       (swap! (:pattern tr) assoc :solo? solo?))
-    (when-let [slot (looper/track-slot kw)]
+    (doseq [slot (worklet/track-slots-for kw)]
       (worklet/solo-track! slot solo?))))
 
 (defn mute!

@@ -1,6 +1,6 @@
 (ns app.audio.control.tracker
   "Track presets registry, playback orchestrator, and instrument preview demos."
-  (:require [app.audio.control.looper :refer [loop! set-bpm! stop! stop-loop!]]
+  (:require [app.audio.control.looper :refer [loop! set-bpm! set-drum-mode! stop! stop-loop!]]
             [app.audio.control.session :as session]
             [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
@@ -38,10 +38,12 @@
                      (contains? available preset-spec) (get available preset-spec)
                      :else (get available (first cfg/jam-presets) (:roller core-tracks)))
         preset-key (if (keyword? preset-spec) preset-spec :custom)
-        {:keys [bpm scale geom colors cutoff tracks]} preset-map
+        {:keys [bpm scale geom colors cutoff tracks mod kit]} preset-map
         [bg-c mesh-c] (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])]
 
     (swap! audio-state assoc :current-jam preset-key :active? true)
+    (when-let [drum-m (or mod (when (keyword? kit) kit) (:mod kit))]
+      (set-drum-mode! drum-m))
     (when scale
       (let [[r m oct] scale]
         (session/set-key! r m (or oct (:octave cfg/default-key 1)))))

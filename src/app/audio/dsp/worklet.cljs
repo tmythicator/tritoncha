@@ -14,7 +14,7 @@
   {;; Analog Drum Voices (fixed DSP algorithms in Rust)
    :kick          0 :bd 0
    :snare         1 :sn-rs 1 :sn-roll 1
-   :hh-c          2 :hh 2 :hh-clk 2 :hat-closed 2
+   :hh-c          2 :hh 2 :hh-clk 2 :hat-closed 2 :hat 2
    :hh-o          3 :hat-open 3
    :util-click    11 :click 11
    :clap          18
@@ -107,6 +107,21 @@
 (defn all-track-slots []
   @track-slot-assignments)
 
+(defn track-slots-for
+  "Returns all sequencer slot indices assigned to a track keyword, including chord voice sub-slots.
+  Examples: (track-slots-for :pad) -> [4 5 6 7]."
+  [track-key]
+  (let [tk   (keyword track-key)
+        pfx  (str (name tk) "-v")
+        base (track-slot tk)]
+    (distinct
+     (keep identity
+           (concat (when base [base])
+                   (keep (fn [[k s]]
+                           (when (and (keyword? k) (str/starts-with? (name k) pfx))
+                             s))
+                         @track-slot-assignments))))))
+
 (defn get-or-assign-track-slot! [track-key]
   (let [tk (keyword track-key)]
     (if-let [slot (get @track-slot-assignments tk)]
@@ -179,81 +194,88 @@
 
 (defn- extract-articulation
   "Splits a string or keyword into [clean-token vel].
-  Supports '!' suffix for accents (vel: 1.15) and '_' suffix for ghost notes (vel: 0.35)."
-  [token]
-  (let [s (if (keyword? token) (name token) (str token))]
-    (cond
-      (str/ends-with? s "!")
-      [(subs s 0 (dec (count s))) 1.15]
+  Supports '!' suffix for accents (vel: 1.15 base) and '_' suffix for ghost notes (vel: 0.35 base)."
+  ([token] (extract-articulation token 0.9))
+  ([token default-vel]
+   (let [s        (if (keyword? token) (name token) (str token))
+         base-vel (float (or default-vel 0.9))]
+     (cond
+       (str/ends-with? s "!")
+       [(subs s 0 (dec (count s))) (min 1.25 (* base-vel (/ 1.15 0.9)))]
 
-      (and (> (count s) 1) (str/ends-with? s "_"))
-      [(subs s 0 (dec (count s))) 0.35]
+       (and (> (count s) 1) (str/ends-with? s "_"))
+       [(subs s 0 (dec (count s))) (* base-vel (/ 0.35 0.9))]
 
-      :else
-      [s 0.9])))
+       :else
+       [s base-vel]))))
 
-(defn parse-step-hit [hit default-inst-key]
-  (cond
-    (nil? hit)
-    {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
+(defn parse-step-hit
+  "Parses a step hit into {:inst-id :note :vel} map respecting default-vel.
+  Examples: (parse-step-hit \"C3\" :bass 0.4) -> {:inst-id 2, :note 48, :vel 0.4}."
+  ([hit default-inst-key] (parse-step-hit hit default-inst-key 0.9))
+  ([hit default-inst-key default-vel]
+   (let [def-v (float (or default-vel 0.9))]
+     (cond
+       (nil? hit)
+       {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
 
-    (boolean? hit)
-    (if hit
-      {:inst-id (inst-keyword->id default-inst-key) :note 60 :vel 0.9}
-      {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0})
+       (boolean? hit)
+       (if hit
+         {:inst-id (inst-keyword->id default-inst-key) :note 60 :vel def-v}
+         {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0})
 
-    (and (vector? hit) (keyword? (first hit)))
-    (let [[k v n]           hit
-          [clean-k art-vel] (extract-articulation k)]
-      {:inst-id (inst-keyword->id (keyword clean-k))
-       :note    (if n (parse-midi-note n) 60)
-       :vel     (float (or v art-vel 0.9))})
+       (and (vector? hit) (keyword? (first hit)))
+       (let [[k v n]           hit
+             [clean-k art-vel] (extract-articulation k def-v)]
+         {:inst-id (inst-keyword->id (keyword clean-k))
+          :note    (if n (parse-midi-note n) 60)
+          :vel     (float (or v art-vel def-v))})
 
-    (vector? hit)
-    {:inst-id (inst-keyword->id default-inst-key)
-     :note    (if (seq hit) (parse-midi-note (first hit)) -1)
-     :vel     (if (seq hit) 0.85 0.0)}
+       (vector? hit)
+       {:inst-id (inst-keyword->id default-inst-key)
+        :note    (if (seq hit) (parse-midi-note (first hit)) -1)
+        :vel     (if (seq hit) def-v 0.0)}
 
-    (keyword? hit)
-    (let [[clean-name art-vel] (extract-articulation hit)
-          resolved-alias       (get mini-notation-aliases clean-name)
-          clean-kw             (or resolved-alias (keyword clean-name))]
-      (cond
-        (contains? #{:_ :- :rest :nil :none} clean-kw)
-        {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
+       (keyword? hit)
+       (let [[clean-name art-vel] (extract-articulation hit def-v)
+             resolved-alias       (get mini-notation-aliases clean-name)
+             clean-kw             (or resolved-alias (keyword clean-name))]
+         (cond
+           (contains? #{:_ :- :rest :nil :none} clean-kw)
+           {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
 
-        (drum-keyword? clean-kw)
-        {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
+           (drum-keyword? clean-kw)
+           {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
 
-        :else
-        (if-let [m (note->midi clean-name)]
-          {:inst-id (inst-keyword->id default-inst-key) :note (int m) :vel (float art-vel)}
-          {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)})))
+           :else
+           (if-let [m (note->midi clean-name)]
+             {:inst-id (inst-keyword->id default-inst-key) :note (int m) :vel (float art-vel)}
+             {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)})))
 
-    (number? hit)
-    (if (neg? hit)
-      {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
-      {:inst-id (inst-keyword->id default-inst-key) :note (int hit) :vel 0.9})
+       (number? hit)
+       (if (neg? hit)
+         {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
+         {:inst-id (inst-keyword->id default-inst-key) :note (int hit) :vel def-v})
 
-    (string? hit)
-    (let [[clean-name art-vel] (extract-articulation hit)
-          resolved-alias       (get mini-notation-aliases clean-name)
-          clean-kw             (or resolved-alias (keyword clean-name))]
-      (cond
-        (contains? #{:_ :- :rest :nil :none "." "0"} clean-name)
-        {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
+       (string? hit)
+       (let [[clean-name art-vel] (extract-articulation hit def-v)
+             resolved-alias       (get mini-notation-aliases clean-name)
+             clean-kw             (or resolved-alias (keyword clean-name))]
+         (cond
+           (contains? #{:_ :- :rest :nil :none "." "0"} clean-name)
+           {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
 
-        (drum-keyword? clean-kw)
-        {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
+           (drum-keyword? clean-kw)
+           {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
 
-        :else
-        (let [m (parse-midi-note clean-name)]
-          (if (neg? m)
-            {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
-            {:inst-id (inst-keyword->id default-inst-key) :note m :vel (float art-vel)}))))
+           :else
+           (let [m (parse-midi-note clean-name)]
+             (if (neg? m)
+               {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
+               {:inst-id (inst-keyword->id default-inst-key) :note m :vel (float art-vel)}))))
 
-    :else
-    {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}))
+       :else
+       {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}))))
 
 (defonce ^:private pending-messages
   (atom []))
@@ -368,11 +390,23 @@
   (send-msg! #js {:type "setPlaying" :playing (boolean playing?)}))
 
 (defn set-track!
-  "Sends a track's hits into the Rust WASM sequencer with note durations."
+  "Sends a track's hits into the Rust WASM sequencer with note durations and velocities."
   ([track-idx default-inst-key hits-vec step-mult]
-   (set-track! track-idx default-inst-key hits-vec step-mult 0.2))
+   (set-track! track-idx default-inst-key hits-vec step-mult 0.2 0.9))
   ([track-idx default-inst-key hits-vec step-mult dur-s]
-   (let [parsed   (mapv #(parse-step-hit % default-inst-key) hits-vec)
+   (set-track! track-idx default-inst-key hits-vec step-mult dur-s 0.9))
+  ([track-idx default-inst-key hits-vec step-mult dur-s vel-spec]
+   (let [vel-fn   (cond
+                    (sequential? vel-spec)
+                    (let [v-cycle (cycle vel-spec)]
+                      (fn [idx] (nth v-cycle idx 0.9)))
+                    (number? vel-spec)
+                    (constantly (float vel-spec))
+                    :else
+                    (constantly 0.9))
+         parsed   (map-indexed (fn [i hit]
+                                 (parse-step-hit hit default-inst-key (vel-fn i)))
+                               hits-vec)
          inst-ids (mapv :inst-id parsed)
          notes    (mapv :note parsed)
          vels     (mapv :vel parsed)
@@ -441,6 +475,131 @@
                     :pitchEnvAmt    (float (:amount pitch-e 0.0))
                     :pitchEnvDecay  (float (:decay pitch-e 0.015))
                     :analogDrift    (float (:drift osc 0.0))})))
+
+(defn drum-mod->id
+  "Maps symbolic drum character mode keyword to numeric float ID for Rust WASM DSP.
+  Supported modes: :analog (0.0), :natural (1.0), :idm (2.0), :industrial (3.0)."
+  [m]
+  (case (keyword (or m :analog))
+    (:analog :classic :808 :909) 0.0
+    (:natural :acoustic :organic :wood) 1.0
+    (:idm :glitch :laser :chirp) 2.0
+    (:industrial :distort :hard :crush) 3.0
+    0.0))
+
+(defn set-drum-mode!
+  "Configures the character synthesis mode across all drum voices in Rust WASM.
+  Supported modes: :analog, :natural, :idm, :industrial.
+  Examples: (set-drum-mode! :idm), (set-drum-mode! :natural)."
+  [mode-kw]
+  (let [mode-id (drum-mod->id mode-kw)]
+    (send-msg! #js {:type "setDrumMode"
+                    :mode mode-id})))
+
+(defn set-worklet-drum-patch!
+  "Transmits drum sound design parameters into the Rust WASM drum synthesis engine.
+  Examples: (set-worklet-drum-patch! :kick {:base-pitch 48 :pitch-drop 180 :decay 0.28 :click 0.35 :drive 1.6 :mod :idm})."
+  [drum-key drum-spec]
+  (let [dk      (keyword drum-key)
+        type    (or (:type drum-spec) dk)
+        inst-id (inst-keyword->id dk)
+        mod-id  (drum-mod->id (:mod drum-spec))]
+    (cond
+      (or (= type :kick) (contains? #{:kick :drum-kick :808-kick :909-kick} dk))
+      (let [base-pitch   (float (or (:base-pitch drum-spec) (:pitch drum-spec) 48.0))
+            pitch-drop   (float (or (:pitch-drop drum-spec) (:snap drum-spec) 180.0))
+            pitch-decay  (float (or (:pitch-decay drum-spec) (:sweep drum-spec) 0.040))
+            decay-s      (float (or (:decay drum-spec) 0.28))
+            click-level  (float (or (:click drum-spec) 0.35))
+            drive        (float (or (:drive drum-spec) 1.6))]
+        (send-msg! #js {:type   "setDrumPatch"
+                        :drumId 0
+                        :p0     base-pitch
+                        :p1     pitch-drop
+                        :p2     pitch-decay
+                        :p3     decay-s
+                        :p4     click-level
+                        :p5     drive
+                        :p6     mod-id}))
+
+      (or (= type :snare) (contains? #{:snare :snare-crack :snare-body :snare-wire :snare-ghost :snare-rim} dk))
+      (let [base-freq   (float (or (:base-freq drum-spec) (:pitch drum-spec) 185.0))
+            tone-decay  (float (or (:tone-decay drum-spec) 0.9985))
+            noise-decay (float (or (:noise-decay drum-spec) 0.9991))
+            cutoff-hz   (float (or (:cutoff drum-spec) 2400.0))
+            snappy      (float (or (:snappy drum-spec) (:noise drum-spec) 0.85))]
+        (send-msg! #js {:type   "setDrumPatch"
+                        :drumId 1
+                        :p0     base-freq
+                        :p1     tone-decay
+                        :p2     noise-decay
+                        :p3     cutoff-hz
+                        :p4     snappy
+                        :p5     0.0
+                        :p6     mod-id}))
+
+      (or (= type :hat) (contains? #{:hat :hat-closed :hat-open :hh-closed :hh-open} dk))
+      (let [cutoff-hz   (float (or (:cutoff drum-spec) 7200.0))
+            decay-close (float (or (:decay-closed drum-spec) (:decay drum-spec) 0.04))
+            decay-open  (float (or (:decay-open drum-spec) 0.24))]
+        (send-msg! #js {:type   "setDrumPatch"
+                        :drumId 2
+                        :p0     cutoff-hz
+                        :p1     decay-close
+                        :p2     decay-open
+                        :p3     0.0
+                        :p4     0.0
+                        :p5     0.0
+                        :p6     mod-id}))
+
+      (or (= type :membrane) (contains? #{:tom :tom-high :tom-mid :tom-low :th :tm :tl} dk))
+      (let [start-p (float (or (:start-pitch drum-spec) 180.0))
+            min-p   (float (or (:min-pitch drum-spec) 105.0))
+            p-decay (float (or (:pitch-decay drum-spec) 0.015))
+            decay-s (float (or (:decay drum-spec) 0.40))
+            drive   (float (or (:drive drum-spec) 1.10))]
+        (send-msg! #js {:type   "setDrumPatch"
+                        :drumId inst-id
+                        :p0     start-p
+                        :p1     min-p
+                        :p2     p-decay
+                        :p3     decay-s
+                        :p4     drive
+                        :p5     0.0
+                        :p6     mod-id}))
+
+      (or (= type :metallic) (contains? #{:ride :ride-bell :crash-16 :crash-17 :crash-18 :splash :china :cowbell :cr :cb :rb} dk))
+      (let [cutoff-hz (float (or (:cutoff drum-spec) 3500.0))
+            res       (float (or (:resonance drum-spec) 0.35))
+            decay-s   (float (or (:decay drum-spec) 0.85))
+            drive     (float (or (:drive drum-spec) 1.0))]
+        (send-msg! #js {:type   "setDrumPatch"
+                        :drumId inst-id
+                        :p0     cutoff-hz
+                        :p1     res
+                        :p2     decay-s
+                        :p3     drive
+                        :p4     0.0
+                        :p5     0.0
+                        :p6     mod-id}))
+
+      (or (= type :clap) (= dk :clap))
+      (let [cutoff-hz (float (or (:cutoff drum-spec) 1200.0))
+            res       (float (or (:resonance drum-spec) 0.70))
+            decay-s   (float (or (:decay drum-spec) 0.28))
+            drive     (float (or (:drive drum-spec) 1.0))]
+        (send-msg! #js {:type   "setDrumPatch"
+                        :drumId 18
+                        :p0     cutoff-hz
+                        :p1     res
+                        :p2     decay-s
+                        :p3     drive
+                        :p4     0.0
+                        :p5     0.0
+                        :p6     mod-id}))
+
+      :else
+      nil)))
 
 (defn trigger-worklet-note!
   "Plays a live note on the Rust WASM modular synth or drum engine."

@@ -55,3 +55,10 @@
     (is (= 40 (looper/set-bpm! 5)))
     (is (= 300 (looper/set-bpm! 999)))
     (is (= 174 (looper/set-bpm! 174)))))
+
+(deftest drum-mode-test
+  (testing "Configures drum character mode and returns keyword"
+    (is (= :natural (looper/set-drum-mode! :natural)))
+    (is (= :idm (looper/set-drum-mode! :idm)))
+    (is (= :analog (looper/mod! :analog)))
+    (is (= :industrial (looper/mod! :industrial)))))

@@ -43,3 +43,25 @@
       (is (= 71 (:inst-id sp-ghost)))
       (is (= 72 (:inst-id ch-accent)))
       (is (= 73 (:inst-id cb-hit))))))
+
+(deftest test-parse-step-hit-custom-velocity
+  (testing "Custom track velocity propagates to notes, chords, and accents"
+    (let [low-note  (worklet/parse-step-hit "E3" :pad 0.28)
+          low-chord (worklet/parse-step-hit ["E3" "G3"] :pad 0.28)
+          low-bool  (worklet/parse-step-hit true :pad 0.28)
+          low-midi  (worklet/parse-step-hit 60 :pad 0.28)
+          low-ghost (worklet/parse-step-hit "E3_" :pad 0.28)]
+      (is (< (js/Math.abs (- (:vel low-note) 0.28)) 0.01))
+      (is (< (js/Math.abs (- (:vel low-chord) 0.28)) 0.01))
+      (is (< (js/Math.abs (- (:vel low-bool) 0.28)) 0.01))
+      (is (< (js/Math.abs (- (:vel low-midi) 0.28)) 0.01))
+      (is (< (js/Math.abs (- (:vel low-ghost) (* 0.28 (/ 0.35 0.9)))) 0.01)))))
+
+(deftest test-track-slots-for
+  (testing "Returns assigned slots and sub-slots for chords"
+    (swap! worklet/track-slot-assignments assoc :pad 4 :pad-v1 5 :pad-v2 6 :bass 1)
+    (let [slots (worklet/track-slots-for :pad)]
+      (is (contains? (set slots) 4))
+      (is (contains? (set slots) 5))
+      (is (contains? (set slots) 6))
+      (is (not (contains? (set slots) 1))))))

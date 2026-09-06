@@ -26,8 +26,9 @@
 (def stop! looper/stop!)
 (def b! looper/set-bpm!)
 (def set-bpm! looper/set-bpm!)
-(def click! looper/toggle-click!)
+(def click! looper/click!)
 (def toggle-click! looper/toggle-click!)
+(def set-click! looper/set-click!)
 
 ;; Looper, Scheduler + Multi-Track Stacking
 (def loop! looper/loop!)
@@ -36,6 +37,8 @@
 (def clear-loops! looper/clear-loops!)
 (def stack! looper/stack!)
 (def unstack! looper/unstack!)
+(def set-drum-mode! looper/set-drum-mode!)
+(def mod! looper/mod!)
 
 ;; Harmonic Music Theory + Generative Rhythms
 (def _ harmony/_)
@@ -151,6 +154,9 @@
 (def instruments inst/all-instruments)
 (def definst! inst/defsynth!)
 (def defsynth! inst/defsynth!)
+(def defdrum! inst/defdrum!)
+(def patch-drum! inst/patch-drum!)
+(def drum! inst/defdrum!)
 (def patch! inst/patch!)
 (def reset-inst! inst/reset-instrument!)
 (def reset-instrument! inst/reset-instrument!)

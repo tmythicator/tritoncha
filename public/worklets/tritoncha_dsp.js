@@ -92,8 +92,8 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             for (let i = 0; i < len; i++) {
               this.instIdsBufferView[i] = data.instIds ? data.instIds[i] : (data.instId || 4);
               this.notesBufferView[i] = data.notes[i];
-              this.velsBufferView[i] = data.vels[i] || 0.9;
-              this.dursBufferView[i] = data.durs ? (data.durs[i] || 0.2) : (data.dur || 0.2);
+              this.velsBufferView[i] = (typeof data.vels[i] === 'number') ? data.vels[i] : 0.9;
+              this.dursBufferView[i] = data.durs ? ((typeof data.durs[i] === 'number') ? data.durs[i] : 0.2) : (data.dur || 0.2);
             }
             this.wasmExports.tritoncha_dsp_set_track(
               this.wasmEnginePtr,
@@ -245,6 +245,31 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
               data.pitchEnvAmt !== undefined ? data.pitchEnvAmt : 0.0,
               data.pitchEnvDecay !== undefined ? data.pitchEnvDecay : 0.015,
               data.analogDrift !== undefined ? data.analogDrift : 0.0
+            );
+          }
+          break;
+
+        case 'setDrumPatch':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drum_patch) {
+            this.wasmExports.tritoncha_dsp_set_drum_patch(
+              this.wasmEnginePtr,
+              data.drumId !== undefined ? data.drumId : 0,
+              data.p0 !== undefined ? data.p0 : 0.0,
+              data.p1 !== undefined ? data.p1 : 0.0,
+              data.p2 !== undefined ? data.p2 : 0.0,
+              data.p3 !== undefined ? data.p3 : 0.0,
+              data.p4 !== undefined ? data.p4 : 0.0,
+              data.p5 !== undefined ? data.p5 : 0.0,
+              data.p6 !== undefined ? data.p6 : 0.0
+            );
+          }
+          break;
+
+        case 'setDrumMode':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drum_mode) {
+            this.wasmExports.tritoncha_dsp_set_drum_mode(
+              this.wasmEnginePtr,
+              data.mode !== undefined ? data.mode : 0.0
             );
           }
           break;

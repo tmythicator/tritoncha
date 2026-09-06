@@ -112,8 +112,9 @@
           step-m  (audio-utils/step->mult (:step pat-data))
           bpm     (:bpm @audio-state 168)
           dur-raw (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
-          dur-s   (audio-utils/dur->seconds dur-raw bpm)]
-      (worklet/set-track! slot inst-k (vec notes) step-m dur-s))))
+          dur-s   (audio-utils/dur->seconds dur-raw bpm)
+          vel     (or (:vel pat-data) 0.9)]
+      (worklet/set-track! slot inst-k (vec notes) step-m dur-s vel))))
 
 (defn transpose-all!
   "Transposes all active melodic loops by N semitones live.
