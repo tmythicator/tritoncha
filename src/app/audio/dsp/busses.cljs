@@ -1,8 +1,6 @@
 (ns app.audio.dsp.busses
-  "Audio bus registry, normalization, routing mappings, predicates, and gain automation."
-  (:require [app.audio.dsp.worklet :as worklet]
-            [app.config :as cfg]
-            [app.custom.instruments :refer [user-instruments]]
+  "Audio bus registry, normalization, routing mappings, and category predicates."
+  (:require [app.custom.instruments :refer [user-instruments]]
             [app.lib.drums :refer [core-drum-instruments core-drum-voices]]
             [app.lib.instruments :refer [core-instruments]]
             [app.state :refer [repl-registry]]))
@@ -52,7 +50,7 @@
 (def sub-voices
   #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808})
 
-(defn- find-instrument-spec
+(defn find-instrument-spec
   "Looks up an instrument specification map across REPL, custom, and core catalogs."
   [k]
   (let [canonical (get {:bass :bass-analog, :sub :sub-pure, :pad :pad-cinema, :lead :lead-pluck} k k)]
@@ -173,23 +171,17 @@
   "Returns true if key, spec, or track corresponds to a sub-bass voice.
   Examples: (sub? :sub-pure) -> true, (sub? :lead-pluck) -> false."
   [x]
-  (let [k (cond
-            (keyword? x) x
-            (map? x) (or (:inst x) (:inst-key x))
-            :else (keyword (str x)))]
-    (and (bass? x)
-         (contains? sub-voices k))))
+  (let [spec (if (map? x) x (find-instrument-spec x))
+        k    (cond
+               (keyword? x) x
+               (map? x) (or (:inst x) (:inst-key x))
+               :else (keyword (str x)))]
+    (or (contains? sub-voices k)
+        (and (bass? x)
+             (= (get-in spec [:osc :type]) :sine)))))
 
 (defn synth?
   "Returns true if key or spec is any tonal or FX synthesizer voice (non-drum).
   Examples: (synth? :bass-analog) -> true, (synth? :kick) -> false."
   [x]
   (not= (sound-category x) :drums))
-
-(defn set-bus-gain!
-  "Sets the input gain of an audio bus in decibels.
-  Examples: (set-bus-gain! :bus/drums -6 0.05), (set-bus-gain! :bus/bass 0)."
-  ([bus-key db-val] (set-bus-gain! bus-key db-val cfg/default-ramp-time))
-  ([bus-key db-val _ramp-time]
-   (let [b-key (normalize-bus-key bus-key)]
-     (worklet/set-bus-params! b-key db-val false 0.15 0.20))))

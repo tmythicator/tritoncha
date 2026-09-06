@@ -1,6 +1,7 @@
 (ns app.audio.dsp.worklet
   "Bridge to the native WebAudio AudioWorklet processor driving Rust WASM DSP."
-  (:require [app.lib.drums :refer [drum-keyword? drum-keywords mini-notation-aliases]]
+  (:require [app.audio.dsp.busses :as busses :refer [find-instrument-spec sound-category]]
+            [app.lib.drums :refer [drum-keyword? drum-keywords mini-notation-aliases]]
             [app.utils.audio :refer [midi->freq note->midi]]
             [clojure.string :as str]))
 
@@ -59,6 +60,7 @@
    :sub-808       34 :808 34
    :bass-slap     35 :slap 35
    :bass-organ    36
+   :bass-liquid   37 :liquid 37
    :lead-bell     38 :bell 38
    :fx-siren      40 :siren 40
    :fx-laser      41 :laser 41})
@@ -93,14 +95,14 @@
 (defn track-slot [track-key]
   (let [tk (keyword track-key)]
     (or (get @track-slot-assignments tk)
-        (when (drum-keyword? tk)
-          (get @track-slot-assignments :drums))
-        (when (contains? #{:bass-analog :sub-pure :acid :bass-303 :moog :moog-bass :bass-reese :bass :sub} tk)
-          (or (get @track-slot-assignments :bass)
-              (get @track-slot-assignments :sub)))
-        (when (contains? #{:pad :pad-cinema :pad-glass :glass :juno :pad-shimmer} tk)
-          (or (get @track-slot-assignments :strings)
-              (get @track-slot-assignments :pad)))
+        (case (sound-category tk)
+          :drums (get @track-slot-assignments :drums)
+          :bass  (or (get @track-slot-assignments :bass)
+                     (get @track-slot-assignments :sub))
+          :pads  (or (get @track-slot-assignments :strings)
+                     (get @track-slot-assignments :pad))
+          :leads (get @track-slot-assignments :lead)
+          nil)
         (when (contains? #{:click :metronome} tk)
           (get @track-slot-assignments :click)))))
 
@@ -496,109 +498,83 @@
     (send-msg! #js {:type "setDrumMode"
                     :mode mode-id})))
 
+(defn- send-drum-patch! [drum-id [p0 p1 p2 p3 p4 p5] mod-id]
+  (send-msg! #js {:type   "setDrumPatch"
+                  :drumId drum-id
+                  :p0     (float (or p0 0.0))
+                  :p1     (float (or p1 0.0))
+                  :p2     (float (or p2 0.0))
+                  :p3     (float (or p3 0.0))
+                  :p4     (float (or p4 0.0))
+                  :p5     (float (or p5 0.0))
+                  :p6     mod-id}))
+
 (defn set-worklet-drum-patch!
   "Transmits drum sound design parameters into the Rust WASM drum synthesis engine.
   Examples: (set-worklet-drum-patch! :kick {:base-pitch 48 :pitch-drop 180 :decay 0.28 :click 0.35 :drive 1.6 :mod :idm})."
   [drum-key drum-spec]
   (let [dk      (keyword drum-key)
-        type    (or (:type drum-spec) dk)
+        spec    (or drum-spec (find-instrument-spec dk))
+        type    (or (:type spec) dk)
         inst-id (inst-keyword->id dk)
-        mod-id  (drum-mod->id (:mod drum-spec))]
-    (cond
-      (or (= type :kick) (contains? #{:kick :drum-kick :808-kick :909-kick} dk))
-      (let [base-pitch   (float (or (:base-pitch drum-spec) (:pitch drum-spec) 48.0))
-            pitch-drop   (float (or (:pitch-drop drum-spec) (:snap drum-spec) 180.0))
-            pitch-decay  (float (or (:pitch-decay drum-spec) (:sweep drum-spec) 0.040))
-            decay-s      (float (or (:decay drum-spec) 0.28))
-            click-level  (float (or (:click drum-spec) 0.35))
-            drive        (float (or (:drive drum-spec) 1.6))]
-        (send-msg! #js {:type   "setDrumPatch"
-                        :drumId 0
-                        :p0     base-pitch
-                        :p1     pitch-drop
-                        :p2     pitch-decay
-                        :p3     decay-s
-                        :p4     click-level
-                        :p5     drive
-                        :p6     mod-id}))
+        mod-id  (drum-mod->id (:mod spec))]
+    (case type
+      :kick
+      (send-drum-patch! 0
+                        [(or (:base-pitch spec) (:pitch spec) 48.0)
+                         (or (:pitch-drop spec) (:snap spec) 180.0)
+                         (or (:pitch-decay spec) (:sweep spec) 0.040)
+                         (or (:decay spec) 0.28)
+                         (or (:click spec) 0.35)
+                         (or (:drive spec) 1.6)]
+                        mod-id)
 
-      (or (= type :snare) (contains? #{:snare :snare-crack :snare-body :snare-wire :snare-ghost :snare-rim} dk))
-      (let [base-freq   (float (or (:base-freq drum-spec) (:pitch drum-spec) 185.0))
-            tone-decay  (float (or (:tone-decay drum-spec) 0.9985))
-            noise-decay (float (or (:noise-decay drum-spec) 0.9991))
-            cutoff-hz   (float (or (:cutoff drum-spec) 2400.0))
-            snappy      (float (or (:snappy drum-spec) (:noise drum-spec) 0.85))]
-        (send-msg! #js {:type   "setDrumPatch"
-                        :drumId 1
-                        :p0     base-freq
-                        :p1     tone-decay
-                        :p2     noise-decay
-                        :p3     cutoff-hz
-                        :p4     snappy
-                        :p5     0.0
-                        :p6     mod-id}))
+      :snare
+      (send-drum-patch! 1
+                        [(or (:base-freq spec) (:pitch spec) 185.0)
+                         (or (:tone-decay spec) 0.9985)
+                         (or (:noise-decay spec) 0.9991)
+                         (or (:cutoff spec) 2400.0)
+                         (or (:snappy spec) (:noise spec) 0.85)
+                         0.0]
+                        mod-id)
 
-      (or (= type :hat) (contains? #{:hat :hat-closed :hat-open :hh-closed :hh-open} dk))
-      (let [cutoff-hz   (float (or (:cutoff drum-spec) 7200.0))
-            decay-close (float (or (:decay-closed drum-spec) (:decay drum-spec) 0.04))
-            decay-open  (float (or (:decay-open drum-spec) 0.24))]
-        (send-msg! #js {:type   "setDrumPatch"
-                        :drumId 2
-                        :p0     cutoff-hz
-                        :p1     decay-close
-                        :p2     decay-open
-                        :p3     0.0
-                        :p4     0.0
-                        :p5     0.0
-                        :p6     mod-id}))
+      :hat
+      (send-drum-patch! 2
+                        [(or (:cutoff spec) 7200.0)
+                         (or (:decay-closed spec) (:decay spec) 0.04)
+                         (or (:decay-open spec) 0.24)
+                         0.0 0.0 0.0]
+                        mod-id)
 
-      (or (= type :membrane) (contains? #{:tom :tom-high :tom-mid :tom-low :th :tm :tl} dk))
-      (let [start-p (float (or (:start-pitch drum-spec) 180.0))
-            min-p   (float (or (:min-pitch drum-spec) 105.0))
-            p-decay (float (or (:pitch-decay drum-spec) 0.015))
-            decay-s (float (or (:decay drum-spec) 0.40))
-            drive   (float (or (:drive drum-spec) 1.10))]
-        (send-msg! #js {:type   "setDrumPatch"
-                        :drumId inst-id
-                        :p0     start-p
-                        :p1     min-p
-                        :p2     p-decay
-                        :p3     decay-s
-                        :p4     drive
-                        :p5     0.0
-                        :p6     mod-id}))
+      :membrane
+      (send-drum-patch! inst-id
+                        [(or (:start-pitch spec) 180.0)
+                         (or (:min-pitch spec) 105.0)
+                         (or (:pitch-decay spec) 0.015)
+                         (or (:decay spec) 0.40)
+                         (or (:drive spec) 1.10)
+                         0.0]
+                        mod-id)
 
-      (or (= type :metallic) (contains? #{:ride :ride-bell :crash-16 :crash-17 :crash-18 :splash :china :cowbell :cr :cb :rb} dk))
-      (let [cutoff-hz (float (or (:cutoff drum-spec) 3500.0))
-            res       (float (or (:resonance drum-spec) 0.35))
-            decay-s   (float (or (:decay drum-spec) 0.85))
-            drive     (float (or (:drive drum-spec) 1.0))]
-        (send-msg! #js {:type   "setDrumPatch"
-                        :drumId inst-id
-                        :p0     cutoff-hz
-                        :p1     res
-                        :p2     decay-s
-                        :p3     drive
-                        :p4     0.0
-                        :p5     0.0
-                        :p6     mod-id}))
+      :metallic
+      (send-drum-patch! inst-id
+                        [(or (:cutoff spec) 3500.0)
+                         (or (:resonance spec) 0.35)
+                         (or (:decay spec) 0.85)
+                         (or (:drive spec) 1.0)
+                         0.0 0.0]
+                        mod-id)
 
-      (or (= type :clap) (= dk :clap))
-      (let [cutoff-hz (float (or (:cutoff drum-spec) 1200.0))
-            res       (float (or (:resonance drum-spec) 0.70))
-            decay-s   (float (or (:decay drum-spec) 0.28))
-            drive     (float (or (:drive drum-spec) 1.0))]
-        (send-msg! #js {:type   "setDrumPatch"
-                        :drumId 18
-                        :p0     cutoff-hz
-                        :p1     res
-                        :p2     decay-s
-                        :p3     drive
-                        :p4     0.0
-                        :p5     0.0
-                        :p6     mod-id}))
+      :clap
+      (send-drum-patch! 18
+                        [(or (:cutoff spec) 1200.0)
+                         (or (:resonance spec) 0.70)
+                         (or (:decay spec) 0.28)
+                         (or (:drive spec) 1.0)
+                         0.0 0.0]
+                        mod-id)
 
-      :else
       nil)))
 
 (defn trigger-worklet-note!
