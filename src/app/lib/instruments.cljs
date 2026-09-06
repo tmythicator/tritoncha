@@ -58,6 +58,16 @@
     :mod-env   {:attack 0.002 :decay 0.5}
     :glide     0.06}
 
+   :bass-liquid
+   {:category :bass
+    :type     :mono
+    :bus      :bus/bass
+    :osc      {:type :tri :sub-level 0.65}
+    :filter   {:type :lowpass :cutoff 280 :q 0.12 :drive 0.0 :env-amount 100 :key-track 1.0}
+    :amp-env  {:attack 0.008 :decay 0.35 :sustain 0.75 :release 0.25}
+    :mod-env  {:attack 0.008 :decay 0.35}
+    :glide    0.04}
+
    :bass-reese
    {:category :bass
     :type     :mono
