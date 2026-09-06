@@ -162,11 +162,11 @@ impl TritonchaEngine {
             patches: std::array::from_fn(ModularPatch::default_for),
             drums: DrumMachine::new(),
             busses: [
-                AudioBus::new(1.0, 0.02, 0.06),  // BUS_DRUMS: tight, clean punch
-                AudioBus::new(1.0, 0.0, 0.0),    // BUS_BASS: pure dry punch
-                AudioBus::new(0.85, 0.20, 0.35), // BUS_SPACE: transparent space
-                AudioBus::new(0.85, 0.15, 0.10), // BUS_LEAD: subtle presence
-                AudioBus::new(1.0, 0.0, 0.0),    // BUS_DIRECT: metronome / click
+                AudioBus::new(1.0, 0.02, 0.06), // BUS_DRUMS: neutral 0.0 dB
+                AudioBus::new(1.0, 0.0, 0.0),   // BUS_BASS: neutral 0.0 dB
+                AudioBus::new(1.0, 0.20, 0.35), // BUS_SPACE: neutral 0.0 dB
+                AudioBus::new(1.0, 0.15, 0.10), // BUS_LEAD: neutral 0.0 dB
+                AudioBus::new(1.0, 0.0, 0.0),   // BUS_DIRECT: metronome / click (0.0 dB)
             ],
             master_filter: StateVariableFilter::new(),
             master_cutoff_hz: DEFAULT_MASTER_CUTOFF_HZ,
@@ -306,6 +306,14 @@ impl TritonchaEngine {
         if patch_id < MAX_PATCHES {
             self.patches[patch_id] = patch.sanitized();
         }
+    }
+
+    pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
+        self.drums.set_drum_patch(drum_id, params);
+    }
+
+    pub fn set_drum_mode(&mut self, mode: u8) {
+        self.drums.set_mode_all(mode);
     }
 
     pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
@@ -506,10 +514,14 @@ impl TritonchaEngine {
             let dur_s = tr.durations[pat_idx];
 
             if note >= 0 && vel > MIN_AUDIBLE_VELOCITY {
-                let freq = if !is_drum_inst(inst_id) && inst_id != INST_CLICK {
-                    midi_to_freq(note as f32)
-                } else if inst_id == INST_CLICK {
-                    DEFAULT_CLICK_FREQ_HZ
+                let freq = if !is_drum_inst(inst_id) {
+                    if note > 0 {
+                        midi_to_freq(note as f32)
+                    } else if inst_id == INST_CLICK {
+                        DEFAULT_CLICK_FREQ_HZ
+                    } else {
+                        DEFAULT_NOTE_FREQ_HZ
+                    }
                 } else if inst_id == INST_DRUM_TOM {
                     midi_to_freq(note as f32)
                 } else {

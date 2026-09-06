@@ -429,9 +429,8 @@ impl SynthVoice {
 
             OscillatorType::Click => {
                 let click_pulse = if self.phase < 0.5 { 1.0 } else { -1.0 };
-                let click_freq = if self.freq > 1800.0 { 2600.0 } else { 1600.0 };
                 let click_sine = (self.phase * 2.0 * PI).sin();
-                (click_sine * 0.8 + click_pulse * 0.4) * (click_freq / 2000.0)
+                (click_sine * 0.85 + click_pulse * 0.35) * (self.freq / 1600.0).clamp(0.6, 2.0)
             }
         };
 

@@ -176,10 +176,12 @@ pub struct SidechainPump {
     env: f32,
 }
 
+pub const DEFAULT_SIDECHAIN_AMOUNT: f32 = 0.50;
+
 impl SidechainPump {
     pub fn new() -> Self {
         Self {
-            amount: 0.0,
+            amount: DEFAULT_SIDECHAIN_AMOUNT,
             env: 1.0,
         }
     }

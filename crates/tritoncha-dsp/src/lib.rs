@@ -346,6 +346,39 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch(
     }
 }
 
+/// Updates parameters for a drum voice patch.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn tritoncha_dsp_set_drum_patch(
+    ptr: *mut TritonchaEngine,
+    drum_id: i32,
+    p0: f32,
+    p1: f32,
+    p2: f32,
+    p3: f32,
+    p4: f32,
+    p5: f32,
+    p6: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_drum_patch(drum_id, [p0, p1, p2, p3, p4, p5, p6]);
+    }
+}
+
+/// Configures global character synthesis mode across all drum machine voices.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_drum_mode(ptr: *mut TritonchaEngine, mode: f32) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_drum_mode(mode.round() as u8);
+    }
+}
+
 /// Processes an audio block and fills stereo output buffers.
 ///
 /// # Safety
