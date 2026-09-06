@@ -52,7 +52,7 @@
         "ArrowRight" (next-jam!)
         ("j" "J") (toggle-track-browser!)
         ("k" "K") (toggle-instrument-browser!)
-        "1" (play-preset! :roller)
+        "1" (play-preset! :metro-roller)
         "2" (play-preset! :sub-roller)
         "3" (play-preset! :acid-roller)
         "4" (play-preset! :ambient-drift)

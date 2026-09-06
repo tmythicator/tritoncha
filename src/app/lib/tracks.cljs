@@ -4,63 +4,66 @@
             [app.audio.theory.patterns :refer [pattern]]))
 
 (def core-tracks
-  {:roller
-   {:name   "Subterranean Pressure Roller"
+  {:metro-roller
+   {:name   "Metro Trip-Hop Roller"
     :mod    :natural
-    :bpm    168
+    :bpm    160
     :scale  [:e :phrygian 1]
     :geom   :torus-knot
     :colors ["#080412" "#ff007f"]
-    :cutoff 3400
+    :cutoff 5000
     :tracks
-    {:drums   {:notes [[:kick 1.0 "D1"] [:hh-c 0.45] [:sn-gh 0.35] [:ride-bell 0.7]
-                       [:snare 1.0 "G3"] [:hh-c 0.4] [:sn-gh 0.4] [:kick 0.9 "D1"]
-                       [:hh-o 0.75] [:kick 0.85 "D1"] [:snare 1.0 "G3"] [:sn-gh 0.35]
-                       [:sn-rs 0.95 "G3"] [:sn-gh 0.35] [:sn-roll 0.8 "A3"] [:sn-roll 0.95 "A3"]]
+    {:kick    {:notes (pattern "k_ . . .  . . . .  . . k_ .  . . . .
+                                . . k_ .  . . . .  . . k_ .  . . . k_")
                :step "16n"}
-     :bass    {:inst :bass-reese
-               :notes (deg :e :phrygian [1 _ 1 3 _ 1 :b5 5 1 _ :b7 1 _ 3 2 _] {:octave 1})
-               :step "16n" :dur "16n" :vel 0.95}
-     :sub     {:inst :sub-pure
-               :notes (deg :e :phrygian [1 _ 1 3 _ 1 :b5 5 1 _ :b7 1 _ 3 2 _] {:octave 1})
-               :step "16n" :dur "16n" :vel 1.0}
-     :strings {:inst :pad-cinema
+     :snare   {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .
+                                . . . .  rs . . g_  . . . .  rs . clk_ .")
+               :step "16n"}
+     :hats    {:notes (pattern "hc_ . h_ .  hc_ . o_ .  hc_ . h_ clk_  hc_ . o_ .
+                                hc_ . h_ .  hc_ . o_ .  hc_ clk_ h_ .  hc_ . o_ .")
+               :step "16n"}
+     :perc    {:notes (pattern ". . . .  . . . .  . . . .  . . sp_ .
+                                . . . .  . . . .  . . . .  . . . .")
+               :step "16n"}
+     :bass    {:inst :bass-liquid
+               :notes (deg :e :phrygian [1 _ _ _  _ _ 3 _  1 _ _ _  _ 4 2 _
+                                         1 _ _ _  _ _ 2 _  1 _ _ :b5  _ 4 1 _] {:octave 1})
+               :step "16n" :dur "8n" :vel 0.62}
+     :strings {:inst :pad-shimmer
                :notes [(chord :e :min9 {:octave 3})
                        (chord :d :min7 {:octave 3})
                        (chord :c :maj7 {:octave 3})
                        (chord :b :7    {:octave 2})]
-               :step "1m" :dur "1m" :vel 0.42}
-     :arp     {:inst :lead-pluck
-               :notes (deg :e :phrygian [1 _ 3 _ 5 _ 4 _ 1 _ :b7 _ 5 _ 4 2] {:octave 3})
-               :step "16n" :dur "32n" :vel 0.28}}}
+               :step "2m" :dur "2m" :vel 0.22}
+     :echo    {:inst :pad-glass
+               :bus  :bus/space
+               :notes (deg :e :phrygian [nil nil 1 nil  nil 3 nil nil  nil :b5 nil 5  nil 4 nil 2] {:octave 3})
+               :step "16n" :dur "16n" :vel 0.24}}}
 
-   :sub-roller
-   {:name   "Abyssal Trench Roller"
+   :street-roller
+   {:name   "Messenger Street Roller"
     :mod    :natural
     :bpm    172
     :scale  [:f :minor 1]
     :geom   :icosahedron
     :colors ["#030814" "#00e5ff"]
-    :cutoff 3800
+    :cutoff 4400
     :tracks
-    {:kick    {:notes (pattern "k . . .  . . . .  . . k .  . . . .") :step "16n"}
-     :snare   {:notes (pattern ". . . .  s . . .  . . . .  s . . .") :step "16n"}
-     :hats    {:notes (pattern ". . h .  . . . h  . o . .  . . h .") :step "16n"}
-     :bass    {:inst :bass-reese
-               :notes ["F1" "F1" nil "F1" "Ab1" nil "C2" nil "F1" nil "Eb1" "F1" nil "Db1" nil "C1"]
-               :step "16n" :dur "16n" :vel 0.95}
+    {:kick    {:notes (pattern "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
+     :snare   {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
+     :hats    {:notes (pattern "h_ . clk .  . . o_ .  h_ . clk .  . . o_ .") :step "16n"}
      :sub     {:inst :sub-pure
                :notes ["F1" "F1" nil "F1" "Ab1" nil "C2" nil "F1" nil "Eb1" "F1" nil "Db1" nil "C1"]
-               :step "16n" :dur "16n" :vel 1.0}
+               :step "16n" :dur "16n" :vel 0.70}
      :strings {:inst :pad-glass
                :notes [(chord :f :min9 {:octave 3})
                        (chord :db :maj9 {:octave 3})
                        (chord :eb :dom7 {:octave 3})
                        (chord :c :min7 {:octave 3})]
-               :step "1m" :dur "1m" :vel 0.32}}}
+               :step "1m" :dur "1m" :vel 0.26}}}
 
    :acid-roller
-   {:name   "Cathode Acid Downtempo Jungle"
+   {:name   "Acid Downtempo Jungle"
     :mod    :analog
     :bpm    130
     :scale  [:a :aeolian 1]
@@ -68,15 +71,15 @@
     :colors ["#140404" "#ff3300"]
     :cutoff 3800
     :tracks
-    {:kick  {:notes (pattern "k . . .  . . . k  . . k .  . . . .") :step "16n"}
-     :snare {:notes (pattern ". . . .  s . . .  . . . .  s . . .") :step "16n"}
-     :hats  {:notes (pattern "h . clk .  . . o .  h . h .  . . o .") :step "16n"}
+    {:kick  {:notes (pattern "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
+     :snare {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
+     :hats  {:notes (pattern "h_ . clk .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
      :bass  {:inst :bass-303
              :notes (deg :a :aeolian [1 _ _ 3 1 _ 4 _ 1 _ :b7 1 _ _ 5 _] {:octave 1})
-             :step "16n" :dur "16n" :vel 1.0}
+             :step "16n" :dur "16n" :vel 0.70}
      :sub   {:inst :sub-pure
              :notes (deg :a :aeolian [1 _ _ _ _ _ 1 _ 1 _ _ _ _ _ 5 _] {:octave 1})
-             :step "16n" :dur "8n" :vel 1.0}}}
+             :step "16n" :dur "8n" :vel 0.68}}}
 
    :ambient-drift
    {:name   "Phobos Moon"
@@ -85,23 +88,23 @@
     :scale  [:d :phrygian 1]
     :geom   :sphere
     :colors ["#0a0302" "#ff6600"]
-    :cutoff 3800
+    :cutoff 4200
     :tracks
-    {:kick    {:notes (pattern "k . . .  . . . .  k . . .  . . k .") :step "16n"}
-     :snare   {:notes (pattern ". . . .  crack . . .  . . . .  s . . .") :step "16n"}
-     :perc    {:notes (pattern ". . clk .  . . rb .  . . sp .  . . ch .") :step "16n"}
-     :bass    {:inst :bass-reese
+    {:kick    {:notes (pattern "k_ . . .  . . . .  k_ . . .  . . k_ .") :step "16n"}
+     :snare   {:notes (pattern ". . . .  crack_ . . .  . . . .  rs . g_ .") :step "16n"}
+     :perc    {:notes (pattern ". . clk .  . . . .  . . sp_ .  . . clk_ .") :step "16n"}
+     :bass    {:inst :bass-liquid
                :notes (deg :d :phrygian [1 _ _ _ _ _ 2 _ 1 _ _ _ :b5 _ _ _] {:octave 1})
-               :step "16n" :dur "8n" :vel 0.95}
+               :step "16n" :dur "8n" :vel 0.65}
      :drone   {:inst :pad-cinema
                :notes [(chord :d :dark-m9 {:octave 2})
                        (chord :bb :maj7 {:octave 2})
                        (chord :eb :maj7 {:octave 2})
                        (chord :c :min7 {:octave 2})]
-               :step "2m" :dur "2m" :vel 0.35}
+               :step "2m" :dur "2m" :vel 0.28}
      :echo    {:inst :pad-glass
                :notes (deg :d :phrygian [nil nil 1 nil nil :b2 nil nil nil :b5 nil nil nil 4 nil nil] {:octave 3})
-               :step "16n" :dur "16n" :vel 0.28}}}
+               :step "16n" :dur "16n" :vel 0.24}}}
 
    :orbital-roller
    {:name   "Facing Moons"
@@ -117,37 +120,13 @@
      :hats      {:notes (pattern "h_ . h_ .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
      :sub       {:inst :sub-pure
                  :notes (deg :e :minor [1 _ _ _ _ _ _ _ 6 _ _ _ _ _ _ _ 4 _ _ _ _ _ _ _ 7 _ _ _ _ _ _ _] {:octave 1})
-                 :step "16n" :dur "4n" :vel 0.78}
+                 :step "16n" :dur "4n" :vel 0.70}
      :pad       {:inst :pad-shimmer
                  :notes [(chord :e :min9 {:octave 3})
                          (chord :c :maj9 {:octave 3})
                          (chord :a :min7 {:octave 3})
                          (chord :d :dom7 {:octave 3})]
                  :step "2m" :dur "2m" :vel 0.1}}}
-
-   :liquid-roller
-   {:name   "Velvet Sunset Liquid"
-    :mod    :natural
-    :bpm    172
-    :scale  [:g :dorian 1]
-    :geom   :torus-knot
-    :colors ["#100418" "#ffaa00"]
-    :cutoff 4800
-    :tracks
-    {:drums   {:notes [[:kick 0.95 "G1"] nil [:hh-c 0.35] [:ride 0.55]
-                       [:sn-rs 1.0 "Bb3"] nil [:hh-c 0.35] [:kick 0.85 "G1"]
-                       nil [:hh-c 0.35] [:sn-rs 1.0 "Bb3"] [:ride 0.5]
-                       nil [:kick 0.8 "G1"] [:hh-o 0.5] nil]
-               :step "16n"}
-     :bass    {:inst :bass-reese
-               :notes (deg :g :dorian [1 _ _ _ 4 _ _ _ 5 _ _ _ 7 _ 5 _] {:octave 1})
-               :step "16n" :dur "8n" :vel 0.95}
-     :strings {:inst :pad-strings
-               :notes [(chord :g :min9 {:octave 3})
-                       (chord :f :maj9 {:octave 3})
-                       (chord :eb :maj7 {:octave 3})
-                       (chord :d :min7 {:octave 3})]
-               :step "1m" :dur "1m" :vel 0.38}}}
 
    :neuro-tech
    {:name   "Dystopian Tech Menace"
@@ -165,10 +144,10 @@
              :step "16n"}
      :bass  {:inst :bass-neuro
              :notes (deg :f :phrygian [1 1 _ 2 _ 1 _ :b5 1 _ :b7 1 _ 3 2 _] {:octave 1})
-             :step "16n" :dur "16n" :vel 1.0}
+             :step "16n" :dur "16n" :vel 0.74}
      :sub   {:inst :sub-pure
              :notes (deg :f :phrygian [1 1 _ 2 _ 1 _ :b5 1 _ :b7 1 _ 3 2 _] {:octave 1})
-             :step "16n" :dur "16n" :vel 1.0}
+             :step "16n" :dur "16n" :vel 0.72}
      :stab  {:inst :lead-fm
              :notes (deg :f :phrygian [nil nil nil 1 nil nil :b5 nil nil nil 2 nil nil :b7 nil nil] {:octave 2})
              :step "16n" :dur "32n" :vel 0.4}}}
@@ -187,7 +166,7 @@
      :hats   {:notes (pattern "h . clk .  h . o .  h . sp .  h . o .") :step "16n"}
      :bass   {:inst :sub-pure
               :notes (deg :c :minor [1 _ _ _ 1 _ _ _ 1 _ _ _ :b7 _ 5 _] {:octave 1})
-              :step "16n" :dur "8n" :vel 1.0}
+              :step "16n" :dur "8n" :vel 0.75}
      :chords {:inst :pad-glass
               :notes [(chord :c :min9 {:octave 3}) nil nil nil
                       (chord :bb :sus4 {:octave 3}) nil nil nil]
@@ -256,10 +235,10 @@
      :hats  {:notes (pattern "h . cb .  . . o! .  h . cb .  . clk o! .") :step "16n"}
      :bass  {:inst :bass-slap
              :notes (deg :e :phrygian [1 _ 1 _ 2 _ 1 _ _ 1 _ 3 2 _ 1 _] {:octave 1})
-             :step "16n" :dur "16n" :vel 0.95}
+             :step "16n" :dur "16n" :vel 0.76}
      :sub   {:inst :sub-808
              :notes (deg :e :phrygian [1 _ _ _ _ _ _ _ 2 _ _ _ 1 _ _ _] {:octave 1})
-             :step "16n" :dur "4n" :vel 1.0}
+             :step "16n" :dur "4n" :vel 0.75}
      :lead  {:inst :lead-pluck
              :notes (deg :e :phrygian [1 _ _ 2 _ 1 _ _ _ 1 3 _ 2 _ 1 _] {:octave 2})
              :step "16n" :dur "16n" :vel 0.4}}}
@@ -274,11 +253,11 @@
     :cutoff 6000
     :tracks
     {:kick  {:notes (pattern "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-     :snare {:notes (pattern ". . . .  s! . . .  . . . .  s! . . cr") :step "16n"}
+     :snare {:notes (pattern ". . . .  s! . . .  . . . .  s! . . s_") :step "16n"}
      :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
      :bass  {:inst :bass-reese
              :notes (deg :c :dorian [1 _ 1 _ 3 _ 1 _ :b7 _ 1 _ 5 _ 4 _] {:octave 1})
-             :step "16n" :dur "16n" :vel 0.95}
+             :step "16n" :dur "16n" :vel 0.78}
      :lead  {:inst :lead-hoover
              :notes (deg :c :dorian [1 _ _ 3 _ 5 _ 8 _ 7 _ 5 _ 4 _ 3] {:octave 2})
              :step "16n" :dur "16n" :vel 0.45}}}
@@ -299,10 +278,10 @@
                :step "16n"}
      :sub     {:inst :sub-pure
                :notes (deg :d :minor [1 _ _ _ 1 _ _ _ :b7 _ _ _ 5 _ 4 _] {:octave 1})
-               :step "16n" :dur "8n" :vel 1.0}
+               :step "16n" :dur "8n" :vel 0.74}
      :bass    {:inst :bass-neuro
                :notes (deg :d :minor [1 _ _ _ 1 _ _ _ :b7 _ _ _ 5 _ 4 _] {:octave 1})
-               :step "16n" :dur "8n" :vel 0.95}
+               :step "16n" :dur "8n" :vel 0.74}
      :strings {:inst :pad-cinema
                :notes [(chord :d :min9 {:octave 3})
                        (chord :c :maj7 {:octave 3})]
@@ -407,7 +386,7 @@
      :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! crack") :step "16n"}
      :bass  {:inst :bass-analog
              :notes (deg :f :phrygian [_ 1 1 1 _ 1 1 1 _ 1 1 1 _ 2 2 1] {:octave 1})
-             :step "16n" :dur "32n" :vel 0.95}
+             :step "16n" :dur "32n" :vel 0.78}
      :lead  {:inst :bass-303
              :notes (deg :f :phrygian [nil 1 1 2 nil 1 3 1 nil 1 1 4 nil 3 2 1] {:octave 2})
              :step "16n" :dur "16n" :vel 0.45}}}
@@ -421,14 +400,14 @@
     :colors ["#120c08" "#ffaa77"]
     :cutoff 3200
     :tracks
-    {:drums   {:notes [[:kick 0.95 "C1"] [:hh-clk 0.3] [:hh-c 0.35] [:ride 0.5]
+    {:drums   {:notes [[:kick 0.95 "C1"] [:hh-clk 0.3] [:hh-c 0.35] [:hh-clk 0.25]
                        [:snare 0.85 "C3"] [:sn-gh 0.25] [:hh-c 0.35] [:hh-o 0.45]
                        [:tom-low 0.65 "D2"] [:kick 0.85 "C1"] [:hh-clk 0.3] [:sn-clk 0.4]
                        [:snare 0.85 "C3"] [:splash 0.5] [:hh-c 0.3] [:sn-gh 0.3]]
                :step "16n"}
      :bass    {:inst :sub-pure
                :notes (deg :c :dorian [1 _ _ _ 3 _ _ _ 4 _ _ _ 5 _ _ _] {:octave 1})
-               :step "16n" :dur "4n" :vel 0.9}
+               :step "16n" :dur "4n" :vel 0.70}
      :strings {:inst :pad-strings
                :notes [(chord :c :min9 {:octave 3})
                        (chord :f :dom7 {:octave 3})

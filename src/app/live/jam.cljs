@@ -9,7 +9,6 @@
   (jam! :sub-roller)
   (jam! :acid-roller)
   (jam! :ambient-drift)
-  (jam! :liquid-roller)
   (refresh!)
   (stop!)
 

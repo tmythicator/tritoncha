@@ -19,7 +19,7 @@
   ;; =============================================================================
 
   ;; Built-in Jams
-  (jam! :roller)
+  (jam! :metro-roller)
   (jam! :sub-roller)
   (jam! :acid-roller)
   (jam! :ambient-drift)
