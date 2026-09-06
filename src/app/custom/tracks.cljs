@@ -15,16 +15,29 @@
 
 (def user-tracks
   {:liquid-roller
-   {:name   "Liquid Roller (172 BPM)"
+   {:name   "Liquid Sunrise Drift"
+    :mod    :natural
     :bpm    172
     :scale  [:e :hirajoshi 2]
     :geom   :torus-knot
     :colors ["#040a14" "#00ffaa"]
     :cutoff 4200
     :tracks
-    {:drums   {:hits [[:kick 1.0 "D1"] [:hh-c 0.4] [[:snare 1.0 "G3"] [:hh-c 0.45]] [:hh-c 0.4]
-                      [:kick 0.9 "D1"] [:hh-o 0.7] [[:sn-rs 0.95 "G3"] [:hh-c 0.4]] [:sn-gh 0.35]]
+    {:drums   {:notes [[:kick 1.0 "D1"] [:hh-c 0.4] [:ride 0.6] [:hh-c 0.4]
+                       [:sn-rs 1.0 "G3"] [:hh-c 0.4] [:kick 0.85 "D1"] [:hh-o 0.75]
+                       [:hh-c 0.4] [:kick 0.9 "D1"] [:sn-rs 1.0 "G3"] [:ride-bell 0.7]
+                       [:hh-c 0.4] [:sn-gh 0.35] [:splash 0.65] [:hh-o 0.6]]
                :step "16n"}
-     :bass    {:inst :bass :notes (deg :e :hirajoshi [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 1) :step "16n"}
-     :sub     {:inst :sub  :notes (deg :e :hirajoshi [1 _ _ _ 2 _ _ _  1 _ _ _ 5 _ 4 _] 1) :step "16n" :dur "8n"}
-     :strings {:inst :pad  :notes [(chord :e :min9 3) (chord :c :maj7 3)] :step "1m" :dur "1m"}}}})
+     :bass    {:inst :bass-reese
+               :notes (deg :e :hirajoshi [1 _ 1 2 _ 1 4 3 1 _ 5 4 _ 2 1 _] {:octave 1})
+               :step "16n" :dur "16n" :vel 0.92}
+     :sub     {:inst :sub-pure
+               :notes (deg :e :hirajoshi [1 _ _ _ 2 _ _ _ 1 _ _ _ 5 _ 4 _] {:octave 1})
+               :step "16n" :dur "8n" :vel 1.0}
+     :strings {:inst :pad-shimmer
+               :notes [(chord :e :min9 {:octave 3})
+                       (chord :c :maj7 {:octave 3})]
+               :step "1m" :dur "1m" :vel 0.35}
+     :keys    {:inst :lead-bell
+               :notes (deg :e :hirajoshi [1 _ 2 _ 4 _ 5 _ 7 _ 5 _ 4 _ 2 _] {:octave 3})
+               :step "16n" :dur "16n" :vel 0.3}}}})

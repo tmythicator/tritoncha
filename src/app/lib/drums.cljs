@@ -3,122 +3,235 @@
 
 (def core-drum-instruments
   {:kick
-   {:category :drums
-    :type     :membrane
-    :bus      :bus/drums
-    :options  {:pitchDecay 0.035 :octaves 7 :oscillator {:type "sine"}
-               :envelope {:attack 0.001 :decay 0.22 :sustain 0 :release 0.08}}}
+   {:category    :drums
+    :type        :kick
+    :bus         :bus/drums
+    :mod         :analog
+    :base-pitch  48.0
+    :pitch-drop  180.0
+    :pitch-decay 0.040
+    :decay       0.28
+    :click       0.35
+    :drive       1.6}
+
+   :snare
+   {:category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :analog
+    :base-freq   185.0
+    :tone-decay  0.9985
+    :noise-decay 0.9991
+    :cutoff      2400.0
+    :snappy      0.85}
+
+   :hat
+   {:category     :drums
+    :type         :hat
+    :bus          :bus/drums
+    :mod          :analog
+    :cutoff       7200.0
+    :decay-closed 0.04
+    :decay-open   0.24}
 
    :snare-body
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums
-    :options  {:oscillator {:type "triangle"}
-               :envelope {:attack 0.001 :decay 0.12 :sustain 0 :release 0.05}}}
+   {:category   :drums
+    :type       :snare
+    :bus        :bus/drums
+    :mod        :analog
+    :base-freq  160.0
+    :tone-decay 0.9985}
 
    :snare-wire
-   {:category :drums
-    :type     :noise
-    :bus      :bus/drums
-    :options  {:noise {:type "white"}
-               :envelope {:attack 0.001 :decay 0.14 :sustain 0 :release 0.06}}}
+   {:category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :analog
+    :noise-decay 0.9993
+    :cutoff      5200.0}
 
    :snare-rim
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums
-    :options  {:oscillator {:type "sine"}
-               :envelope {:attack 0.001 :decay 0.03 :sustain 0 :release 0.01}}}
+   {:category   :drums
+    :type       :snare
+    :bus        :bus/drums
+    :mod        :analog
+    :base-freq  420.0
+    :tone-decay 0.9975
+    :cutoff     4200.0}
 
    :snare-ghost
-   {:category :drums
-    :type     :noise
-    :bus      :bus/drums
-    :options  {:noise {:type "pink"}
-               :envelope {:attack 0.001 :decay 0.08 :sustain 0 :release 0.03}}}
+   {:category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :analog
+    :base-freq   190.0
+    :noise-decay 0.9980}
 
    :hat-closed
-   {:category :drums
-    :type     :noise
-    :bus      :bus/drums
-    :options  {:noise {:type "white"}
-               :envelope {:attack 0.001 :decay 0.035 :sustain 0 :release 0.01}}}
+   {:category     :drums
+    :type         :hat
+    :bus          :bus/drums
+    :mod          :analog
+    :cutoff       7200.0
+    :decay-closed 0.04}
 
    :hat-open
-   {:category :drums
-    :type     :noise
-    :bus      :bus/drums
-    :options  {:noise {:type "white"}
-               :envelope {:attack 0.001 :decay 0.18 :sustain 0 :release 0.05}}}
+   {:category   :drums
+    :type       :hat
+    :bus        :bus/drums
+    :mod        :analog
+    :cutoff     7200.0
+    :decay-open 0.24}
 
    :ride
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums
-    :options  {:oscillator {:type "square"}
-               :envelope {:attack 0.001 :decay 0.6 :sustain 0 :release 0.2}}}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    950.0
+    :resonance 0.40
+    :decay     2.20
+    :drive     1.15}
 
    :tom
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums
-    :options  {:oscillator {:type "sine"}
-               :envelope {:attack 0.001 :decay 0.25 :sustain 0 :release 0.1}}}
+   {:category    :drums
+    :type        :membrane
+    :bus         :bus/drums
+    :mod         :analog
+    :start-pitch 180.0
+    :min-pitch   105.0
+    :pitch-decay 0.015
+    :decay       0.40
+    :drive       1.10}
 
    :sn-crack
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category   :drums
+    :type       :snare
+    :bus        :bus/drums
+    :mod        :analog
+    :base-freq  220.0
+    :cutoff     3800.0
+    :tone-decay 0.9988}
 
    :ride-bell
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    1650.0
+    :resonance 0.35
+    :decay     2.00
+    :bandpass  false
+    :drive     1.25}
 
    :tom-high
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category    :drums
+    :type        :membrane
+    :bus         :bus/drums
+    :mod         :analog
+    :start-pitch 240.0
+    :min-pitch   170.0
+    :pitch-decay 0.018
+    :decay       0.35
+    :drive       1.15}
 
    :tom-mid
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category    :drums
+    :type        :membrane
+    :bus         :bus/drums
+    :mod         :analog
+    :start-pitch 180.0
+    :min-pitch   120.0
+    :pitch-decay 0.016
+    :decay       0.42
+    :drive       1.15}
 
    :tom-low
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category    :drums
+    :type        :membrane
+    :bus         :bus/drums
+    :mod         :analog
+    :start-pitch 120.0
+    :min-pitch   75.0
+    :pitch-decay 0.014
+    :decay       0.55
+    :drive       1.15}
 
    :crash-16
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    1900.0
+    :resonance 0.20
+    :decay     2.00
+    :bandpass  false
+    :drive     1.05}
 
    :crash-17
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    1650.0
+    :resonance 0.20
+    :decay     2.40
+    :bandpass  false
+    :drive     1.05}
 
    :crash-18
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    1400.0
+    :resonance 0.20
+    :decay     2.80
+    :bandpass  false
+    :drive     1.05}
 
    :splash
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    3200.0
+    :resonance 0.25
+    :decay     0.38
+    :bandpass  false
+    :drive     0.95}
 
    :china
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    1800.0
+    :resonance 0.45
+    :decay     1.60
+    :bandpass  false
+    :drive     1.35}
 
    :cowbell
-   {:category :drums
-    :type     :synth
-    :bus      :bus/drums}})
+   {:category  :drums
+    :type      :metallic
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    820.0
+    :resonance 0.85
+    :decay     0.38
+    :bandpass  true
+    :drive     1.40}
+
+   :clap
+   {:category  :drums
+    :type      :clap
+    :bus       :bus/drums
+    :mod       :analog
+    :cutoff    1200.0
+    :resonance 0.70
+    :decay     0.28
+    :drive     1.00}})
 
 (def core-drum-voices
   {:kick      {:node :kick        :default-note "D1" :dur "16n" :pulse 1.5}
