@@ -15,10 +15,18 @@
 
 (def ^:private min-db -24.0)
 (def ^:private max-db 6.0)
-(def ^:private db-range (- max-db min-db))
 (def ^:private arc-radius 18.0)
 (def ^:private arc-circumference (* 2.0 (.-PI js/Math) arc-radius)) ;; ~113.1
 (def ^:private arc-total-len (* 0.75 arc-circumference))              ;; ~84.82
+
+(defn- db->norm
+  "Maps decibel value to normalized 0.0 to 1.0 rotary position.
+  0.0 dB (unity gain) is centered at 0.5 (12 o'clock)."
+  [db]
+  (let [val (clamp db min-db max-db)]
+    (if (<= val 0.0)
+      (* 0.5 (/ (- val min-db) (- min-db)))
+      (+ 0.5 (* 0.5 (/ val max-db))))))
 
 (defn- format-db [db]
   (let [rounded (/ (.round js/Math (* db 10.0)) 10.0)]
@@ -33,7 +41,7 @@
   (let [drag-state (r/atom {:dragging? false :start-y 0 :start-val 0.0})]
     (fn [{:keys [value default-val color muted? on-change]}]
       (let [val-clamped   (clamp value min-db max-db)
-            norm          (/ (- val-clamped min-db) db-range)
+            norm          (db->norm val-clamped)
             dash-active   (* norm arc-total-len)
             dash-arr      (str (.toFixed dash-active 2) " " (.toFixed arc-circumference 2))
             angle-deg     (+ 135.0 (* norm 270.0))
