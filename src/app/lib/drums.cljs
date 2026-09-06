@@ -268,7 +268,8 @@
 (def drum-keywords
   "Unified set of all drum instrument keywords and aliases."
   (into #{:drums :clap :handclap :crack :rimshot :hh :hihat :closed-hh :open-hh :bd :bassdrum
-          :rb :th :tm :tl :cr :crash :cr16 :cr17 :cr18 :sp :ch :cb}
+          :rb :th :tm :tl :cr :crash :cr16 :cr17 :cr18 :sp :ch :cb
+          :hats :perc :percussion :break}
         (concat (keys core-drum-voices)
                 (keys core-drum-instruments))))
 

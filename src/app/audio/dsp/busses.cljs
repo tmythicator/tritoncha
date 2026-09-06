@@ -16,14 +16,19 @@
    :fx    :bus/lead})
 
 (def category-aliases
-  {:pad   :pads
-   :pads  :pads
-   :lead  :leads
-   :leads :leads
-   :bass  :bass
-   :drum  :drums
-   :drums :drums
-   :fx    :fx})
+  {:pad        :pads
+   :pads       :pads
+   :lead       :leads
+   :leads      :leads
+   :bass       :bass
+   :drum       :drums
+   :drums      :drums
+   :hat        :drums
+   :hats       :drums
+   :perc       :drums
+   :percussion :drums
+   :break      :drums
+   :fx         :fx})
 
 (defn normalize-category
   "Normalizes category keyword to standard plural form (:pads, :leads, :bass, :drums, :fx).
@@ -45,15 +50,25 @@
    :noise          :bus/glitch
    :click          :bus/direct
    :util-click     :bus/direct
-   :metronome      :bus/direct})
+   :metronome      :bus/direct
+   :hats           :bus/drums
+   :perc           :bus/drums
+   :percussion     :bus/drums
+   :break          :bus/drums})
 
 (def sub-voices
   #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808})
 
+(def ^:private default-category-instruments
+  {:bass :bass-analog
+   :sub  :sub-pure
+   :pad  :pad-cinema
+   :lead :lead-pluck})
+
 (defn find-instrument-spec
   "Looks up an instrument specification map across REPL, custom, and core catalogs."
   [k]
-  (let [canonical (get {:bass :bass-analog, :sub :sub-pure, :pad :pad-cinema, :lead :lead-pluck} k k)]
+  (let [canonical (get default-category-instruments k k)]
     (or (get (:instruments @repl-registry) canonical)
         (get user-instruments canonical)
         (get core-instruments canonical)

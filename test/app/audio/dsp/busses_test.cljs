@@ -25,6 +25,10 @@
   (testing "Resolves default bus for instruments with master fallback"
     (is (= :bus/drums (busses/instrument-bus :kick)))
     (is (= :bus/drums (busses/instrument-bus :snare)))
+    (is (= :bus/drums (busses/instrument-bus :hats)))
+    (is (= :bus/drums (busses/instrument-bus :perc)))
+    (is (= :bus/drums (busses/instrument-bus :percussion)))
+    (is (= :bus/drums (busses/instrument-bus :break)))
     (is (= :bus/bass (busses/instrument-bus :bass-analog)))
     (is (= :bus/bass (busses/instrument-bus :bass-303)))
     (is (= :bus/space (busses/instrument-bus :pad-cinema)))
@@ -37,6 +41,10 @@
     ;; Drums
     (is (true? (busses/drum? :kick)))
     (is (true? (busses/drum? :snare-wire)))
+    (is (true? (busses/drum? :hats)))
+    (is (true? (busses/drum? :perc)))
+    (is (true? (busses/drum? :percussion)))
+    (is (true? (busses/drum? :break)))
     (is (true? (busses/drum? {:bus :bus/drums})))
     (is (true? (busses/drum? {:inst :kick})))
     (is (false? (busses/drum? :bass-analog)))
