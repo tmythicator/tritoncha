@@ -1,7 +1,7 @@
 //! Core real-time DSP audio engine and mixer orchestration.
 
 use crate::dsp::delay::StereoDelay;
-use crate::dsp::effects::{BitcrusherDrive, SidechainPump, StereoChorus};
+use crate::dsp::effects::{BitcrusherDrive, SidechainPump, StereoChorus, MAX_SAMPLE_HOLD};
 use crate::dsp::filter::StateVariableFilter;
 use crate::dsp::math::{db_to_gain, midi_to_freq, soft_clip};
 use crate::dsp::reverb::StereoReverb;
@@ -470,7 +470,7 @@ impl TritonchaEngine {
     pub fn set_drive_bitcrush(&mut self, drive: f32, bit_depth: f32, sample_hold: f32) {
         self.bitcrush_drive.drive = drive.clamp(0.0, 1.0);
         self.bitcrush_drive.bit_depth = bit_depth.clamp(1.0, 16.0);
-        self.bitcrush_drive.sample_hold = sample_hold.clamp(1.0, 16.0);
+        self.bitcrush_drive.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
     }
 
     pub fn set_chorus(&mut self, rate_hz: f32, depth: f32, mix: f32) {
