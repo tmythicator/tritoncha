@@ -14,7 +14,7 @@
 (defonce audio-state
   (r/atom {:active?          false
            :bpm              cfg/default-bpm
-           :current-jam      :roller
+           :current-jam      cfg/default-jam
            :current-routing  :default
            :key              cfg/default-key
            :active-tracks    {}

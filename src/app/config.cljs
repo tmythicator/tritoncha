@@ -37,8 +37,4 @@
 (def default-ambient-light-intensity 0.6)
 (def default-directional-light-intensity 1.2)
 
-(def jam-presets
-  [:roller :sub-roller :acid-roller :ambient-drift :orbital-roller
-   :liquid-roller :neuro-tech :cyber-dub :deep-minimal :synthwave-run
-   :electro-break :hardcore-rave :dubstep-wobble :ambient-temple :glitch-hop
-   :industrial-techno :chiptune-odyssey :psy-trance :downtempo-chill :future-garage])
+(def default-jam :metro-roller)
