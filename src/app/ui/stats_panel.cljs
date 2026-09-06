@@ -4,6 +4,7 @@
    [app.audio.dsp.telemetry :refer [telemetry-snapshot]]
    [app.config :as cfg]
    [app.state :refer [audio-state visual-state]]
+   [app.ui.stats.bus-mixer :refer [bus-mixer-component]]
    [app.ui.stats.loops :refer [active-loops-component]]
    [app.ui.stats.routing-graph :refer [routing-graph-component]]
    [app.ui.stats.telemetry :refer [telemetry-component]]
@@ -56,6 +57,7 @@
            [stats-header snap on-close]
            [:div.neo-body
             [telemetry-component telemetry]
+            [bus-mixer-component]
             [routing-graph-component]
             [active-loops-component tracks-map]]
            [stats-footer]]))})))
