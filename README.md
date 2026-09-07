@@ -69,7 +69,7 @@ Tritoncha is built for an interactive Emacs live-coding workflow during jams and
 ## Cheatsheet
 
 > [!TIP]
-> For the interactive masterclass covering Jojo Mayer breakbeats, Nerve ghost rudiments, probabilistic mutations (`sometimes`, `every-n`), and procedural 3D scenes, see [src/app/demo/tutorial.cljs](src/app/demo/tutorial.cljs).
+> For the interactive masterclass covering breakbeat grooves, ghost note rudiments, probabilistic mutations (`sometimes`, `every-n`), and procedural 3D scenes, see [src/app/demo/tutorial.cljs](src/app/demo/tutorial.cljs).
 
 ### 1. Playback and Preset Jams
 

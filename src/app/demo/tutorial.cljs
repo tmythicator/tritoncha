@@ -40,7 +40,7 @@
    [:sub   {:notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}]
    [:arp   {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.8}])
 
-  ;; Jojo Mayer + Nerve Live Breakbeat Masterclass: Articulations and Ghost Rudiments
+  ;; Live Breakbeat Masterclass: Articulations and Ghost Rudiments
   ;;
   ;; Mini-notation modifiers:
   ;;   ! -> Accent (punchy rimshot / hit: vel 1.15)
