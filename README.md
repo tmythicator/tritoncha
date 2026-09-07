@@ -5,7 +5,7 @@
 Live-coding electronic music and audio-reactive 3D visuals in ClojureScript.
 
 [![CI Status](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml/badge.svg)](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 
 ---
 
@@ -117,4 +117,4 @@ The fastest way to learn Tritoncha is through the interactive tutorial in `src/a
 ## License
 
 Copyright © 2026 Alexandr Timchenko.
-Licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
+Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).

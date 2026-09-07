@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Live-coding electronic music and 3D WebGL visuals studio built with ClojureScript, Rust WASM DSP and Three.js.",
   "author": "Alexandr Timchenko",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "homepage": "https://github.com/tmythicator/tritoncha#readme",
   "repository": {
