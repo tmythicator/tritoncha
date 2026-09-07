@@ -18,25 +18,10 @@
      :on-select #(state/patch-param! cur-sel-key :osc :type % cur-spec)}]
 
    [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Sub-Osc Level:"
-      :val-str   (.toFixed (or (get-in cur-spec [:osc :sub-level]) 0.0) 2)
-      :min       "0.0" :max "1.0" :step "0.05"
-      :value     (or (get-in cur-spec [:osc :sub-level]) 0.0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :osc :sub-level v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Pulse Width:"
-      :val-str   (.toFixed (or (get-in cur-spec [:osc :pulse-width]) 0.5) 2)
-      :min       "0.05" :max "0.95" :step "0.02"
-      :value     (or (get-in cur-spec [:osc :pulse-width]) 0.5)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :osc :pulse-width v cur-spec)))}]]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :sub-level]
+                          :label "Sub-Osc Level:" :min 0.0 :max 1.0 :step 0.05 :default 0.0 :decimals 2}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :pulse-width]
+                          :label "Pulse Width:" :min 0.05 :max 0.95 :step 0.02 :default 0.5 :decimals 2}]]
 
    [:div.inst-grid-2col-bottom
     [comps/pill-selector
@@ -54,36 +39,14 @@
                        (state/patch-param! cur-sel-key :polyphony 1 cur-spec)
                        (state/patch-param! cur-sel-key :maxPolyphony 1 cur-spec))))}]
 
-    [comps/param-slider
-     {:label     "Portamento Glide:"
-      :val-str   (str (.toFixed (or (:glide cur-spec) 0.0) 3) " s")
-      :min       "0.0" :max "0.5" :step "0.005"
-      :value     (or (:glide cur-spec) 0.0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :glide v cur-spec)))}]]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :glide
+                          :label "Portamento Glide:" :min 0.0 :max 0.5 :step 0.005 :default 0.0 :unit "s" :decimals 3}]]
 
    [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Voice White Noise:"
-      :val-str   (str (Math/round (* (or (get-in cur-spec [:osc :noise]) 0.0) 100)) "%")
-      :min       "0.0" :max "1.0" :step "0.02"
-      :value     (or (get-in cur-spec [:osc :noise]) 0.0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :osc :noise v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "VCO Analog Drift:"
-      :val-str   (str (Math/round (* (or (get-in cur-spec [:osc :drift]) 0.0) 100)) "%")
-      :min       "0.0" :max "1.0" :step "0.05"
-      :value     (or (get-in cur-spec [:osc :drift]) 0.0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :osc :drift v cur-spec)))}]]])
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :noise]
+                          :label "Voice White Noise:" :min 0.0 :max 1.0 :step 0.02 :default 0.0 :pct? true}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :drift]
+                          :label "VCO Analog Drift:" :min 0.0 :max 1.0 :step 0.05 :default 0.0 :pct? true}]]])
 
 (defn filter-section
   "Render filter topology, cutoff, resonance, env amount, and key tracking controls.
@@ -98,57 +61,20 @@
      :on-select #(state/patch-param! cur-sel-key :filter :type % cur-spec)}]
 
    [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Cutoff Frequency:"
-      :val-str   (str (Math/round (or (get-in cur-spec [:filter :cutoff]) 2400)) " Hz")
-      :min       "40" :max "14000" :step "50"
-      :value     (or (get-in cur-spec [:filter :cutoff]) 2400)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :filter :cutoff v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Resonance (Q):"
-      :val-str   (.toFixed (or (get-in cur-spec [:filter :q]) 0.2) 2)
-      :min       "0.0" :max "0.95" :step "0.02"
-      :value     (or (get-in cur-spec [:filter :q]) 0.2)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :filter :q v cur-spec)))}]]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:filter :cutoff]
+                          :label "Cutoff Frequency:" :min 40 :max 14000 :step 50 :default 2400 :unit "Hz" :decimals 0}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:filter :q]
+                          :label "Resonance (Q):" :min 0.0 :max 0.95 :step 0.02 :default 0.2 :decimals 2}]]
 
    [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Filter Env Amount:"
-      :val-str   (str (Math/round (or (get-in cur-spec [:filter :env-amount]) 0)) " Hz")
-      :min       "-8000" :max "8000" :step "100"
-      :value     (or (get-in cur-spec [:filter :env-amount]) 0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :filter :env-amount v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Keyboard Tracking:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:filter :key-track]) 1.0) 1) "x")
-      :min       "0.0" :max "3.0" :step "0.1"
-      :value     (or (get-in cur-spec [:filter :key-track]) 1.0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :filter :key-track v cur-spec)))}]]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:filter :env-amount]
+                          :label "Filter Env Amount:" :min -8000 :max 8000 :step 100 :default 0 :unit "Hz" :decimals 0}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:filter :key-track]
+                          :label "Keyboard Tracking:" :min 0.0 :max 3.0 :step 0.1 :default 1.0 :unit "x" :decimals 1}]]
 
    [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Filter Drive (Saturation):"
-      :val-str   (str (Math/round (* (or (get-in cur-spec [:filter :drive]) 0.0) 100)) "%")
-      :min       "0.0" :max "1.0" :step "0.05"
-      :value     (or (get-in cur-spec [:filter :drive]) 0.0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :filter :drive v cur-spec)))}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:filter :drive]
+                          :label "Filter Drive (Saturation):" :min 0.0 :max 1.0 :step 0.05 :default 0.0 :pct? true}]
     [:div]]])
 
 (defn pitch-snap-section
@@ -158,25 +84,10 @@
   [:div.inst-box
    [:div.inst-section-label "PITCH TRANSIENT SNAP (:pitch-env)"]
    [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Snap Amount:"
-      :val-str   (str (Math/round (or (get-in cur-spec [:pitch-env :amount]) 0)) " st")
-      :min       "0" :max "48" :step "1"
-      :value     (or (get-in cur-spec [:pitch-env :amount]) 0)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :pitch-env :amount v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Snap Decay:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:pitch-env :decay]) 0.015) 3) " s")
-      :min       "0.005" :max "0.100" :step "0.005"
-      :value     (or (get-in cur-spec [:pitch-env :decay]) 0.015)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :pitch-env :decay v cur-spec)))}]]])
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:pitch-env :amount]
+                          :label "Snap Amount:" :min 0 :max 48 :step 1 :default 0 :unit "st" :decimals 0}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:pitch-env :decay]
+                          :label "Snap Decay:" :min 0.005 :max 0.100 :step 0.005 :default 0.015 :unit "s" :decimals 3}]]])
 
 (defn amp-section
   "Render 4-column amplifier ADSR envelope controls.
@@ -185,76 +96,28 @@
   [:div.inst-box
    [:div.inst-section-label "AMPLIFIER ENVELOPE (:amp-env)"]
    [:div.inst-grid-4col
-    [comps/param-slider
-     {:label     "Attack:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:amp-env :attack]) 0.01) 3) "s")
-      :min       "0.001" :max "1.5" :step "0.005"
-      :value     (or (get-in cur-spec [:amp-env :attack]) 0.01)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :amp-env :attack v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Decay:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:amp-env :decay]) 0.25) 2) "s")
-      :min       "0.01" :max "3.0" :step "0.02"
-      :value     (or (get-in cur-spec [:amp-env :decay]) 0.25)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :amp-env :decay v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Sustain:"
-      :val-str   (.toFixed (or (get-in cur-spec [:amp-env :sustain]) 0.5) 2)
-      :min       "0.0" :max "1.0" :step "0.02"
-      :value     (or (get-in cur-spec [:amp-env :sustain]) 0.5)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :amp-env :sustain v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Release:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:amp-env :release]) 0.4) 2) "s")
-      :min       "0.01" :max "4.0" :step "0.02"
-      :value     (or (get-in cur-spec [:amp-env :release]) 0.4)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :amp-env :release v cur-spec)))}]]])
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:amp-env :attack]
+                          :label "Attack:" :min 0.001 :max 1.5 :step 0.005 :default 0.01 :unit "s" :decimals 3}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:amp-env :decay]
+                          :label "Decay:" :min 0.01 :max 3.0 :step 0.02 :default 0.25 :unit "s" :decimals 2}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:amp-env :sustain]
+                          :label "Sustain:" :min 0.0 :max 1.0 :step 0.02 :default 0.5 :decimals 2}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:amp-env :release]
+                          :label "Release:" :min 0.01 :max 4.0 :step 0.02 :default 0.4 :unit "s" :decimals 2}]]])
 
 (defn mod-section
   "Render filter modulation envelope controls.
   Examples: [mod-section :saw-bass cur-spec]."
   [cur-sel-key cur-spec]
-  [:div.inst-box
-   [:div.inst-section-label "FILTER MOD ENVELOPE (:mod-env)"]
-   [:div.inst-grid-2col
-    [comps/param-slider
-     {:label     "Mod Attack:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:mod-env :attack])
-                                    (get-in cur-spec [:amp-env :attack]) 0.01) 3) "s")
-      :min       "0.001" :max "1.5" :step "0.005"
-      :value     (or (get-in cur-spec [:mod-env :attack])
-                     (get-in cur-spec [:amp-env :attack]) 0.01)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :mod-env :attack v cur-spec)))}]
-
-    [comps/param-slider
-     {:label     "Mod Decay:"
-      :val-str   (str (.toFixed (or (get-in cur-spec [:mod-env :decay])
-                                    (get-in cur-spec [:amp-env :decay]) 0.25) 2) "s")
-      :min       "0.01" :max "3.0" :step "0.02"
-      :value     (or (get-in cur-spec [:mod-env :decay])
-                     (get-in cur-spec [:amp-env :decay]) 0.25)
-      :on-down   #(state/touch-preview-note! cur-sel-key)
-      :on-change (fn [e]
-                   (let [v (js/parseFloat (.. e -target -value))]
-                     (state/patch-param! cur-sel-key :mod-env :decay v cur-spec)))}]]])
+  (let [default-atk (or (get-in cur-spec [:amp-env :attack]) 0.01)
+        default-dec (or (get-in cur-spec [:amp-env :decay]) 0.25)]
+    [:div.inst-box
+     [:div.inst-section-label "FILTER MOD ENVELOPE (:mod-env)"]
+     [:div.inst-grid-2col
+      [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:mod-env :attack]
+                            :label "Mod Attack:" :min 0.001 :max 1.5 :step 0.005 :default default-atk :unit "s" :decimals 3}]
+      [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:mod-env :decay]
+                            :label "Mod Decay:" :min 0.01 :max 3.0 :step 0.02 :default default-dec :unit "s" :decimals 2}]]]))
 
 (defn synth-inspector
   "Render complete modular sound design suite for synth voices.

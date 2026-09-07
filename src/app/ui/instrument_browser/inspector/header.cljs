@@ -1,6 +1,7 @@
 (ns app.ui.instrument-browser.inspector.header
   "Inspector header badges, routing information, and interactive sound audition bar."
   (:require
+   [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.components :as comps]
    [app.ui.instrument-browser.state :as state]
    [clojure.string :as str]))
@@ -40,49 +41,49 @@
   "Render quick test trigger buttons and continuous audition loop toggle.
   Examples: [audition-bar :saw-bass cur-spec drum? looping?]."
   [cur-sel-key cur-spec drum? looping?]
-  (let [cat (state/sound-family cur-sel-key cur-spec)
+  (let [cat (audition/sound-family cur-sel-key cur-spec)
         fx? (= cat :fx)]
     [:div.inst-audition-bar
      [:button.neo-btn-stats
-      {:on-click #(state/play-test-note! cur-sel-key)
+      {:on-click #(audition/play-test-note! cur-sel-key)
        :title    (cond drum? "Audition single drum hit" fx? "Audition single one-shot FX" :else "Audition single sustained note")}
       (cond drum? "♪ HIT" fx? "♪ SHOT" :else "♪ NOTE")]
      [:button.neo-btn-stats
-      {:on-click #(state/play-test-run! cur-sel-key)
+      {:on-click #(audition/play-test-run! cur-sel-key)
        :title    (cond drum? "Audition drum roll" fx? "Audition descending pitch run" :else "Audition melodic 5-note scale run")}
       (if drum? "♫ ROLL" "♫ RUN")]
      (cond
        drum?
        [:button.neo-btn-stats
-        {:on-click #(state/play-test-arp! cur-sel-key)
+        {:on-click #(audition/play-test-arp! cur-sel-key)
          :title    "Audition 8-step drum fill"}
         "≋ FILL"]
 
        fx?
        [:<>
         [:button.neo-btn-stats
-         {:on-click #(state/play-test-arp! cur-sel-key)
+         {:on-click #(audition/play-test-arp! cur-sel-key)
           :title    "Audition rapid FX strobe"}
          "≋ ARP"]
         [:button.neo-btn-stats
-         {:on-click #(state/play-test-chord! cur-sel-key)
+         {:on-click #(audition/play-test-chord! cur-sel-key)
           :title    "Audition FX burst"}
          "≈ CHORD"]]
 
        :else
        [:<>
         [:button.neo-btn-stats
-         {:on-click #(state/play-test-arp! cur-sel-key)
+         {:on-click #(audition/play-test-arp! cur-sel-key)
           :title    "Audition 8-step rhythmic arpeggio"}
          "≋ ARP"]
         [:button.neo-btn-stats
-         {:on-click #(state/play-test-chord! cur-sel-key)
+         {:on-click #(audition/play-test-chord! cur-sel-key)
           :title    (if (= (:type cur-spec) :poly)
                       "Audition polyphonic sustained chord"
                       "Audition fast broken chord strum")}
          "≈ CHORD"]])
      [:button.neo-btn-stats.audition-loop-btn
       {:class    (when looping? "active")
-       :on-click #(state/toggle-audition-loop! cur-sel-key)
+       :on-click #(audition/toggle-audition-loop! cur-sel-key)
        :title    "Continuously loop the sound so you can tweak parameters live"}
       (if looping? "■ STOP" "⟳ LOOP")]]))

@@ -1,6 +1,7 @@
 (ns app.ui.instrument-browser.list.card
   "Instrument card component presenting taxonomy badges, sound specs, and audition triggers."
   (:require
+   [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.components :as comps]
    [app.ui.instrument-browser.list.buttons :as buttons]
    [app.ui.instrument-browser.state :as state]
@@ -63,7 +64,7 @@
   "Render interactive card for a single instrument in catalog list.
   Examples: [instrument-card :bass-analog spec selected?]."
   [inst-key spec selected?]
-  (let [cat         (state/sound-family inst-key spec)
+  (let [cat         (audition/sound-family inst-key spec)
         poly?       (= (:type spec) :poly)
         custom?     (state/custom-file-inst? inst-key)
         session?    (state/session-inst? inst-key)]

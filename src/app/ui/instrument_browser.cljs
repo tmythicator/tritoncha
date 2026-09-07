@@ -3,6 +3,7 @@
   (:require
    [app.audio.dsp.busses :as busses]
    [app.audio.dsp.instruments :as instruments]
+   [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.inspector :as inspector]
    [app.ui.instrument-browser.list :as list-view]
    [app.ui.instrument-browser.state :as state]
@@ -12,7 +13,7 @@
   "Halt active audition looper playback.
   Examples: (stop-audition-loop!) -> nil."
   []
-  (state/stop-audition-loop!))
+  (audition/stop-audition-loop!))
 
 (defn instrument-browser-component
   "Render interactive instrument studio modal overlay.
@@ -26,7 +27,7 @@
         cur-sel-key   @state/selected-inst
         cur-spec      (instruments/resolve-instrument-spec cur-sel-key)
         drum?         (busses/drum? (or cur-spec cur-sel-key))
-        looping?      @state/audition-loop-active?
+        looping?      @audition/audition-loop-active?
         filtered      (into []
                             (filter (fn [[k spec]]
                                       (let [nm (str/lower-case (name k))]
@@ -44,7 +45,7 @@
        [:span.neo-prompt "> "]
        [:span "INSTRUMENT STUDIO + AUDITION LAB (" (count primary-insts) " SOUNDS)"]]
       [:button.neo-btn-close
-       {:on-click   #(do (state/stop-audition-loop!) (when on-close (on-close)))
+       {:on-click   #(do (audition/stop-audition-loop!) (when on-close (on-close)))
         :aria-label "Close instrument lab"}
        "[X]"]]
 
