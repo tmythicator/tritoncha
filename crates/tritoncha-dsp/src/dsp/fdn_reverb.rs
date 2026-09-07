@@ -17,11 +17,57 @@ pub const FDN_BASE_DELAYS: [usize; FDN_CHANNELS] = [1051, 1223, 1453, 1693, 1987
 /// Maximum buffer allocation capacity per delay line (accommodates 2x room scaling + modulation headroom).
 pub const MAX_FDN_DELAY: usize = 8192;
 
+/// Minimum safety delay length for delay lines in samples.
+pub const MIN_DELAY_LINE_LENGTH: usize = 64;
+
+/// Safety margin subtracted from MAX_FDN_DELAY to avoid boundary overflow during interpolation.
+pub const DELAY_LINE_SAFETY_HEADROOM: usize = 64;
+
+/// Reference standard audio sample rate in Hz.
+pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
+
+/// Minimum valid audio sample rate in Hz.
+pub const MIN_VALID_SAMPLE_RATE: f32 = 1000.0;
+
 /// Default decay time (feedback coefficient scale).
 pub const DEFAULT_FDN_ROOM_SIZE: f32 = 0.75;
 
+/// Maximum room size feedback coefficient to guarantee network stability.
+pub const MAX_FDN_ROOM_SIZE: f32 = 0.98;
+
 /// Default high-frequency damping factor.
 pub const DEFAULT_FDN_DAMPING: f32 = 0.25;
+
+/// Maximum high-frequency damping factor.
+pub const MAX_FDN_DAMPING: f32 = 0.85;
+
+/// Default wet signal gain.
+pub const DEFAULT_FDN_WET: f32 = 0.35;
+
+/// Wet gain threshold below which reverb processing is bypassed to save CPU cycles.
+pub const MIN_WET_THRESHOLD: f32 = 0.001;
+
+/// Dual quadrature modulation LFO frequencies in Hz.
+pub const LFO_RATE_1_HZ: f32 = 0.65;
+pub const LFO_RATE_2_HZ: f32 = 0.92;
+
+/// Quadrature phase offset (90 degrees / quarter cycle) for the second LFO.
+pub const LFO_QUADRATURE_PHASE_OFFSET: f32 = 0.25;
+
+/// Read-head sinusoidal modulation depth in fractional samples.
+pub const LFO_MODULATION_DEPTH_SAMPLES: f32 = 5.5;
+
+/// Householder feedback matrix reflection coefficient: 2 / N (for N = 8 channels, 0.25).
+pub const HOUSEHOLDER_SCALE: f32 = 2.0 / (FDN_CHANNELS as f32);
+
+/// Input signal injection gain scale across all delay lines.
+pub const FDN_INPUT_SCALE: f32 = 0.35;
+
+/// Split index dividing Left (channels 0..4) and Right (channels 4..8) stereo inputs.
+pub const FDN_STEREO_INPUT_SPLIT: usize = FDN_CHANNELS / 2;
+
+/// Stereo decorrelated output mix gain scaling factor.
+pub const FDN_STEREO_OUTPUT_SCALE: f32 = 0.5;
 
 /// Single delay line inside the Feedback Delay Network.
 #[derive(Debug, Clone)]
@@ -37,7 +83,10 @@ impl FdnDelayLine {
         Self {
             buffer: vec![0.0; MAX_FDN_DELAY],
             write_pos: 0,
-            base_length: base_length.clamp(64, MAX_FDN_DELAY - 64),
+            base_length: base_length.clamp(
+                MIN_DELAY_LINE_LENGTH,
+                MAX_FDN_DELAY - DELAY_LINE_SAFETY_HEADROOM,
+            ),
             damp_state: 0.0,
         }
     }
@@ -106,19 +155,19 @@ pub struct FdnReverb {
 
 impl Default for FdnReverb {
     fn default() -> Self {
-        Self::new(48000.0)
+        Self::new(DEFAULT_SAMPLE_RATE)
     }
 }
 
 impl FdnReverb {
     /// Constructs a new 8-channel Householder FDN reverb processor.
     pub fn new(sample_rate: f32) -> Self {
-        let sr = if sample_rate > 1000.0 {
+        let sr = if sample_rate > MIN_VALID_SAMPLE_RATE {
             sample_rate
         } else {
-            48000.0
+            DEFAULT_SAMPLE_RATE
         };
-        let scale = sr / 48000.0;
+        let scale = sr / DEFAULT_SAMPLE_RATE;
 
         let lines = std::array::from_fn(|i| {
             let len = ((FDN_BASE_DELAYS[i] as f32) * scale).round() as usize;
@@ -129,22 +178,22 @@ impl FdnReverb {
             lines,
             room_size: DEFAULT_FDN_ROOM_SIZE,
             damping: DEFAULT_FDN_DAMPING,
-            wet: 0.35,
+            wet: DEFAULT_FDN_WET,
             lfo_phase_1: 0.0,
-            lfo_phase_2: 0.25,                 // 90 degree quadrature offset
-            lfo_inc_1: (2.0 * PI * 0.65) / sr, // 0.65 Hz slow drift
-            lfo_inc_2: (2.0 * PI * 0.92) / sr, // 0.92 Hz uncorrelated drift
+            lfo_phase_2: LFO_QUADRATURE_PHASE_OFFSET,
+            lfo_inc_1: (2.0 * PI * LFO_RATE_1_HZ) / sr,
+            lfo_inc_2: (2.0 * PI * LFO_RATE_2_HZ) / sr,
         }
     }
 
     /// Sets room size, scaling decay feedback between 0.0 and 0.98.
     pub fn set_room_size(&mut self, size: f32) {
-        self.room_size = size.clamp(0.0, 0.98);
+        self.room_size = size.clamp(0.0, MAX_FDN_ROOM_SIZE);
     }
 
-    /// Sets high frequency absorption damping (0.0 to 0.8).
+    /// Sets high frequency absorption damping (0.0 to 0.85).
     pub fn set_damping(&mut self, damp: f32) {
-        self.damping = damp.clamp(0.0, 0.85);
+        self.damping = damp.clamp(0.0, MAX_FDN_DAMPING);
     }
 
     /// Sets wet mix gain.
@@ -158,13 +207,13 @@ impl FdnReverb {
             line.reset();
         }
         self.lfo_phase_1 = 0.0;
-        self.lfo_phase_2 = 0.25;
+        self.lfo_phase_2 = LFO_QUADRATURE_PHASE_OFFSET;
     }
 
     /// Processes an incoming stereo sample and returns only the wet reverberated stereo signal.
     #[inline(always)]
     pub fn process_wet(&mut self, in_l: f32, in_r: f32) -> (f32, f32) {
-        if self.wet < 0.001 {
+        if self.wet < MIN_WET_THRESHOLD {
             return (0.0, 0.0);
         }
 
@@ -179,8 +228,8 @@ impl FdnReverb {
             self.lfo_phase_2 -= 2.0 * PI;
         }
 
-        let mod_1 = self.lfo_phase_1.sin() * 5.5;
-        let mod_2 = self.lfo_phase_2.sin() * 5.5;
+        let mod_1 = self.lfo_phase_1.sin() * LFO_MODULATION_DEPTH_SAMPLES;
+        let mod_2 = self.lfo_phase_2.sin() * LFO_MODULATION_DEPTH_SAMPLES;
 
         // 1. Read delay line outputs with LFO modulation
         let mut delay_outs = [0.0_f32; FDN_CHANNELS];
@@ -198,17 +247,16 @@ impl FdnReverb {
         // 3. Fast Householder Feedback Matrix: A = I - (2 / N) * 1 * 1^T
         // For N = 8: (A * x)_i = x_i - 0.25 * sum(x)
         let sum: f32 = delay_outs.iter().sum();
-        let householder_term = 0.25 * sum;
+        let householder_term = HOUSEHOLDER_SCALE * sum;
 
         // 4. Feedback attenuation scaled by room size (decay time)
         let fb_gain = self.room_size;
 
         // 5. Input injection: stereo inputs are injected across all 8 delay lines with alternating polarity
         // Lines 0..3 take Left, Lines 4..7 take Right
-        let input_scale = 0.35;
         for (i, (&delayed, line)) in delay_outs.iter().zip(self.lines.iter_mut()).enumerate() {
             let reflected = delayed - householder_term;
-            let inj = if i < 4 {
+            let inj = if i < FDN_STEREO_INPUT_SPLIT {
                 if i % 2 == 0 {
                     in_l
                 } else {
@@ -221,17 +269,19 @@ impl FdnReverb {
                     -in_r
                 }
             };
-            let next_in = inj * input_scale + reflected * fb_gain;
+            let next_in = inj * FDN_INPUT_SCALE + reflected * fb_gain;
             line.write(next_in);
         }
 
         // 6. Stereo decorrelated output matrix
         // Left: lines 0, 2, 4, 6
-        let out_l =
-            (delay_outs[0] - delay_outs[2] + delay_outs[4] - delay_outs[6]) * 0.5 * self.wet;
+        let out_l = (delay_outs[0] - delay_outs[2] + delay_outs[4] - delay_outs[6])
+            * FDN_STEREO_OUTPUT_SCALE
+            * self.wet;
         // Right: lines 1, 3, 5, 7
-        let out_r =
-            (delay_outs[1] + delay_outs[3] - delay_outs[5] - delay_outs[7]) * 0.5 * self.wet;
+        let out_r = (delay_outs[1] + delay_outs[3] - delay_outs[5] - delay_outs[7])
+            * FDN_STEREO_OUTPUT_SCALE
+            * self.wet;
 
         (out_l, out_r)
     }
@@ -247,10 +297,10 @@ mod tests {
         // Test unitary property: sum(A*x)^2 == sum(x)^2 for orthogonal input vector
         let x = [1.0, 0.5, -0.2, 0.8, -0.6, 0.3, -0.1, 0.4];
         let sum: f32 = x.iter().sum();
-        let term = 0.25 * sum;
+        let term = HOUSEHOLDER_SCALE * sum;
 
-        let mut y = [0.0_f32; 8];
-        for i in 0..8 {
+        let mut y = [0.0_f32; FDN_CHANNELS];
+        for i in 0..FDN_CHANNELS {
             y[i] = x[i] - term;
         }
 

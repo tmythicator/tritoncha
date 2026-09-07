@@ -9,11 +9,29 @@ use std::f32;
 /// Small epsilon threshold below which standard difference division risks numerical cancellation.
 pub const ADAA_EPSILON: f32 = 1e-5;
 
+/// Minimum drive amplification factor (linear gain 1.0 = clean passthrough).
+pub const MIN_ADAA_DRIVE: f32 = 1.0;
+
 /// Default analog drive gain factor.
 pub const DEFAULT_ADAA_DRIVE: f32 = 1.0;
 
 /// Maximum allowable drive amplification.
 pub const MAX_ADAA_DRIVE: f32 = 12.0;
+
+/// Threshold below which drive is considered clean and bypassed if no bias is applied.
+pub const ADAA_PASS_DRIVE_THRESHOLD: f32 = 1.001;
+
+/// Maximum asymmetric DC bias offset for even-harmonic saturation.
+pub const MAX_ASYMMETRIC_BIAS: f32 = 0.5;
+
+/// Threshold below which asymmetric bias is negligible.
+pub const ADAA_PASS_BIAS_THRESHOLD: f32 = 0.001;
+
+/// Output loudness normalization factor per unit of added drive gain.
+pub const ADAA_LOUDNESS_NORM_FACTOR: f32 = 0.35;
+
+/// L'Hopital midpoint interpolation weight when delta approaches zero.
+pub const L_HOPITAL_MIDPOINT_WEIGHT: f32 = 0.5;
 
 /// Antiderivative Antialiased Analog Saturation Processor.
 #[derive(Debug, Clone)]
@@ -64,13 +82,13 @@ impl AdaaDrive {
     /// Sets drive amount, scaling from 0.0 (clean passthrough) to 1.0 (heavy saturation).
     pub fn set_drive(&mut self, amount: f32) {
         let clamped = amount.clamp(0.0, 1.0);
-        // Map 0.0..1.0 linearly to 1.0..MAX_ADAA_DRIVE
-        self.drive = 1.0 + clamped * (MAX_ADAA_DRIVE - 1.0);
+        // Map 0.0..1.0 linearly to MIN_ADAA_DRIVE..MAX_ADAA_DRIVE
+        self.drive = MIN_ADAA_DRIVE + clamped * (MAX_ADAA_DRIVE - MIN_ADAA_DRIVE);
     }
 
     /// Sets asymmetric bias for even-harmonic saturation (tube-like warmth).
     pub fn set_bias(&mut self, bias: f32) {
-        self.asymmetric_bias = bias.clamp(-0.5, 0.5);
+        self.asymmetric_bias = bias.clamp(-MAX_ASYMMETRIC_BIAS, MAX_ASYMMETRIC_BIAS);
     }
 
     /// Resets historical states.
@@ -89,7 +107,7 @@ impl AdaaDrive {
 
         let y = if dx.abs() < ADAA_EPSILON {
             // Ill-conditioned: apply L'Hopital limit at midpoint
-            let mid = 0.5 * (x + *last_x);
+            let mid = L_HOPITAL_MIDPOINT_WEIGHT * (x + *last_x);
             Self::f(mid)
         } else {
             // First-order discrete difference
@@ -104,7 +122,9 @@ impl AdaaDrive {
     /// Processes stereo audio through the ADAA-1 non-linear saturation curve.
     #[inline(always)]
     pub fn process(&mut self, in_l: f32, in_r: f32) -> (f32, f32) {
-        if self.drive <= 1.001 && self.asymmetric_bias.abs() < 0.001 {
+        if self.drive <= ADAA_PASS_DRIVE_THRESHOLD
+            && self.asymmetric_bias.abs() < ADAA_PASS_BIAS_THRESHOLD
+        {
             return (in_l, in_r);
         }
 
@@ -115,7 +135,7 @@ impl AdaaDrive {
         let sat_r = Self::process_channel(pre_r, &mut self.last_x_r, &mut self.last_f1_r);
 
         // Normalize output level by drive factor to maintain perceptual loudness headroom
-        let norm_gain = 1.0 / (1.0 + 0.35 * (self.drive - 1.0));
+        let norm_gain = 1.0 / (1.0 + ADAA_LOUDNESS_NORM_FACTOR * (self.drive - MIN_ADAA_DRIVE));
         (sat_l * norm_gain, sat_r * norm_gain)
     }
 }

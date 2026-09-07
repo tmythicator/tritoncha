@@ -10,6 +10,8 @@ pub const BIT_CRUSH_ACTIVE_THRESHOLD: f32 = 15.5;
 
 pub const DEFAULT_SAMPLE_HOLD: f32 = 1.0;
 pub const MAX_SAMPLE_HOLD: f32 = 16.0;
+pub const SAMPLE_HOLD_INACTIVE_THRESHOLD: f32 = 1.05;
+pub const BIT_DEPTH_INACTIVE_HEADROOM: f32 = 0.1;
 
 pub const OVERDRIVE_GAIN_SCALE: f32 = 6.0;
 pub const MIN_DRIVE_THRESHOLD: f32 = 0.001;
@@ -75,8 +77,8 @@ impl BitcrusherDrive {
     #[inline(always)]
     pub fn process(&mut self, in_l: f32, in_r: f32) -> (f32, f32) {
         if self.drive <= MIN_DRIVE_THRESHOLD
-            && self.bit_depth >= (MAX_BIT_DEPTH - 0.1)
-            && self.sample_hold <= 1.05
+            && self.bit_depth >= (MAX_BIT_DEPTH - BIT_DEPTH_INACTIVE_HEADROOM)
+            && self.sample_hold <= SAMPLE_HOLD_INACTIVE_THRESHOLD
         {
             return (in_l, in_r);
         }
