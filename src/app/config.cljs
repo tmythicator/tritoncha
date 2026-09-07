@@ -38,3 +38,8 @@
 (def default-directional-light-intensity 1.2)
 
 (def default-jam :metro-roller)
+
+;; AudioWorklet and Rust WASM DSP configuration
+(def wasm-processor-name "tritoncha-dsp-processor")
+(def worklet-script-path "worklets/tritoncha_dsp.js")
+(def wasm-binary-path    "wasm/tritoncha_dsp.wasm")

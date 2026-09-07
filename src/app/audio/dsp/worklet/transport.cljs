@@ -1,5 +1,6 @@
 (ns app.audio.dsp.worklet.transport
-  "Low-level WebAudio AudioWorklet transport and WASM binary loader.")
+  "Low-level WebAudio AudioWorklet transport and WASM binary loader."
+  (:require [app.config :as config]))
 
 (defonce ^:private worklet-state
   (atom {:ctx nil :node nil :wasm-module nil :ready? false}))
@@ -64,7 +65,7 @@
 (defn- attach-worklet-node!
   "Constructs and connects the AudioWorkletNode, wiring its port messages."
   [^js audio-ctx ^js wasm-buffer]
-  (let [node (js/AudioWorkletNode. audio-ctx "tritoncha-dsp-processor"
+  (let [node (js/AudioWorkletNode. audio-ctx config/wasm-processor-name
                                    #js {:numberOfInputs 0
                                         :numberOfOutputs 1
                                         :outputChannelCount #js [2]
@@ -89,9 +90,15 @@
       (.resume ctx))
     ctx))
 
+(defn- resolve-asset-url
+  "Resolves asset path relative to the active document base URL."
+  [path]
+  (if (exists? js/document.baseURI)
+    (.-href (js/URL. path js/document.baseURI))
+    path))
+
 (defn init-audio-worklet!
-  "Asynchronously loads WASM binary and attaches Tritoncha AudioWorklet processor.
-  Examples: (init-audio-worklet!) -> Promise<boolean>."
+  "Asynchronously loads WASM binary and attaches Tritoncha AudioWorklet processor."
   ([]
    (if (exists? js/window)
      (init-audio-worklet! (create-audio-context))
@@ -109,9 +116,11 @@
        (swap! worklet-state assoc :ctx audio-ctx)
        (when (= (.-state audio-ctx) "suspended")
          (.resume audio-ctx))
-       (-> (.addModule (.-audioWorklet audio-ctx) "/worklets/tritoncha_dsp.js")
-           (.then #(fetch-wasm-bytes "/wasm/tritoncha_dsp.wasm"))
-           (.then #(attach-worklet-node! audio-ctx %))
-           (.catch (fn [err]
-                     (println "AudioWorklet init notice:" (.-message err))
-                     false)))))))
+       (let [worklet-url (resolve-asset-url config/worklet-script-path)
+             wasm-url    (resolve-asset-url config/wasm-binary-path)]
+         (-> (.addModule (.-audioWorklet audio-ctx) worklet-url)
+             (.then #(fetch-wasm-bytes wasm-url))
+             (.then #(attach-worklet-node! audio-ctx %))
+             (.catch (fn [err]
+                       (println "AudioWorklet init notice:" (.-message err))
+                       false))))))))
