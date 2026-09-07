@@ -1,67 +1,85 @@
 (ns app.audio.control.session
-  "Live session musical key context, scale degree resolution, and modal transposition."
-  (:require [app.audio.theory.harmony :as harmony]
-            [app.audio.theory.patterns :refer [map-notes]]
+  "Session key context, scale degree resolution, and real-time modal transposition."
+  (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.worklet :as worklet]
+            [app.audio.theory.harmony :as harmony]
             [app.config :as cfg]
             [app.state :refer [audio-state]]
-            [app.utils.audio :refer [is-bass-track? is-drum-track? normalize-opts note->midi]]))
+            [app.utils.audio :as audio-utils :refer [normalize-opts note->midi]]))
 
 (defn current-key
-  "Returns the active musical key map from application state.
-  Examples: (current-key) -> {:root :e, :mode :phrygian, :octave 1}."
+  "Returns the active musical key context map {:root :e, :mode :phrygian, :octave 1}."
   []
-  (:key @audio-state cfg/default-key))
+  (get @audio-state :key cfg/default-key))
 
 (defn set-key!
-  "Sets the session musical key, mode, and octave.
-  Examples: (set-key! :e :phrygian 1) -> {:root :e, :mode :phrygian, :octave 1}."
-  ([root mode] (set-key! root mode (:octave cfg/default-key 1)))
+  "Updates the global session key context.
+  Examples: (set-key! :d :dorian), (set-key! :e :phrygian 2)."
+  ([root mode]
+   (set-key! root mode (get-in @audio-state [:key :octave] (:octave cfg/default-key 1))))
   ([root mode octave]
-   (let [new-k {:root (keyword root) :mode (keyword mode) :octave octave}]
-     (swap! audio-state assoc :key new-k)
-     new-k)))
+   (let [key-map {:root (keyword root)
+                  :mode (keyword mode)
+                  :octave (or octave 1)}]
+     (swap! audio-state assoc :key key-map)
+     key-map)))
 
 (defn d
-  "Resolves degree numbers using the current session key.
-  Supports both (d degrees opts) and ->> pipelines.
-  Examples:
-    (d [1 _ 1 2]) -> ['E2' nil 'E2' 'F#2']
-    (d [1 3 5] 1) -> ['E1' 'G1' 'B1']
-    (->> [1 3 5] (d 1)) -> ['E1' 'G1' 'B1']."
-  ([degrees]
-   (if (or (number? degrees) (and (map? degrees) (not (vector? degrees))))
-     (fn [degs] (d degs degrees))
-     (d degrees {})))
+  "Resolves scale degrees against the active global session key.
+  Rests (nil or :_) become rests. Single numbers or vectors of scale degrees.
+  Options: nil, number for octave, or {:octave 1 :octaves 2}.
+  Supports thread-last (->> coll (d 1)) pipeline ordering.
+  Examples: (d [1 3 5]), (d [1 _ 1 2 _ 1 4 3] 2), (d 1 {:octave 2}), (->> [1 2 3] (d 1))."
+  ([degrees] (d degrees nil))
   ([a b]
-   (let [[degrees opts-or-oct] (if (sequential? a)
-                                 [a b]
-                                 [b a])
+   (let [[degrees opts] (if (and (sequential? b) (not (sequential? a)))
+                          [b a]
+                          [a b])
          {:keys [root mode octave]} (current-key)
-         opt-map       (normalize-opts opts-or-oct octave)
-         effective-oct (:octave opt-map octave)
-         res           (harmony/deg root mode degrees {:octave effective-oct})]
-     (with-meta res {:degrees degrees :octave effective-oct :root (keyword root) :mode (keyword mode)}))))
+         o-map (normalize-opts opts octave)]
+     (harmony/deg root mode degrees o-map))))
 
-(defn sc
-  "Returns pitch strings for the current active scale.
-  Examples: (sc 1) -> ['E2' 'F#2' 'G2' 'A2' 'B2' 'C#3' 'D3']."
-  ([]
-   (let [{:keys [root mode octave]} (current-key)]
-     (harmony/scale root mode {:octave octave :octaves 2})))
-  ([octaves]
-   (let [{:keys [root mode octave]} (current-key)]
-     (harmony/scale root mode {:octave octave :octaves octaves}))))
+(defn deg
+  "Resolves scale degrees with explicit root and mode, with fallback to global context.
+  Examples: (deg :e :phrygian [1 3 5]), (deg :d :dorian [:i :iii :v])."
+  ([root mode degrees] (deg root mode degrees nil))
+  ([root mode degrees opts]
+   (let [octave (get-in @audio-state [:key :octave] 1)
+         o-map  (normalize-opts opts octave)]
+     (harmony/deg root mode degrees o-map))))
+
+(defn scale
+  "Returns notes of the active session scale across octaves.
+  Examples: (scale), (scale 2)."
+  ([] (scale nil))
+  ([opts]
+   (let [{:keys [root mode octave]} (current-key)
+         o-map (normalize-opts opts octave)]
+     (harmony/scale root mode o-map))))
+
+(def sc scale)
 
 (defn- transpose-track-melody
-  "Pure transform updating pattern notes by transposing pitch values by delta semitones."
-  [pat delta]
-  (if-let [notes (or (:notes pat) (:pattern pat))]
-    (let [tr-notes (map-notes #(harmony/transpose % delta) notes)]
-      (assoc pat
-             :notes tr-notes
-             :hits-vec tr-notes
-             :hits-count (count tr-notes)))
-    pat))
+  "Pure helper transposing a single track pattern map by semitones."
+  [pat delta-st]
+  (let [notes (or (:notes pat) (:pattern pat))]
+    (cond
+      (vector? notes)
+      (let [shifted (mapv (fn [n]
+                            (cond
+                              (nil? n) nil
+                              (= n :_) nil
+                              (string? n) (harmony/transpose n delta-st)
+                              (vector? n) (mapv #(if (or (nil? %) (= % :_)) nil (harmony/transpose % delta-st)) n)
+                              :else n))
+                          notes)]
+        (assoc pat :notes shifted :hits-vec shifted))
+
+      (string? notes)
+      (let [shifted (harmony/transpose notes delta-st)]
+        (assoc pat :notes [shifted] :hits-vec [shifted]))
+
+      :else pat)))
 
 (defn- update-track-melody
   "Pure transform modulating pattern notes to new key context or applying chromatic pitch shift."
@@ -72,13 +90,12 @@
       degs
       (let [base-oct  (or (:oct pat) (:octave pat)
                           (when (vector? notes) (:octave (meta notes)))
-                          (if (is-bass-track? track-key) cfg/default-bass-octave cfg/default-lead-octave))
+                          (if (busses/bass? track-key) cfg/default-bass-octave cfg/default-lead-octave))
             track-oct (+ base-oct oct-shift)
             new-notes (harmony/deg root mode degs {:octave track-oct})]
         (assoc pat
                :notes new-notes
                :hits-vec new-notes
-               :hits-count (count new-notes)
                :deg degs
                :oct track-oct))
 
@@ -87,6 +104,18 @@
 
       :else pat)))
 
+(defn- worklet-sync-track! [tk pat-data]
+  (when-let [slot (worklet/track-slot tk)]
+    (let [inst-k  (or (:inst pat-data) (:synth pat-data) tk)
+          hits    (or (:notes pat-data) (:hits-vec pat-data) [true])
+          notes   (if (sequential? hits) hits [hits])
+          step-m  (audio-utils/step->mult (:step pat-data))
+          bpm     (:bpm @audio-state 168)
+          dur-raw (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
+          dur-s   (audio-utils/dur->seconds dur-raw bpm)
+          vel     (or (:vel pat-data) 0.9)]
+      (worklet/set-track! slot inst-k (vec notes) step-m dur-s vel))))
+
 (defn transpose-all!
   "Transposes all active melodic loops by N semitones live.
   Examples: (transpose-all! 2), (transpose-all! -1)."
@@ -94,8 +123,9 @@
   (let [delta (or semitones 0)]
     (when-not (zero? delta)
       (doseq [[kw tr] (:active-tracks @audio-state)
-              :when (not (is-drum-track? kw))]
-        (swap! (:pattern tr) transpose-track-melody delta)))
+              :when (not (busses/drum? kw))]
+        (let [updated-pat (swap! (:pattern tr) transpose-track-melody delta)]
+          (worklet-sync-track! kw updated-pat))))
     delta))
 
 (defn modulate-all!
@@ -113,6 +143,7 @@
          key-info   {:root root :mode mode :oct-shift oct-shift}
          new-k      (set-key! root mode target-oct)]
      (doseq [[kw tr] (:active-tracks @audio-state)
-             :when (not (is-drum-track? kw))]
-       (swap! (:pattern tr) update-track-melody kw delta-st key-info))
+             :when (not (busses/drum? kw))]
+       (let [updated-pat (swap! (:pattern tr) update-track-melody kw delta-st key-info)]
+         (worklet-sync-track! kw updated-pat)))
      new-k)))

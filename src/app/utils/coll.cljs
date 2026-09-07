@@ -18,6 +18,23 @@
           (get v (mod (inc found-idx) cnt))
           (first v))))))
 
+(defn cycle-prev
+  "Finds the previous item in a collection before current, wrapping around to the end.
+  If current is not found in coll, returns the last element.
+  Examples: (cycle-prev :b [:a :b :c]) -> :a, (cycle-prev :a [:a :b :c]) -> :c."
+  [current coll]
+  (let [v (vec coll)
+        cnt (count v)]
+    (cond
+      (zero? cnt) current
+      (nil? current) (last v)
+      :else
+      (let [cur-str (name current)
+            found-idx (first (keep-indexed (fn [i x] (when (= (name x) cur-str) i)) v))]
+        (if found-idx
+          (get v (mod (dec (+ found-idx cnt)) cnt))
+          (last v))))))
+
 (defn rotate
   "Rotates a collection by N steps (positive rotates left, negative rotates right).
   Examples: (rotate 1 [1 2 3 4]) -> [2 3 4 1], (rotate -1 [1 2 3 4]) -> [4 1 2 3]."

@@ -31,10 +31,10 @@ jobs:
       - name: Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Verify code style, lint + tests
-        run: nix develop --command bash -c "cljfmt check src test && clj-kondo --lint src test && pnpm test"
+      - name: Verify code style, lint + tests (Rust + ClojureScript)
+        run: nix develop --command pnpm run check
 
-      - name: Build clean production bundle
+      - name: Build clean production bundle (WASM + ClojureScript)
         run: nix develop --command bash -c "pnpm run clean && pnpm run build"
 
       - name: Setup Pages

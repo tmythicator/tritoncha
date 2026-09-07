@@ -4,7 +4,7 @@
    [app.api]
    [app.audio.control.looper :refer [toggle-click!]]
    [app.audio.control.mixer :refer [toggle-bus! toggle-drums!]]
-   [app.audio.control.tracker :refer [play-preset! toggle-play!]]
+   [app.audio.control.tracker :refer [next-jam! play-preset! prev-jam! toggle-play!]]
    [app.audio.dsp.engine :refer [init-audio! resume-audio-context!]]
    [app.audio.dsp.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
    [app.audio.dsp.instruments]
@@ -19,7 +19,7 @@
    [app.lib.scenes]
    [app.lib.tracks]
    [app.state :refer [engine-ctx ui-state visual-state]]
-   [app.ui.hud :refer [render-ui! toggle-hud! toggle-stats! toggle-tutorial!]]
+   [app.ui.hud :refer [render-ui! toggle-hud! toggle-instrument-browser! toggle-stats! toggle-track-browser! toggle-tutorial!]]
    [app.visuals.engine :as engine :refer [cycle-scene! init-three! render-loop!
                                           resize-viewport! toggle-wireframe!]]))
 
@@ -48,10 +48,15 @@
         (toggle-tutorial!))
       (case k
         " " (do (.preventDefault e) (toggle-play!))
-        "1" (play-preset! :roller)
+        "ArrowLeft" (prev-jam!)
+        "ArrowRight" (next-jam!)
+        ("j" "J") (toggle-track-browser!)
+        ("k" "K") (toggle-instrument-browser!)
+        "1" (play-preset! :metro-roller)
         "2" (play-preset! :sub-roller)
         "3" (play-preset! :acid-roller)
         "4" (play-preset! :ambient-drift)
+        "5" (play-preset! :orbital-roller)
         ("d" "D") (toggle-drums!)
         ("c" "C") (toggle-click!)
         ("b" "B") (toggle-bus! :bus/bass)
@@ -64,7 +69,9 @@
         ("t" "T" "?") (toggle-tutorial!)
         ("Escape" "Esc") (do
                            (when (:stats-visible? @ui-state) (toggle-stats!))
-                           (when (:tutorial-visible? @ui-state) (toggle-tutorial!)))
+                           (when (:tutorial-visible? @ui-state) (toggle-tutorial!))
+                           (when (:track-browser-open? @ui-state) (toggle-track-browser!))
+                           (when (:instrument-browser-open? @ui-state) (toggle-instrument-browser!)))
         nil))))
 
 (defn- bind-events!
@@ -83,6 +90,7 @@
   (init-three!)
   (render-loop!)
   (bind-events!)
+  (init-audio!)
   (js/console.log "Audio + WebGL Engines Ready. Connect REPL or evaluate live in app.live.jam."))
 
 (defn ^:dev/after-load ^:export reload! []

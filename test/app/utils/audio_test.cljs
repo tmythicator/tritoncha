@@ -20,18 +20,16 @@
     (is (= "A4" (audio/midi->note 69)))
     (is (= "E2" (audio/midi->note 40)))))
 
-(deftest track-predicates-test
-  (testing "is-drum-track? and is-bass-track? predicates"
-    (is (true? (audio/is-drum-track? :kick)))
-    (is (true? (audio/is-drum-track? :snare)))
-    (is (true? (audio/is-drum-track? :drums)))
-    (is (true? (audio/is-drum-track? :hh-c)))
-    (is (false? (audio/is-drum-track? :bass)))
-    (is (false? (audio/is-drum-track? :lead)))
-    (is (true? (audio/is-bass-track? :bass)))
-    (is (true? (audio/is-bass-track? :sub)))
-    (is (true? (audio/is-bass-track? :acid)))
-    (is (false? (audio/is-bass-track? :pad)))))
+(deftest duration-and-step-test
+  (testing "dur->seconds and step->mult calculations"
+    (is (pos? (audio/dur->seconds "16n" 168)))
+    (is (pos? (audio/dur->seconds "1m" 168)))
+    (is (= 1 (audio/step->mult "64n")))
+    (is (= 2 (audio/step->mult "32n")))
+    (is (= 4 (audio/step->mult "16n")))
+    (is (= 8 (audio/step->mult "8n")))
+    (is (= 16 (audio/step->mult "4n")))
+    (is (= 64 (audio/step->mult "1m")))))
 
 (deftest format-key-test
   (testing "format-key outputs clean uppercase harmonic strings"

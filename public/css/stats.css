@@ -159,9 +159,123 @@
 
     &.bus-drums  { background: var(--bus-drums-bg); color: var(--bus-drums-color); border: 1px solid var(--bus-drums-border); }
     &.bus-bass   { background: var(--bus-bass-bg); color: var(--bus-bass-color); border: 1px solid var(--bus-bass-border); }
+    &.bus-lead   { background: var(--bus-lead-bg); color: var(--bus-lead-color); border: 1px solid var(--bus-lead-border); }
     &.bus-space  { background: var(--bus-space-bg); color: var(--bus-space-color); border: 1px solid var(--bus-space-border); }
     &.bus-direct { background: var(--bus-direct-bg); color: var(--bus-direct-color); border: 1px solid var(--bus-direct-border); }
     &.bus-master { background: var(--bus-master-bg); color: var(--bus-master-color); border: 1px solid var(--bus-master-border); }
+}
+
+/* ==========================================================================
+   Bus Mixer Strip & Rotary Knobs
+   ========================================================================== */
+
+.neo-bus-mixer-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-xs);
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    padding: var(--space-sm) var(--space-xs);
+    border-radius: var(--radius-sm);
+
+    @media (max-width: 640px) {
+        gap: var(--space-2xs);
+        padding: var(--space-xs) var(--space-2xs);
+    }
+}
+
+.neo-bus-strip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-2xs);
+    border-radius: var(--radius-xs);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    transition: all var(--trans-fast);
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    &.muted {
+        opacity: 0.6;
+        border-color: var(--border-danger-subtle);
+    }
+}
+
+.neo-bus-tag.mini {
+    min-width: 0;
+    width: 100%;
+    padding: 2px 4px;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+.neo-knob-container {
+    width: 44px;
+    height: 44px;
+    cursor: ns-resize;
+    user-select: none;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 50%;
+    transition: transform var(--trans-fast);
+
+    &:active {
+        transform: scale(1.04);
+    }
+}
+
+.neo-knob-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.neo-bus-readout {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-align: center;
+    min-height: 14px;
+    line-height: 14px;
+}
+
+.neo-mute-btn {
+    width: 22px;
+    height: 18px;
+    line-height: 16px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    border-radius: var(--radius-xs);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--trans-fast);
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+    }
+
+    &.active {
+        background: var(--bg-danger-subtle);
+        border-color: var(--border-danger);
+        color: var(--text-danger);
+        box-shadow: var(--glow-danger);
+    }
 }
 
 .neo-route-chain {

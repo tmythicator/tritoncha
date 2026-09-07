@@ -4,7 +4,7 @@
 
 (deftest core-tracks-catalog-test
   (testing "All core presets are defined and structurally valid"
-    (let [presets [:roller :sub-roller :acid-roller :ambient-drift]]
+    (let [presets (keys core-tracks)]
       (doseq [preset-kw presets]
         (let [track (get core-tracks preset-kw)]
           (is (some? track) (str "Preset " preset-kw " must exist"))
@@ -16,7 +16,10 @@
 
 (deftest core-tracks-drum-structure-test
   (testing "Drum tracks preserve their hit keywords"
-    (let [roller-drums (get-in core-tracks [:roller :tracks :drums])]
-      (is (some? (:notes roller-drums)))
-      (is (vector? (first (:notes roller-drums))))
-      (is (= :kick (first (first (:notes roller-drums))))))))
+    (let [dt-drums (get-in core-tracks [:downtempo-chill :tracks :drums])]
+      (is (some? (:notes dt-drums)))
+      (is (vector? (first (:notes dt-drums))))
+      (is (= :kick (first (first (:notes dt-drums))))))
+    (let [roller-kick (get-in core-tracks [:metro-roller :tracks :kick])]
+      (is (some? (:notes roller-kick)))
+      (is (vector? (:notes roller-kick))))))

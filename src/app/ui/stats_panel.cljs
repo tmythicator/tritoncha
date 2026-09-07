@@ -4,6 +4,7 @@
    [app.audio.dsp.telemetry :refer [telemetry-snapshot]]
    [app.config :as cfg]
    [app.state :refer [audio-state visual-state]]
+   [app.ui.stats.bus-mixer :refer [bus-mixer-component]]
    [app.ui.stats.loops :refer [active-loops-component]]
    [app.ui.stats.routing-graph :refer [routing-graph-component]]
    [app.ui.stats.telemetry :refer [telemetry-component]]
@@ -30,15 +31,14 @@
    [:span.neo-foot-hint "[Press I or click [X] to close]"]])
 
 (defn stats-panel-component [_props]
-  (let [live-snap (atom (telemetry-snapshot))
+  (let [live-snap (r/atom (telemetry-snapshot))
         timer-id  (atom nil)]
     (r/create-class
      {:component-did-mount
-      (fn [this]
+      (fn [_this]
         (reset! timer-id
                 (js/setInterval (fn []
-                                  (reset! live-snap (telemetry-snapshot))
-                                  (r/force-update this))
+                                  (reset! live-snap (telemetry-snapshot)))
                                 cfg/stats-refresh-interval-ms)))
       :component-will-unmount
       (fn [_this]
@@ -57,6 +57,7 @@
            [stats-header snap on-close]
            [:div.neo-body
             [telemetry-component telemetry]
+            [bus-mixer-component]
             [routing-graph-component]
             [active-loops-component tracks-map]]
            [stats-footer]]))})))

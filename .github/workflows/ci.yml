@@ -29,14 +29,14 @@ jobs:
       - name: Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Check code style (cljfmt)
-        run: nix develop --command cljfmt check src test
+      - name: Check code style (cargo fmt + cljfmt)
+        run: nix develop --command pnpm run fmt:check
 
-      - name: Lint source + tests (clj-kondo)
-        run: nix develop --command clj-kondo --lint src test
+      - name: Lint source + tests (cargo clippy + clj-kondo)
+        run: nix develop --command pnpm run lint
 
-      - name: Run unit test suite
+      - name: Run unit test suite (Rust DSP + ClojureScript)
         run: nix develop --command pnpm test
 
-      - name: Build production release bundle
+      - name: Build production release bundle (WASM + ClojureScript)
         run: nix develop --command pnpm run build

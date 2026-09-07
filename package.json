@@ -1,29 +1,58 @@
 {
   "name": "tritoncha",
   "version": "0.1.0",
-  "description": "Live-coding music and 3D WebGL visuals studio built with ClojureScript, Tone.js and Three.js.",
+  "description": "Live-coding electronic music and 3D WebGL visuals studio built with ClojureScript, Rust WASM DSP and Three.js.",
   "author": "Alexandr Timchenko",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
+  "homepage": "https://github.com/tmythicator/tritoncha#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmythicator/tritoncha.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tmythicator/tritoncha/issues"
+  },
+  "keywords": [
+    "clojurescript",
+    "rust",
+    "wasm",
+    "webgl",
+    "threejs",
+    "webaudio",
+    "live-coding",
+    "algorave",
+    "sound-design"
+  ],
   "scripts": {
     "dev": "shadow-cljs watch app",
     "watch": "shadow-cljs watch app",
-    "build": "shadow-cljs release app",
+    "watch:rust": "cargo watch -C crates/tritoncha-dsp -s 'cargo test && pnpm run build:wasm'",
+    "build:wasm": "cargo build --manifest-path crates/tritoncha-dsp/Cargo.toml --target wasm32-unknown-unknown --release && mkdir -p public/wasm && cp crates/tritoncha-dsp/target/wasm32-unknown-unknown/release/tritoncha_dsp.wasm public/wasm/",
+    "build": "pnpm run build:wasm && shadow-cljs release app",
     "serve": "shadow-cljs server",
-    "compile": "shadow-cljs compile app",
-    "test": "shadow-cljs compile test",
+    "compile": "pnpm run build:wasm && shadow-cljs compile app",
+    "test": "pnpm run test:rust && pnpm run test:clj",
+    "test:rust": "cargo test --manifest-path crates/tritoncha-dsp/Cargo.toml",
+    "test:clj": "shadow-cljs compile test",
     "perf": "shadow-cljs compile perf && node target/perf.cjs",
-    "lint": "clj-kondo --lint src test",
-    "fmt": "cljfmt fix src test",
-    "fmt:check": "cljfmt check src test",
-    "clean": "rm -rf .shadow-cljs public/js target"
+    "lint": "pnpm run lint:rust && pnpm run lint:clj",
+    "lint:rust": "cargo clippy --manifest-path crates/tritoncha-dsp/Cargo.toml --all-targets -- -D warnings",
+    "lint:clj": "clj-kondo --lint src test",
+    "fmt": "pnpm run fmt:rust && pnpm run fmt:clj",
+    "fmt:rust": "cargo fmt --manifest-path crates/tritoncha-dsp/Cargo.toml",
+    "fmt:rust:check": "cargo fmt --manifest-path crates/tritoncha-dsp/Cargo.toml -- --check",
+    "fmt:clj": "cljfmt fix src test",
+    "fmt:clj:check": "cljfmt check src test",
+    "fmt:check": "pnpm run fmt:rust:check && pnpm run fmt:clj:check",
+    "check": "pnpm run fmt:check && pnpm run lint && pnpm run test",
+    "clean": "rm -rf .shadow-cljs public/js public/wasm target crates/tritoncha-dsp/target"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "scheduler": "^0.27.0",
-    "three": "^0.185.1",
-    "tone": "^14.7.77"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "shadow-cljs": "^3.5.0"

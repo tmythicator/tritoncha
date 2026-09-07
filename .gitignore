@@ -2,6 +2,9 @@
 /node_modules/
 /.pnpm-store/
 /pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Clojure & Shadow-CLJS build artifacts
 /.shadow-cljs/
@@ -9,8 +12,17 @@
 /.nrepl-port
 /.clj-kondo/.cache/
 /.lsp/
+/.calva/
+/.cider-repl-history
 /public/js/
-/target/
+
+# Rust + WASM build artifacts and credentials
+target/
+**/target/
+/public/wasm/
+**/*.rs.bk
+.cargo/credentials
+.cargo/credentials.toml
 
 # Nix & Direnv
 /.direnv/
@@ -20,7 +32,12 @@
 # OS & Editor files
 .DS_Store
 Thumbs.db
+*~
 *.swp
 *.swo
+#*#
+.#*
 .vscode/
 .idea/
+.project
+.settings/

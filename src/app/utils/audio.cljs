@@ -44,6 +44,13 @@
           oct (- (quot m 12) 1)]
       (str pitch oct))))
 
+(defn midi->freq
+  "Converts a MIDI pitch number (0..127) to frequency in Hertz.
+  Examples: (midi->freq 69) -> 440.0, (midi->freq 60) -> 261.6256."
+  [midi-num]
+  (when (number? midi-num)
+    (* 440.0 (js/Math.pow 2.0 (/ (- midi-num 69.0) 12.0)))))
+
 (defn format-key
   "Formats a musical key map into a clean uppercase string.
   Examples: (format-key {:root :e :mode :phrygian}) -> \"E PHRYGIAN\"."
@@ -60,50 +67,47 @@
      (number? opts-or-oct) {:octave opts-or-oct}
      :else {:octave default-oct})))
 
-(defn enforce-stereo-mode!
-  "Enforces explicit 2-channel stereo routing on WebAudio/Tone.js nodes to prevent dynamic allocation glitches."
-  [^js node]
-  (when node
-    (try
-      (doseq [field ["input" "output" "_filter" "_gainNode" "_node"]]
-        (when-let [^js sub (aget node field)]
-          (when (exists? (.-channelCount sub))
-            (set! (.-channelCount sub) 2)
-            (set! (.-channelCountMode sub) "explicit")
-            (set! (.-channelInterpretation sub) "speakers"))))
-      (when (exists? (.-channelCount node))
-        (set! (.-channelCount node) 2)
-        (set! (.-channelCountMode node) "explicit")
-        (set! (.-channelInterpretation node) "speakers"))
-      (catch js/Object _)))
-  node)
+(defn dur->seconds
+  "Converts a musical duration notation string, keyword, or number to seconds at given BPM.
+  Supports standard musical notations: '1m', '1n', '2n', '4n', '8n', '16n', '32n', '8n.', '16t', etc.
+  Examples: (dur->seconds \"16n\" 168) -> 0.089, (dur->seconds \"1m\" 168) -> 1.428."
+  ([dur] (dur->seconds dur 168))
+  ([dur bpm]
+   (let [b (or bpm 168)
+         beat-s (/ 60.0 b)]
+     (cond
+       (number? dur) (double dur)
+       (nil? dur) (* beat-s 0.25)
+       :else
+       (let [s (-> (name dur) str/trim str/lower-case)]
+         (case s
+           ("1m" "measure" "bar") (* beat-s 4.0)
+           ("1n" "whole")         (* beat-s 4.0)
+           ("2n" "half")          (* beat-s 2.0)
+           ("2n.")                (* beat-s 3.0)
+           ("2t")                 (* beat-s (/ 4.0 3.0))
+           ("4n" "quarter")       beat-s
+           ("4n.")                (* beat-s 1.5)
+           ("4t")                 (* beat-s (/ 2.0 3.0))
+           ("8n" "eighth")        (* beat-s 0.5)
+           ("8n.")                (* beat-s 0.75)
+           ("8t")                 (* beat-s (/ 1.0 3.0))
+           ("16n" "sixteenth")    (* beat-s 0.25)
+           ("16n.")               (* beat-s 0.375)
+           ("16t")                (* beat-s (/ 0.5 3.0))
+           ("32n" "thirtysecond") (* beat-s 0.125)
+           (* beat-s 0.25)))))))
 
-(defn safe-ramp!
-  "Safely ramps a WebAudio/Tone AudioParam with fallback to direct value assignment.
-  Examples: (safe-ramp! (.-volume bus) -6 0.05)."
-  [^js audio-param target-val ramp-time]
-  (when audio-param
-    (let [v (or target-val 0)
-          t (or ramp-time 0.05)]
-      (try
-        (.rampTo audio-param v t)
-        (catch js/Object _
-          (set! (.-value audio-param) v))))))
-
-(def ^:private drum-voice-set
-  #{:kick :snare :sn-rs :sn-clk :sn-gh :sn-roll :hh-c :hh-o :hh-clk :click :drums :drum})
-
-(def ^:private bass-track-set
-  #{:bass :sub :saw-bass :acid :sub-sine :fm-growl :bass-lead :sub-bass})
-
-(defn is-drum-track?
-  "Returns true if the track key represents a drum/percussion track.
-  Examples: (is-drum-track? :kick) -> true, (is-drum-track? :drums) -> true, (is-drum-track? :bass) -> false."
-  [track-key]
-  (contains? drum-voice-set (keyword track-key)))
-
-(defn is-bass-track?
-  "Returns true if the track key represents a bass or sub-bass track.
-  Examples: (is-bass-track? :bass) -> true, (is-bass-track? :lead) -> false."
-  [track-key]
-  (contains? bass-track-set (keyword track-key)))
+(defn step->mult
+  "Converts step string notation to step multiplier relative to base clock ticks (64th notes).
+  Examples: (step->mult \"64n\") -> 1, (step->mult \"32n\") -> 2, (step->mult \"16n\") -> 4, (step->mult \"8n\") -> 8, (step->mult \"4n\") -> 16, (step->mult \"1m\") -> 64."
+  [step-val]
+  (case (str step-val)
+    ("64n" "64" "64th") 1
+    ("32n" "32" "32nd") 2
+    ("16n" "16" "16th") 4
+    ("8n" "8" "8th") 8
+    ("4n" "4" "quarter" "1n") 16
+    ("2n" "half") 32
+    ("1m" "measure" "bar") 64
+    4))

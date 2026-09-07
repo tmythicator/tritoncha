@@ -15,6 +15,7 @@
    'set-bpm!            api/set-bpm!
    'click!              api/click!
    'toggle-click!       api/toggle-click!
+   'set-click!          api/set-click!
 
    ;; Looper, Scheduler + Multi-Track Stacking
    'loop!               api/loop!
@@ -105,6 +106,13 @@
    'deftrack!           api/deftrack!
    'instruments         api/instruments
    'definst!            api/definst!
+   'defsynth!           api/defsynth!
+   'defdrum!            api/defdrum!
+   'patch-drum!         api/patch-drum!
+   'drum!               api/drum!
+   'patch!              api/patch!
+   'reset-inst!         api/reset-inst!
+   'reset-instrument!   api/reset-instrument!
    'routings            api/routings
    'defrouting!         api/defrouting!
    'demo!               api/demo!

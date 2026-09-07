@@ -10,7 +10,15 @@
     (session/set-key! :e :phrygian 1)
     (is (= {:root :e :mode :phrygian :octave 1} (session/current-key)))
     (is (= ["E1" nil "E1" "F1"] (session/d [1 _ 1 2])))
-    (is (= ["E1" "F1" "G1" "A1" "B1" "C2" "D2"] (subvec (session/sc 1) 0 7)))))
+    (is (= ["E1" "F1" "G1" "A1" "B1" "C2" "D2"] (subvec (session/sc 1) 0 7))))
+
+  (testing "session/d supports thread-last pipeline ordering (->> coll (d 1)) and scalar degrees"
+    (session/set-key! :e :phrygian 1)
+    (is (= "E1" (session/d 1)))
+    (is (= "E2" (session/d 1 2)))
+    (is (= ["E1" nil "E1" "F1"]
+           (->> [1 _ 1 2]
+                (session/d 1))))))
 
 (deftest transpose-all-melodic-tracks-test
   (testing "transpose-all! shifts all melodic tracks evenly by N semitones while preserving relative octaves"

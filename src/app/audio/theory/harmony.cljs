@@ -91,12 +91,15 @@
   ([root mode degrees] (deg root mode degrees {}))
   ([root mode degrees opts-or-oct]
    (let [octave (if (map? opts-or-oct) (get opts-or-oct :octave 3) (or opts-or-oct 3))
-         sc (scale root mode {:octave octave :octaves 4})
-         notes (mapv (fn [d]
-                       (when-let [idx (degree->idx d)]
-                         (get sc idx)))
-                     degrees)]
-     (with-meta notes {:degrees degrees :octave octave :root (keyword root) :mode (keyword mode)}))))
+         sc (scale root mode {:octave octave :octaves 4})]
+     (if (sequential? degrees)
+       (let [notes (mapv (fn [d]
+                           (when-let [idx (degree->idx d)]
+                             (get sc idx)))
+                         degrees)]
+         (with-meta notes {:degrees degrees :octave octave :root (keyword root) :mode (keyword mode)}))
+       (when-let [idx (degree->idx degrees)]
+         (get sc idx))))))
 
 (def chord-intervals
   {;; Standard chords

@@ -1,8 +1,8 @@
 (ns app.audio.dsp.telemetry
-  "WebAudio hardware clock, latency diagnostics, clock drift calculation and status."
-  (:require [app.config :as cfg]
-            [app.state :refer [audio-metrics audio-state engine-ctx]]
-            [app.utils.dom :as dom]
+  "Hardware audio clock, WASM buffer latency diagnostics, clock drift calculation and status."
+  (:require [app.audio.dsp.worklet :as worklet]
+            [app.config :as cfg]
+            [app.state :refer [audio-metrics audio-state]]
             [app.utils.math :refer [ms->sec sec->ms]]
             [clojure.string :as str]))
 
@@ -19,54 +19,65 @@
                       (str (name kw) " (" (name inst) ", " step ", " status ")")))]
       (str (count tracks) " active -> [" (str/join ", " details) "]"))))
 
-(defn telemetry-snapshot
-  "Computes a real-time diagnostics snapshot of WebAudio hardware clock, latency and drift."
-  []
-  (let [tone-engine   (:tone @engine-ctx)
-        ^js transport (when tone-engine (:transport tone-engine))
-        ^js ctx       (when transport (.-context transport))
-        ^js raw-ctx   (when ctx (.-rawContext ctx))
-        ^js native-ctx (or (when raw-ctx (.-_nativeAudioContext raw-ctx)) raw-ctx ctx)
-        sample-rate   (when native-ctx (.-sampleRate native-ctx))
-        base-lat      (when (and native-ctx (number? (.-baseLatency native-ctx))) (sec->ms (.-baseLatency native-ctx)))
-        out-lat       (when (and native-ctx (number? (.-outputLatency native-ctx))) (sec->ms (.-outputLatency native-ctx)))
-        lookahead     (when ctx (sec->ms (.-lookAhead ctx)))
-        ctx-state     (if ctx (.-state ctx) "uninitialized")
-        raw-pos       (when transport (str (.-position transport)))
-        pos           (if raw-pos (first (str/split raw-pos #"\.")) "0:0:0")
-        bpm-val       (if transport (.. transport -bpm -value) (:bpm @audio-state cfg/default-bpm))
-        bpm-str       (if (number? bpm-val) (.toFixed bpm-val 0) (str bpm-val))
-        transport-st  (if transport (.-state transport) "stopped")
-        tone-now      (if raw-ctx (.-currentTime raw-ctx) 0.0)
-        sys-now       (if (exists? js/performance) (ms->sec (.now js/performance)) 0.0)
+(defn- calculate-transport-position [active? bpm hw-now start-time]
+  (if (and active? (number? hw-now) (number? start-time) (pos? start-time) (>= hw-now start-time))
+    (let [elapsed      (- hw-now start-time)
+          bpm-safe     (max (or bpm 168.0) 1.0)
+          sec-per-16th (/ 15.0 bpm-safe)
+          total-16ths  (Math/floor (/ elapsed sec-per-16th))
+          bar          (Math/floor (/ total-16ths 16.0))
+          beat         (Math/floor (/ (mod total-16ths 16.0) 4.0))
+          step         (mod total-16ths 4.0)]
+      (str bar ":" beat ":" step))
+    "0:0:0"))
 
-        drift-str     (if-let [{:keys [t-tone-start t-sys-start]} (:clock-origin @audio-metrics)]
-                        (if (pos? tone-now)
-                          (let [elapsed-tone (- tone-now t-tone-start)
+(defn telemetry-snapshot
+  "Computes a real-time diagnostics snapshot of WebAudio hardware clock, WASM latency and drift."
+  []
+  (let [^js ctx       (worklet/get-audio-context)
+        sample-rate   (when ctx (.-sampleRate ctx))
+        base-lat      (when (and ctx (number? (.-baseLatency ctx))) (sec->ms (.-baseLatency ctx)))
+        out-lat       (when (and ctx (number? (.-outputLatency ctx))) (sec->ms (.-outputLatency ctx)))
+        ctx-state     (if ctx (.-state ctx) "uninitialized")
+        bpm-val       (:bpm @audio-state cfg/default-bpm)
+        bpm-str       (if (number? bpm-val) (.toFixed bpm-val 0) (str bpm-val))
+        active?       (:active? @audio-state false)
+        transport-st  (if active? "running" "stopped")
+        hw-now        (if ctx (.-currentTime ctx) 0.0)
+        sys-now       (if (exists? js/performance) (ms->sec (.now js/performance)) 0.0)
+        pos           (calculate-transport-position active? bpm-val hw-now (:transport-start @audio-state))
+
+        ;; Dedicated WebAudio AudioWorklet block latency: 128 samples (< 2.7 ms at 48 kHz)
+        block-lat-ms  (* 1000.0 (/ 128.0 (or sample-rate 48000.0)))
+        lookahead-ms  block-lat-ms
+
+        drift-str     (if-let [{:keys [t-hw-start t-sys-start]} (:clock-origin @audio-metrics)]
+                        (if (pos? hw-now)
+                          (let [elapsed-hw   (- hw-now t-hw-start)
                                 elapsed-sys  (- sys-now t-sys-start)
-                                drift-ms     (sec->ms (- elapsed-tone elapsed-sys))]
+                                drift-ms     (sec->ms (- elapsed-hw elapsed-sys))]
                             (str (if (pos? drift-ms) "+" "") (.toFixed drift-ms 3) " ms"))
                           "0.000 ms")
                         (do
-                          (when (pos? tone-now)
-                            (swap! audio-metrics assoc :clock-origin {:t-tone-start tone-now :t-sys-start sys-now}))
+                          (when (pos? hw-now)
+                            (swap! audio-metrics assoc :clock-origin {:t-hw-start hw-now :t-sys-start sys-now}))
                           "0.000 ms (calibrated)"))
 
-        lookahead-ms  (or lookahead (sec->ms (dom/active-lookahead)) 100.0)
         min-headroom  (or (:min-headroom-ms @audio-metrics) lookahead-ms)
         xruns         (:xrun-count @audio-metrics 0)]
-    {:ctx-state       ctx-state
+    {:engine          "Rust WASM (AudioWorklet)"
+     :block-size      128
+     :ctx-state       ctx-state
      :sample-rate     sample-rate
      :base-latency    base-lat
      :output-latency  out-lat
-     :lookahead       lookahead
-     :latency-hint    (or (when ctx (.-latencyHint ctx))
-                          (when raw-ctx (.-latencyHint raw-ctx)))
+     :lookahead       lookahead-ms
+     :latency-hint    "interactive"
      :bpm             bpm-val
      :bpm-str         bpm-str
      :position        pos
      :transport-state transport-st
-     :hardware-clock  tone-now
+     :hardware-clock  hw-now
      :clock-drift     drift-str
      :headroom-ms     lookahead-ms
      :min-headroom-ms min-headroom
@@ -87,15 +98,13 @@
   []
   (let [snap (telemetry-snapshot)]
     (println "--- WebAudio Engine Diagnostics ---")
-    (println (str "State:          " (:ctx-state snap)))
+    (println (str "Engine:         " (:engine snap)))
+    (println (str "Context:        " (:ctx-state snap)))
     (println (str "Sample Rate:    " (if-let [sr (:sample-rate snap)] (str sr " Hz") "N/A")))
     (println (str "Hardware Clock: " (.toFixed (:hardware-clock snap) 4) " s"))
     (println (str "Clock Drift:    " (:clock-drift snap)))
-    (println (str "Min Headroom:   " (.toFixed (:min-headroom-ms snap) 1) " ms"))
-    (println (str "X-Runs (Drops): " (:xrun-count snap)))
     (println (str "Base Latency:   " (if-let [bl (:base-latency snap)] (str (.toFixed bl 2) " ms") "unavailable")))
-    (println (str "Lookahead:      " (if-let [la (:lookahead snap)] (str (.toFixed la 1) " ms") "N/A")))
-    (println (str "Latency Hint:   " (or (:latency-hint snap) "N/A")))
+    (println (str "X-Runs (Drops): " (:xrun-count snap)))
     (println (str "Transport:      " (str/upper-case (:transport-state snap)) " @ " (:bpm-str snap) " BPM (Pos: " (:position snap) ")"))
     (println (str "Active Loops:   " (:active-tracks snap)))
     (println "-----------------------------------")

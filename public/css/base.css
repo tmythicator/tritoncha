@@ -36,7 +36,7 @@ html, body {
     color: var(--text-danger);
     cursor: pointer;
     padding: 0 var(--space-xs);
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
 
     &:hover {
         color: var(--palette-pink);

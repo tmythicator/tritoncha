@@ -1,10 +1,11 @@
 (ns app.audio.control.tracker
   "Track presets registry, playback orchestrator, and instrument preview demos."
-  (:require [app.audio.control.looper :refer [loop! set-bpm! stop! stop-loop!]]
+  (:require [app.audio.control.looper :refer [loop! set-bpm! set-drum-mode! stop! stop-loop!]]
             [app.audio.control.session :as session]
+            [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
             [app.audio.dsp.fx :refer [set-filter-cutoff!]]
-            [app.audio.dsp.instruments :refer [all-drum-keys reload-instruments!]]
+            [app.audio.dsp.instruments :refer [reload-instruments!]]
             [app.audio.theory.harmony :refer [chord]]
             [app.audio.theory.patterns :refer [pattern]]
             [app.config :as cfg]
@@ -20,27 +21,48 @@
   (swap! repl-registry assoc-in [:tracks track-key] spec)
   track-key)
 
+(def ^:private track-aliases
+  {:roller :metro-roller})
+
 (defn all-tracks
   "Returns a merged map of core built-in tracks, user custom tracks, and REPL tracks."
   []
   (merge core-tracks user-tracks (:tracks @repl-registry)))
 
+(defn track-keys
+  "Returns a vector of all available track keywords across core, custom, and REPL catalogs."
+  []
+  (vec (keys (all-tracks))))
+
+(defn default-track-key
+  "Returns the default track keyword."
+  []
+  (or (first (track-keys)) :metro-roller))
+
 (defn play-preset!
   "Launches a track by keyword (from all-tracks) or custom data map.
-  Examples: (play-preset! :roller), (play-preset! {:bpm 165 :scale [:f :phrygian 1] ...})."
+  Examples: (play-preset! :metro-roller), (play-preset! {:bpm 165 :scale [:f :phrygian 1] ...})."
   [preset-spec]
   (init-audio!)
   (stop!)
   (let [available  (all-tracks)
+        target-key (if (keyword? preset-spec)
+                     (get track-aliases preset-spec preset-spec)
+                     preset-spec)
         preset-map (cond
-                     (map? preset-spec) preset-spec
-                     (contains? available preset-spec) (get available preset-spec)
-                     :else (get available (first cfg/jam-presets) (:roller core-tracks)))
-        preset-key (if (keyword? preset-spec) preset-spec :custom)
-        {:keys [bpm scale geom colors cutoff tracks]} preset-map
+                     (map? target-key) target-key
+                     (contains? available target-key) (get available target-key)
+                     :else (or (val (first available)) (get core-tracks :metro-roller)))
+        preset-key (cond
+                     (keyword? target-key) target-key
+                     (keyword? preset-spec) preset-spec
+                     :else :custom)
+        {:keys [bpm scale geom colors cutoff tracks mod kit]} preset-map
         [bg-c mesh-c] (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])]
 
     (swap! audio-state assoc :current-jam preset-key :active? true)
+    (when-let [drum-m (or mod (when (keyword? kit) kit) (:mod kit))]
+      (set-drum-mode! drum-m))
     (when scale
       (let [[r m oct] scale]
         (session/set-key! r m (or oct (:octave cfg/default-key 1)))))
@@ -58,14 +80,39 @@
   []
   (if (:active? @audio-state)
     (stop!)
-    (play-preset! (:current-jam @audio-state :roller))))
+    (play-preset! (or (:current-jam @audio-state) (default-track-key)))))
 
-(defn cycle-jam!
-  "Cycles to the next built-in jam track preset.
-  Examples: (cycle-jam!)."
+(defn- cycle-track!
+  [cycle-fn]
+  (let [tks (track-keys)
+        cur (or (:current-jam @audio-state) (first tks))]
+    (play-preset! (cycle-fn cur tks))))
+
+(defn next-jam!
+  "Cycles to the next available jam track preset across core and custom catalogs.
+  Examples: (next-jam!)."
   []
-  (let [next-jam (coll/cycle-next (:current-jam @audio-state :roller) cfg/jam-presets)]
-    (play-preset! next-jam)))
+  (cycle-track! coll/cycle-next))
+
+(defn prev-jam!
+  "Cycles to the previous available jam track preset across core and custom catalogs.
+  Examples: (prev-jam!)."
+  []
+  (cycle-track! coll/cycle-prev))
+
+(def cycle-jam! next-jam!)
+
+(defn jam-list
+  "Returns a vector of metadata maps for all available jam presets across core, custom, and REPL catalogs.
+  Useful for UI dropdowns, modals, and preset preview cards."
+  []
+  (mapv (fn [[k t]]
+          {:id    k
+           :name  (or (:name t) (name k))
+           :bpm   (or (:bpm t) 168)
+           :scale (or (:scale t) [:e :minor 1])
+           :geom  (or (:geom t) :torus-knot)})
+        (all-tracks)))
 
 (defn reload-track!
   "Reloads and restarts the currently active track preset with updated track data."
@@ -88,10 +135,10 @@
   (let [kw   (keyword inst-key)
         root (:root (session/current-key) :e)]
     (cond
-      (contains? (all-drum-keys) kw)
+      (busses/drum? kw)
       (loop! :demo {:inst kw :notes (pattern "k . . .  k . . .  . . k .  . . . .") :step cfg/default-step})
 
-      (contains? #{:dark-pad :pad :ambient-glass} kw)
+      (busses/pad? kw)
       (loop! :demo {:inst kw :notes [(chord root :min9 3) (chord root :maj7 3)] :step "1m" :dur "1m" :vel 0.4})
 
       :else

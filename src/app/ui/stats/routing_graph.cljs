@@ -2,6 +2,7 @@
   "Audio routing topology visualization subcomponent."
   (:require
    [app.audio.dsp.busses :as busses]
+   [app.audio.dsp.fx :as fx]
    [app.audio.dsp.routing :as routing]
    [app.lib.routes :refer [default-graph]]
    [app.state :refer [audio-state engine-ctx]]
@@ -11,6 +12,7 @@
   (case (busses/normalize-bus-key bus-key)
     :bus/drums  {:label "DRUMS"  :class "bus-drums"}
     :bus/bass   {:label "BASS"   :class "bus-bass"}
+    :bus/lead   {:label "LEAD"   :class "bus-lead"}
     :bus/space  {:label "SPACE"  :class "bus-space"}
     :bus/direct {:label "DIRECT" :class "bus-direct"}
     :bus/master {:label "MASTER" :class "bus-master"}
@@ -27,7 +29,7 @@
         :filter
         (let [freq (if (and node-obj (.-frequency ^js node-obj))
                      (js/Math.round (.. node-obj -frequency -value))
-                     (:frequency spec 3400))]
+                     (Math/round (:cutoff (fx/get-filter-state) (:frequency spec 3400))))]
           (str "LP-FILTER (" freq " Hz)"))
 
         :delay
@@ -42,6 +44,12 @@
 
         :distortion
         "DISTORTION"
+
+        :chorus
+        "CHORUS"
+
+        :bitcrusher
+        "BITCRUSHER"
 
         :limiter
         "LIMITER"
