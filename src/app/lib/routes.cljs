@@ -40,11 +40,11 @@
     :bus/direct {:type :volume :volume 0}}
 
    :processors
-   {:distort       {:type :distortion :algorithm :adaa :distortion 0.30 :wet 0.8}
-    :chorus        {:type :chorus :rate 0.8 :depth 0.4 :wet 0.35}
-    :master-filter {:type :filter :frequency 18000 :filter-type "lowpass"}
-    :delay         {:type :delay :time "8n." :feedback 0.38 :wet 0.35}
-    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.78 :wet 0.35}
+   {:distort       {:type :distortion :algorithm :adaa :distortion 0.0 :wet 0.0}
+    :chorus        {:type :chorus :rate 0.8 :depth 0.4 :wet 0.0}
+    :master-filter {:type :filter :filter-type "lowpass"}
+    :delay         {:type :delay :time "8n." :feedback 0.35 :wet 0.25}
+    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.75 :wet 0.35}
     :limiter       {:type :limiter :threshold -1.0}}
 
    :routes
@@ -67,11 +67,11 @@
     :bus/direct {:type :volume :volume 0}}
 
    :processors
-   {:distort       {:type :distortion :algorithm :adaa :distortion 0.25 :wet 0.65}
-    :chorus        {:type :chorus :rate 0.6 :depth 0.5 :wet 0.4}
+   {:distort       {:type :distortion :algorithm :adaa :distortion 0.05 :wet 0.25}
+    :chorus        {:type :chorus :rate 0.4 :depth 0.25 :wet 0.15}
     :master-filter {:type :filter :frequency 4200 :filter-type "lowpass"}
-    :delay         {:type :delay :time "8n." :feedback 0.55 :wet 0.6}
-    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.92 :wet 0.55}
+    :delay         {:type :delay :time "8n." :feedback 0.44 :wet 0.36}
+    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.82 :wet 0.32}
     :limiter       {:type :limiter :threshold -1.5}}
 
    :routes

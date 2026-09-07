@@ -5,6 +5,53 @@
             [app.lib.routes :refer [core-routes]]
             [app.state :refer [audio-state repl-registry]]))
 
+;; Neutral Baseline DSP Processor Configuration
+(def ^:private neutral-processors
+  {:distort       {:distortion 0.0 :algorithm :adaa}
+   :crusher       {:bits 16.0 :sample-hold 1.0}
+   :chorus        {:rate 0.8 :depth 0.4 :wet 0.0}
+   :master-filter {:q 0.0}
+   :delay         {:time "8n." :feedback 0.35 :wet 0.25}
+   :reverb        {:room-size 0.75 :wet 0.35 :algorithm :fdn}})
+
+(defn- resolve-filter-frequency
+  "Resolves the cutoff frequency in Hz: declared topology frequency, active track cutoff, or 18000 Hz."
+  [spec]
+  (or (:frequency spec)
+      (:track-cutoff @audio-state)
+      18000.0))
+
+(defn- apply-processor!
+  "Applies a declared DSP processor configuration map into the Rust WASM engine."
+  [p-type spec]
+  (case p-type
+    :distort
+    (do
+      (fx/set-distortion! (or (:distortion spec) 0.0))
+      (fx/set-drive-mode! (or (:algorithm spec) (:mode spec) :adaa)))
+
+    :crusher
+    (fx/set-bitcrush! (or (:bits spec) 16.0) (or (:sample-hold spec) 1.0))
+
+    :chorus
+    (fx/set-chorus! (or (:rate spec) 0.8) (or (:depth spec) 0.4) (or (:wet spec) 0.0))
+
+    :master-filter
+    (let [freq (resolve-filter-frequency spec)
+          q    (or (:q spec) 0.0)]
+      (fx/set-filter-cutoff! freq)
+      (fx/set-filter-q! q))
+
+    :delay
+    (fx/set-delay! (or (:time spec) "8n.") (or (:feedback spec) 0.35) (or (:wet spec) 0.0))
+
+    :reverb
+    (do
+      (fx/set-reverb! (or (:roomSize spec) (:room-size spec) 0.75) (or (:wet spec) 0.0))
+      (fx/set-reverb-mode! (or (:algorithm spec) (:mode spec) :fdn)))
+
+    nil))
+
 (defn register-routing!
   "Registers or updates a dynamic routing topology in the REPL registry.
   Examples: (register-routing! :dub-matrix {:busses [...] :routes {...}})."
@@ -21,33 +68,9 @@
   "Switches the active DSP routing topology preset and applies its processors to the Rust WASM engine.
   Examples: (set-routing! :dub-echo), (route! :cyber-glitch)."
   [routing-key]
-  (let [routings (all-routings)
-        spec     (get routings routing-key)]
-    (when spec
-      (swap! audio-state assoc :current-routing routing-key)
-      (let [{:keys [processors]} spec]
-        ;; Apply Distortion / Overdrive
-        (when-let [d (:distort processors)]
-          (fx/set-distortion! (or (:distortion d) 0.35))
-          (when-let [algo (or (:algorithm d) (:mode d))]
-            (fx/set-drive-mode! algo)))
-        ;; Apply Bitcrusher
-        (when-let [c (:crusher processors)]
-          (fx/set-bitcrush! (or (:bits c) 8) (or (:sample-hold c) 1.0)))
-        ;; Apply Chorus
-        (when-let [ch (:chorus processors)]
-          (fx/set-chorus! (or (:rate ch) 0.8) (or (:depth ch) 0.4) (or (:wet ch) 0.35)))
-        ;; Apply Master Filter
-        (when-let [f (:master-filter processors)]
-          (fx/set-filter-cutoff! (or (:frequency f) 18000.0)))
-        ;; Apply Delay
-        (when-let [del (:delay processors)]
-          (fx/set-delay-feedback! (or (:feedback del) 0.38))
-          (when-let [w (:wet del)]
-            (fx/set-reverb-wet! w)))
-        ;; Apply Reverb
-        (when-let [rev (:reverb processors)]
-          (fx/set-reverb-wet! (or (:wet rev) 0.35))
-          (when-let [algo (or (:algorithm rev) (:mode rev))]
-            (fx/set-reverb-mode! algo)))
-        routing-key))))
+  (when-let [spec (get (all-routings) routing-key)]
+    (swap! audio-state assoc :current-routing routing-key)
+    (let [dsp (merge-with merge neutral-processors (:processors spec))]
+      (doseq [[p-type p-spec] dsp]
+        (apply-processor! p-type p-spec))
+      routing-key)))

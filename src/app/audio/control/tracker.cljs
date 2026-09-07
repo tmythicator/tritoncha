@@ -60,7 +60,7 @@
         {:keys [bpm scale geom colors cutoff tracks mod kit]} preset-map
         [bg-c mesh-c] (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])]
 
-    (swap! audio-state assoc :current-jam preset-key :active? true)
+    (swap! audio-state assoc :current-jam preset-key :active? true :track-cutoff cutoff)
     (when-let [drum-m (or mod (when (keyword? kit) kit) (:mod kit))]
       (set-drum-mode! drum-m))
     (when scale
