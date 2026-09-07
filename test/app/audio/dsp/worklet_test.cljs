@@ -65,3 +65,10 @@
       (is (contains? (set slots) 5))
       (is (contains? (set slots) 6))
       (is (not (contains? (set slots) 1))))))
+
+(deftest test-mode-switching-dispatch
+  (testing "Dispatches drive and reverb algorithm mode messages safely"
+    (is (= :adaa (worklet/set-worklet-drive-mode! :adaa)))
+    (is (= :classic (worklet/set-worklet-drive-mode! :classic)))
+    (is (= :fdn (worklet/set-worklet-reverb-mode! :fdn)))
+    (is (= :freeverb (worklet/set-worklet-reverb-mode! :freeverb)))))

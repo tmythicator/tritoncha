@@ -82,6 +82,8 @@
      :headroom-ms     lookahead-ms
      :min-headroom-ms min-headroom
      :xrun-count      xruns
+     :reverb-mode     (str/upper-case (name (or (:reverb-mode @audio-state) :fdn)))
+     :drive-mode      (str/upper-case (name (or (:drive-mode @audio-state) :adaa)))
      :active-tracks   (format-active-loops-summary (:active-tracks @audio-state))}))
 
 (defn reset-telemetry-metrics!
@@ -99,6 +101,7 @@
   (let [snap (telemetry-snapshot)]
     (println "--- WebAudio Engine Diagnostics ---")
     (println (str "Engine:         " (:engine snap)))
+    (println (str "DSP Modes:      Reverb: " (:reverb-mode snap) " | Drive: " (:drive-mode snap)))
     (println (str "Context:        " (:ctx-state snap)))
     (println (str "Sample Rate:    " (if-let [sr (:sample-rate snap)] (str sr " Hz") "N/A")))
     (println (str "Hardware Clock: " (.toFixed (:hardware-clock snap) 4) " s"))

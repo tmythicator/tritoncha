@@ -87,8 +87,19 @@ impl AllpassFilter {
     }
 }
 
-/// Studio-Quality Stereo Schroeder / Freeverb Diffusion Reverb.
+use crate::dsp::fdn_reverb::FdnReverb;
+
+/// Reverb Engine Algorithm Mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReverbMode {
+    Freeverb = 0,
+    Fdn = 1,
+}
+
+/// Studio-Quality Stereo Reverb with selectable Freeverb and 8-channel Householder FDN modes.
 pub struct StereoReverb {
+    pub mode: ReverbMode,
+    pub fdn: FdnReverb,
     combs_l: [CombFilter; 8],
     combs_r: [CombFilter; 8],
     allpasses_l: [AllpassFilter; 4],
@@ -98,7 +109,13 @@ pub struct StereoReverb {
 
 impl StereoReverb {
     pub fn new() -> Self {
+        Self::with_sample_rate(48000.0)
+    }
+
+    pub fn with_sample_rate(sample_rate: f32) -> Self {
         Self {
+            mode: ReverbMode::Fdn,
+            fdn: FdnReverb::new(sample_rate),
             combs_l: [
                 CombFilter::new(FREEVERB_COMB_TUNINGS_L[0]),
                 CombFilter::new(FREEVERB_COMB_TUNINGS_L[1]),
@@ -135,12 +152,21 @@ impl StereoReverb {
         }
     }
 
+    /// Sets the reverb algorithm mode.
+    pub fn set_mode(&mut self, mode: ReverbMode) {
+        self.mode = mode;
+    }
+
     pub fn set_wet(&mut self, wet: f32) {
         self.wet = wet.clamp(0.0, 1.0);
+        self.fdn.set_wet(self.wet);
     }
 
     pub fn set_params(&mut self, room_size: f32, wet: f32) {
         self.wet = wet.clamp(0.0, 1.0);
+        self.fdn.set_room_size(room_size);
+        self.fdn.set_wet(self.wet);
+
         let fb = (0.7 + room_size * 0.28).clamp(0.0, MAX_COMB_FEEDBACK);
         for c in &mut self.combs_l {
             c.set_feedback(fb);
@@ -156,27 +182,32 @@ impl StereoReverb {
             return (0.0, 0.0);
         }
 
-        let mono_in = (in_l + in_r) * 0.5;
+        match self.mode {
+            ReverbMode::Fdn => self.fdn.process_wet(in_l, in_r),
+            ReverbMode::Freeverb => {
+                let mono_in = (in_l + in_r) * 0.5;
 
-        let mut out_l = 0.0;
-        let mut out_r = 0.0;
+                let mut out_l = 0.0;
+                let mut out_r = 0.0;
 
-        for c in &mut self.combs_l {
-            out_l += c.process(mono_in);
-        }
-        for c in &mut self.combs_r {
-            out_r += c.process(mono_in);
-        }
+                for c in &mut self.combs_l {
+                    out_l += c.process(mono_in);
+                }
+                for c in &mut self.combs_r {
+                    out_r += c.process(mono_in);
+                }
 
-        for ap in &mut self.allpasses_l {
-            out_l = ap.process(out_l);
-        }
-        for ap in &mut self.allpasses_r {
-            out_r = ap.process(out_r);
-        }
+                for ap in &mut self.allpasses_l {
+                    out_l = ap.process(out_l);
+                }
+                for ap in &mut self.allpasses_r {
+                    out_r = ap.process(out_r);
+                }
 
-        let wet_gain = self.wet * REVERB_STEREO_SPREAD_GAIN;
-        (out_l * wet_gain, out_r * wet_gain)
+                let wet_gain = self.wet * REVERB_STEREO_SPREAD_GAIN;
+                (out_l * wet_gain, out_r * wet_gain)
+            }
+        }
     }
 
     #[inline(always)]

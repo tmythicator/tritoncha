@@ -1,10 +1,12 @@
 //! Core real-time DSP audio engine and mixer orchestration.
 
 use crate::dsp::delay::StereoDelay;
-use crate::dsp::effects::{BitcrusherDrive, SidechainPump, StereoChorus, MAX_SAMPLE_HOLD};
+use crate::dsp::effects::{
+    BitcrusherDrive, DriveMode, SidechainPump, StereoChorus, MAX_SAMPLE_HOLD,
+};
 use crate::dsp::filter::StateVariableFilter;
 use crate::dsp::math::{db_to_gain, midi_to_freq, soft_clip};
-use crate::dsp::reverb::StereoReverb;
+use crate::dsp::reverb::{ReverbMode, StereoReverb};
 use crate::sequencer::track::{
     TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
     MAX_STEPS, MAX_TRACKS,
@@ -125,7 +127,7 @@ impl TritonchaEngine {
             chorus: StereoChorus::new(),
             sidechain: SidechainPump::new(),
             delay: StereoDelay::new(),
-            reverb: StereoReverb::new(),
+            reverb: StereoReverb::with_sample_rate(sr),
         }
     }
 }
@@ -372,9 +374,18 @@ impl TritonchaEngine {
     }
 
     pub fn set_drive_bitcrush(&mut self, drive: f32, bit_depth: f32, sample_hold: f32) {
-        self.bitcrush_drive.drive = drive.clamp(0.0, 1.0);
+        self.bitcrush_drive.set_drive(drive);
         self.bitcrush_drive.bit_depth = bit_depth.clamp(1.0, 16.0);
         self.bitcrush_drive.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
+    }
+
+    pub fn set_drive_mode(&mut self, mode: u8) {
+        let m = if mode == 0 {
+            DriveMode::Classic
+        } else {
+            DriveMode::Adaa
+        };
+        self.bitcrush_drive.set_mode(m);
     }
 
     pub fn set_chorus(&mut self, rate_hz: f32, depth: f32, mix: f32) {
@@ -394,6 +405,15 @@ impl TritonchaEngine {
 
     pub fn set_reverb(&mut self, room_size: f32, wet: f32) {
         self.reverb.set_params(room_size, wet);
+    }
+
+    pub fn set_reverb_mode(&mut self, mode: u8) {
+        let m = if mode == 0 {
+            ReverbMode::Freeverb
+        } else {
+            ReverbMode::Fdn
+        };
+        self.reverb.set_mode(m);
     }
 
     #[inline(always)]

@@ -16,6 +16,8 @@
            :bpm              cfg/default-bpm
            :current-jam      cfg/default-jam
            :current-routing  :default
+           :reverb-mode      :fdn
+           :drive-mode       :adaa
            :key              cfg/default-key
            :active-tracks    {}
            :solo-mode?       false}))

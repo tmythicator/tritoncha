@@ -141,6 +141,10 @@
 (def wq! fx/set-filter-q!)
 (def worklet-cutoff! fx/set-filter-cutoff!)
 (def worklet-resonance! fx/set-filter-q!)
+(def drive-mode! fx/set-drive-mode!)
+(def set-drive-mode! fx/set-drive-mode!)
+(def reverb-mode! fx/set-reverb-mode!)
+(def set-reverb-mode! fx/set-reverb-mode!)
 
 ;; SFX Drops + Dub One-Shots
 (def s! fx/trigger-dub-siren!)

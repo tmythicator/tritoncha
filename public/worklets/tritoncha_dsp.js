@@ -294,6 +294,24 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             );
           }
           break;
+
+        case 'setDriveMode':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drive_mode) {
+            this.wasmExports.tritoncha_dsp_set_drive_mode(
+              this.wasmEnginePtr,
+              data.mode !== undefined ? data.mode : 1
+            );
+          }
+          break;
+
+        case 'setReverbMode':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_reverb_mode) {
+            this.wasmExports.tritoncha_dsp_set_reverb_mode(
+              this.wasmEnginePtr,
+              data.mode !== undefined ? data.mode : 1
+            );
+          }
+          break;
       }
   }
 

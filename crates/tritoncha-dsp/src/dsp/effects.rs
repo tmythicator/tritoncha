@@ -23,14 +23,25 @@ pub const CHORUS_QUADRATURE_OFFSET: f32 = 0.25; // 90 degree stereo phase offset
 pub const CHORUS_WET_GAIN: f32 = 0.6;
 pub const CHORUS_DRY_ATTEN: f32 = 0.5;
 
+use crate::dsp::adaa::AdaaDrive;
+
 pub const SIDECHAIN_DUCK_SCALE: f32 = 0.85;
 pub const SIDECHAIN_RECOVERY_RATE: f32 = 0.0012; // exponential recovery coefficient
 
-/// Bitcrusher and analog drive / saturation effect.
+/// Saturation and Overdrive Engine Algorithm Mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DriveMode {
+    Classic = 0,
+    Adaa = 1,
+}
+
+/// Bitcrusher and analog drive / saturation effect with selectable ADAA-1 antialiased core.
 pub struct BitcrusherDrive {
     pub drive: f32,       // 0.0 to 1.0
     pub bit_depth: f32,   // 1.0 to 16.0
     pub sample_hold: f32, // 1.0 to 16.0 (downsampling factor)
+    pub mode: DriveMode,
+    pub adaa: AdaaDrive,
     hold_counter: f32,
     last_sample_l: f32,
     last_sample_r: f32,
@@ -42,10 +53,23 @@ impl BitcrusherDrive {
             drive: 0.0,
             bit_depth: DEFAULT_BIT_DEPTH,
             sample_hold: DEFAULT_SAMPLE_HOLD,
+            mode: DriveMode::Adaa,
+            adaa: AdaaDrive::new(),
             hold_counter: 0.0,
             last_sample_l: 0.0,
             last_sample_r: 0.0,
         }
+    }
+
+    /// Sets the saturation algorithm mode.
+    pub fn set_mode(&mut self, mode: DriveMode) {
+        self.mode = mode;
+    }
+
+    /// Updates the drive gain parameter across classic and ADAA engines.
+    pub fn set_drive(&mut self, drive: f32) {
+        self.drive = drive.clamp(0.0, 1.0);
+        self.adaa.set_drive(self.drive);
     }
 
     #[inline(always)]
@@ -57,10 +81,17 @@ impl BitcrusherDrive {
             return (in_l, in_r);
         }
 
-        // 1. Overdrive saturation using fast analog tanh approximation
-        let drive_gain = 1.0 + self.drive * OVERDRIVE_GAIN_SCALE;
-        let mut x_l = tanh_approx(in_l * drive_gain);
-        let mut x_r = tanh_approx(in_r * drive_gain);
+        // 1. Overdrive saturation: ADAA-1 antialiased or Classic Pade tanh
+        let (mut x_l, mut x_r) = match self.mode {
+            DriveMode::Adaa => self.adaa.process(in_l, in_r),
+            DriveMode::Classic => {
+                let drive_gain = 1.0 + self.drive * OVERDRIVE_GAIN_SCALE;
+                (
+                    tanh_approx(in_l * drive_gain),
+                    tanh_approx(in_r * drive_gain),
+                )
+            }
+        };
 
         // 2. Sample rate reduction (sample & hold)
         self.hold_counter += 1.0;
@@ -85,6 +116,7 @@ impl BitcrusherDrive {
     }
 
     pub fn reset(&mut self) {
+        self.adaa.reset();
         self.hold_counter = 0.0;
         self.last_sample_l = 0.0;
         self.last_sample_r = 0.0;

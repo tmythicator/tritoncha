@@ -28,7 +28,9 @@
       (let [{:keys [processors]} spec]
         ;; Apply Distortion / Overdrive
         (when-let [d (:distort processors)]
-          (fx/set-distortion! (or (:distortion d) 0.35)))
+          (fx/set-distortion! (or (:distortion d) 0.35))
+          (when-let [algo (or (:algorithm d) (:mode d))]
+            (fx/set-drive-mode! algo)))
         ;; Apply Bitcrusher
         (when-let [c (:crusher processors)]
           (fx/set-bitcrush! (or (:bits c) 8) (or (:sample-hold c) 1.0)))
@@ -45,5 +47,7 @@
             (fx/set-reverb-wet! w)))
         ;; Apply Reverb
         (when-let [rev (:reverb processors)]
-          (fx/set-reverb-wet! (or (:wet rev) 0.35))))
-      routing-key)))
+          (fx/set-reverb-wet! (or (:wet rev) 0.35))
+          (when-let [algo (or (:algorithm rev) (:mode rev))]
+            (fx/set-reverb-mode! algo)))
+        routing-key))))

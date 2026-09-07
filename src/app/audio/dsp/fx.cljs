@@ -2,7 +2,7 @@
   "Audio effects automations, drive, chorus, bitcrush, sidechain, smooth filter sweeps, dub sirens, and sub-bass drops via Rust WASM DSP engine."
   (:require [app.audio.dsp.engine :refer [init-audio!]]
             [app.audio.dsp.worklet :as worklet]
-            [app.state :refer [pulse!]]
+            [app.state :refer [audio-state pulse!]]
             [app.utils.math :refer [clamp]]))
 
 (defonce ^:private filter-state
@@ -99,6 +99,24 @@
   (let [clamped-w (clamp w 0.0 1.0)]
     (swap! reverb-state assoc :wet clamped-w)
     (worklet/set-worklet-reverb! (:room-size @reverb-state) clamped-w)))
+
+(defn set-drive-mode!
+  "Selects the master overdrive saturation algorithm mode (:adaa or :classic).
+  Examples: (set-drive-mode! :adaa), (set-drive-mode! :classic)."
+  [mode-kw]
+  (let [m (if (= (keyword mode-kw) :classic) :classic :adaa)]
+    (swap! audio-state assoc :drive-mode m)
+    (worklet/set-worklet-drive-mode! m)
+    m))
+
+(defn set-reverb-mode!
+  "Selects the reverb engine algorithm mode (:fdn or :freeverb).
+  Examples: (set-reverb-mode! :fdn), (set-reverb-mode! :freeverb)."
+  [mode-kw]
+  (let [m (if (= (keyword mode-kw) :freeverb) :freeverb :fdn)]
+    (swap! audio-state assoc :reverb-mode m)
+    (worklet/set-worklet-reverb-mode! m)
+    m))
 
 (defn trigger-dub-siren!
   "Triggers a classic one-shot dub laser siren FX."
