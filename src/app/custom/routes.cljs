@@ -1,5 +1,5 @@
 (ns app.custom.routes
-  "User custom audio routing topologies and DSP bus graphs.")
+  "User custom audio routing topologies and DSP bus graphs for Tritoncha.")
 
 ;; Custom Routing Topologies
 ;;
@@ -8,8 +8,9 @@
 ;; Routes:     Vector of signal connection chains [[:src :fx1 :fx2 :dst] ...]
 
 (def void-chamber
-  "Deep spatial void routing with modulated FDN diffusion and stereo chorus wash."
-  {:busses
+  "Deep cosmic void routing with vast modulated FDN diffusion and stereo chorus wash."
+  {:title "VOID CHAMBER"
+   :busses
    {:bus/drums  {:type :volume :volume 0}
     :bus/bass   {:type :volume :volume 0}
     :bus/lead   {:type :volume :volume 0}
@@ -17,11 +18,11 @@
     :bus/direct {:type :volume :volume 0}}
 
    :processors
-   {:distort       {:type :distortion :algorithm :adaa :distortion 0.20 :wet 0.70}
-    :chorus        {:type :chorus :rate 0.45 :depth 0.65 :wet 0.55}
+   {:distort       {:type :distortion :algorithm :adaa :distortion 0.04 :wet 0.25}
+    :chorus        {:type :chorus :rate 0.40 :depth 0.60 :wet 0.45}
     :master-filter {:type :filter :frequency 14000 :filter-type "lowpass"}
-    :delay         {:type :delay :time "8n." :feedback 0.48 :wet 0.45}
-    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.96 :wet 0.65}
+    :delay         {:type :delay :time "8n." :feedback 0.46 :wet 0.38}
+    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.88 :wet 0.42}
     :limiter       {:type :limiter :threshold -1.2}}
 
    :routes
@@ -33,32 +34,5 @@
     [:master-filter :limiter]
     [:limiter :destination]]})
 
-(def neuro-roller
-  "Heavy neurofunk and drum and bass roller topology with saturated sub-bass and snappy direct percussion."
-  {:busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}}
-
-   :processors
-   {:distort       {:type :distortion :algorithm :adaa :distortion 0.42 :wet 0.85}
-    :chorus        {:type :chorus :rate 0.9 :depth 0.35 :wet 0.25}
-    :master-filter {:type :filter :frequency 18000 :filter-type "lowpass"}
-    :delay         {:type :delay :time "16n" :feedback 0.35 :wet 0.25}
-    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.70 :wet 0.25}
-    :limiter       {:type :limiter :threshold -1.0}}
-
-   :routes
-   [[:bus/drums :master-filter]
-    [:bus/bass :distort :limiter]
-    [:bus/lead :chorus :master-filter]
-    [:bus/space :delay :reverb :limiter]
-    [:bus/direct :limiter]
-    [:master-filter :limiter]
-    [:limiter :destination]]})
-
 (def user-routes
-  {:void-chamber void-chamber
-   :neuro-roller neuro-roller})
+  {:void-chamber  void-chamber})

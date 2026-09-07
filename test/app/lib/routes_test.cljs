@@ -112,4 +112,12 @@
                                 :routes [[:bus/direct :destination]]})
     (is (contains? (routing/all-routings) :custom-matrix) "Dynamic custom matrix must be present")
     (is (= :custom-matrix (routing/set-routing! :custom-matrix)))
-    (is (= :custom-matrix (:current-routing @audio-state)))))
+    (is (= :custom-matrix (:current-routing @audio-state))))
+
+  (testing "all built-in and user custom topologies switch cleanly and have valid termination"
+    (let [all (routing/all-routings)]
+      (doseq [[rk spec] all]
+        (is (= rk (routing/set-routing! rk)) (str "Routing " rk " must switch successfully"))
+        (is (= rk (:current-routing @audio-state)) (str "Audio state must store " rk))
+        (is (map? (:busses spec)) (str "Routing " rk " must define :busses"))
+        (is (vector? (:routes spec)) (str "Routing " rk " must define :routes"))))))
