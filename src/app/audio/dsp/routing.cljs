@@ -1,6 +1,7 @@
 (ns app.audio.dsp.routing
   "Declarative DSP routing graph catalog, bus configuration, and live route application."
-  (:require [app.audio.dsp.fx :as fx]
+  (:require [app.audio.control.mixer :as mixer]
+            [app.audio.dsp.fx :as fx]
             [app.custom.routes :refer [user-routes]]
             [app.lib.routes :refer [core-routes]]
             [app.state :refer [audio-state repl-registry]]))
@@ -52,6 +53,16 @@
 
     nil))
 
+(defn- apply-bus-sends!
+  "Applies declared bus send amounts into the mixer, falling back to default-bus-sends."
+  [busses-spec]
+  (let [target-sends (merge mixer/default-bus-sends busses-spec)]
+    (doseq [[b-key s-map] target-sends]
+      (when (contains? s-map :delay)
+        (mixer/set-send! b-key :delay (:delay s-map)))
+      (when (contains? s-map :reverb)
+        (mixer/set-send! b-key :reverb (:reverb s-map))))))
+
 (defn register-routing!
   "Registers or updates a dynamic routing topology in the REPL registry.
   Examples: (register-routing! :dub-matrix {:busses [...] :routes {...}})."
@@ -70,6 +81,7 @@
   [routing-key]
   (when-let [spec (get (all-routings) routing-key)]
     (swap! audio-state assoc :current-routing routing-key)
+    (apply-bus-sends! (:busses spec))
     (let [dsp (merge-with merge neutral-processors (:processors spec))]
       (doseq [[p-type p-spec] dsp]
         (apply-processor! p-type p-spec))

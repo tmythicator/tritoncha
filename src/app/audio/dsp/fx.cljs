@@ -96,11 +96,15 @@
 
 (defn- parse-delay-time-s [t]
   (cond
-    (number? t) (float t)
+    (number? t)  (float t)
     (= t "16n")  0.09
     (= t "8n")   0.18
     (= t "8n.")  0.27
     (= t "4n")   0.36
+    (= t "4n.")  0.54
+    (= t "2n")   0.72
+    (= t "2n.")  1.08
+    (= t "1m")   1.44
     :else        0.35))
 
 (defn set-delay-time!

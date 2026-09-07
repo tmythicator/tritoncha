@@ -15,7 +15,7 @@ pub const FDN_CHANNELS: usize = 8;
 pub const FDN_BASE_DELAYS: [usize; FDN_CHANNELS] = [1051, 1223, 1453, 1693, 1987, 2333, 2741, 3217];
 
 /// Maximum buffer allocation capacity per delay line (accommodates 2x room scaling + modulation headroom).
-pub const MAX_FDN_DELAY: usize = 8192;
+pub const MAX_FDN_DELAY: usize = 16384;
 
 /// Minimum safety delay length for delay lines in samples.
 pub const MIN_DELAY_LINE_LENGTH: usize = 64;
@@ -231,11 +231,12 @@ impl FdnReverb {
         let mod_1 = self.lfo_phase_1.sin() * LFO_MODULATION_DEPTH_SAMPLES;
         let mod_2 = self.lfo_phase_2.sin() * LFO_MODULATION_DEPTH_SAMPLES;
 
-        // 1. Read delay line outputs with LFO modulation
+        // 1. Read delay line outputs with LFO modulation and physical room size scaling
+        let size_scale = 0.65 + self.room_size * 1.35;
         let mut delay_outs = [0.0_f32; FDN_CHANNELS];
         for (i, (out, line)) in delay_outs.iter_mut().zip(self.lines.iter()).enumerate() {
             let m = if i % 2 == 0 { mod_1 } else { mod_2 };
-            let delay_len = (line.base_length as f32) + m;
+            let delay_len = (line.base_length as f32) * size_scale + m;
             *out = line.read_interpolated(delay_len);
         }
 

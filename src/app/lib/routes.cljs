@@ -56,6 +56,33 @@
     [:master-filter :limiter]
     [:limiter :destination]]})
 
+;; Liminal Prison (Infinite Subterranean FDN Diffusion + Cross-Fed Ping-Pong Hallways)
+(def liminal-prison
+  "Mind-bending liminal space topology with vast subterranean FDN diffusion, cross-fed ping-pong echoes, and cold eerie acoustics."
+  {:title "LIMINAL PRISON"
+   :busses
+   {:bus/drums  {:type :volume :volume 0 :delay 0.28 :reverb 0.42}
+    :bus/bass   {:type :volume :volume 0 :delay 0.05 :reverb 0.15}
+    :bus/lead   {:type :volume :volume 0 :delay 0.42 :reverb 0.65}
+    :bus/space  {:type :volume :volume 0 :delay 0.55 :reverb 0.85}
+    :bus/direct {:type :volume :volume 0 :delay 0.0  :reverb 0.0}}
+
+   :processors
+   {:chorus        {:type :chorus :rate 0.18 :depth 0.70 :wet 0.35}
+    :master-filter {:type :filter :frequency 11500 :q 0.22 :filter-type "lowpass"}
+    :delay         {:type :delay :time "4n." :feedback 0.52 :wet 0.45}
+    :reverb        {:type :reverb :algorithm :fdn :roomSize 0.96 :wet 0.58}
+    :limiter       {:type :limiter :threshold -1.2}}
+
+   :routes
+   [[:bus/drums :delay :reverb :master-filter]
+    [:bus/bass :master-filter]
+    [:bus/lead :chorus :delay :reverb :master-filter]
+    [:bus/space :chorus :delay :reverb :limiter]
+    [:bus/direct :limiter]
+    [:master-filter :limiter]
+    [:limiter :destination]]})
+
 ;; Heavy Dub Echo Chamber (Cathedral FDN Reverb + Warm ADAA Tape Saturation)
 (def dub-echo-chamber
   "Heavy dub routing with tape delay feedback and deep cathedral FDN reverb."
@@ -255,6 +282,7 @@
 ;; Catalog of Core Routing Topologies
 (def core-routes
   {:default           default-graph
+   :liminal-prison    liminal-prison
    :dub-echo          dub-echo-chamber
    :tape-lofi         tape-lofi
    :crematorium       crematorium

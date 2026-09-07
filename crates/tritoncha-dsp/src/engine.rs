@@ -529,7 +529,9 @@ impl TritonchaEngine {
 
             // 4. Run Delay and Reverb effects on their send lines (WET ONLY)
             let (wet_dl, wet_dr) = self.delay.process_wet(delay_send, delay_send);
-            let (wet_rl, wet_rr) = self.reverb.process_wet(reverb_send, reverb_send);
+            let (wet_rl, wet_rr) = self
+                .reverb
+                .process_wet(reverb_send + wet_dl * 0.20, reverb_send + wet_dr * 0.20);
 
             // 5. Combine direct dry mix with wet effects
             let mut combined_l = direct_mix + wet_dl + wet_rl;
