@@ -12,15 +12,16 @@ use crate::sequencer::track::{
 use crate::synth::drums::DrumMachine;
 use crate::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
 
-pub const NUM_VOICES: usize = 32;
-pub const NUM_BUSSES: usize = 5;
+pub use crate::dsp::bus::*;
+pub use crate::synth::drums::{
+    is_drum_inst, INST_DRUM_CHINA, INST_DRUM_CLAP, INST_DRUM_COWBELL, INST_DRUM_CRASH_16,
+    INST_DRUM_CRASH_17, INST_DRUM_CRASH_18, INST_DRUM_HH_CLOSED, INST_DRUM_HH_OPEN, INST_DRUM_KICK,
+    INST_DRUM_RIDE, INST_DRUM_RIDE_BELL, INST_DRUM_SNARE, INST_DRUM_SNARE_BODY,
+    INST_DRUM_SNARE_CRACK, INST_DRUM_SNARE_GHOST, INST_DRUM_SNARE_RIM, INST_DRUM_SNARE_WIRE,
+    INST_DRUM_SPLASH, INST_DRUM_TOM, INST_DRUM_TOM_HIGH, INST_DRUM_TOM_LOW, INST_DRUM_TOM_MID,
+};
 
-// Audio Bus Indices
-pub const BUS_DRUMS: usize = 0;
-pub const BUS_BASS: usize = 1;
-pub const BUS_SPACE: usize = 2;
-pub const BUS_LEAD: usize = 3;
-pub const BUS_DIRECT: usize = 4;
+pub const NUM_VOICES: usize = 32;
 
 // Audio Clock and Timing Constants
 pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
@@ -40,67 +41,11 @@ pub const MASTER_FILTER_BYPASS_CUTOFF_HZ: f32 = 16000.0;
 pub const MAX_MASTER_RESONANCE: f32 = 0.95;
 pub const MIN_AUDIBLE_RESONANCE: f32 = 0.01;
 pub const MIN_SWEEP_DURATION_S: f32 = 0.01;
-pub const MAX_BUS_LINEAR_GAIN: f32 = 4.0;
 pub const MASTER_HEADROOM_GAIN: f32 = 0.95;
 
-// Drum Voice Identifiers
-pub const INST_DRUM_KICK: i32 = 0;
-pub const INST_DRUM_SNARE: i32 = 1;
-pub const INST_DRUM_HH_CLOSED: i32 = 2;
-pub const INST_DRUM_HH_OPEN: i32 = 3;
 pub const INST_CLICK: i32 = 11;
-pub const INST_DRUM_CLAP: i32 = 18;
-pub const INST_DRUM_RIDE: i32 = 20;
-pub const INST_DRUM_TOM: i32 = 21;
-pub const INST_DRUM_SNARE_CRACK: i32 = 22;
-pub const INST_DRUM_SNARE_WIRE: i32 = 23;
-pub const INST_DRUM_SNARE_BODY: i32 = 24;
-pub const INST_DRUM_SNARE_GHOST: i32 = 25;
-pub const INST_DRUM_SNARE_RIM: i32 = 26;
-pub const INST_DRUM_RIDE_BELL: i32 = 64;
-pub const INST_DRUM_TOM_HIGH: i32 = 65;
-pub const INST_DRUM_TOM_MID: i32 = 66;
-pub const INST_DRUM_TOM_LOW: i32 = 67;
-pub const INST_DRUM_CRASH_16: i32 = 68;
-pub const INST_DRUM_CRASH_17: i32 = 69;
-pub const INST_DRUM_CRASH_18: i32 = 70;
-pub const INST_DRUM_SPLASH: i32 = 71;
-pub const INST_DRUM_CHINA: i32 = 72;
-pub const INST_DRUM_COWBELL: i32 = 73;
-
 pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
 pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
-
-#[inline(always)]
-pub fn is_drum_inst(inst_id: i32) -> bool {
-    matches!(
-        inst_id,
-        INST_DRUM_KICK..=INST_DRUM_HH_OPEN
-            | INST_DRUM_CLAP
-            | INST_DRUM_RIDE..=INST_DRUM_SNARE_RIM
-            | INST_DRUM_RIDE_BELL..=INST_DRUM_COWBELL
-    )
-}
-
-/// Mixer bus state controlling volume, mutes, and effects sends.
-#[derive(Clone, Copy)]
-pub struct AudioBus {
-    pub gain: f32,
-    pub muted: bool,
-    pub send_delay: f32,
-    pub send_reverb: f32,
-}
-
-impl AudioBus {
-    pub fn new(gain: f32, send_delay: f32, send_reverb: f32) -> Self {
-        Self {
-            gain,
-            muted: false,
-            send_delay,
-            send_reverb,
-        }
-    }
-}
 
 /// Tritoncha Real-Time Audio Engine.
 pub struct TritonchaEngine {
@@ -317,131 +262,90 @@ impl TritonchaEngine {
     }
 
     pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
-        match inst_id {
-            INST_DRUM_KICK => {
-                self.drums.trigger_kick(vel);
-                self.sidechain.trigger_kick();
+        if inst_id == INST_DRUM_KICK {
+            self.sidechain.trigger_kick();
+        }
+        if self.drums.trigger_by_id(inst_id, vel, freq) {
+            return;
+        }
+
+        let pid = (inst_id as usize).min(MAX_PATCHES - 1);
+        let patch = self.patches[pid];
+        let target_bus = patch.bus_id as usize;
+
+        if patch.polyphony <= 1 {
+            // 1. Monophonic mode: find existing active voice for this patch
+            let mut found_mono: Option<usize> = None;
+            for (i, v) in self.voices.iter().enumerate() {
+                if v.active && v.patch_id == pid {
+                    found_mono = Some(i);
+                    break;
+                }
             }
-            INST_DRUM_SNARE => self.drums.trigger_snare(vel),
-            INST_DRUM_HH_CLOSED => self.drums.trigger_hh(vel, false),
-            INST_DRUM_HH_OPEN => self.drums.trigger_hh(vel, true),
-            INST_DRUM_CLAP => self.drums.trigger_clap(vel),
-            INST_DRUM_RIDE => self.drums.trigger_ride(vel),
-            INST_DRUM_TOM => self.drums.trigger_tom(vel, freq),
-            INST_DRUM_SNARE_CRACK | INST_DRUM_SNARE_RIM => self.drums.trigger_snare_crack(vel),
-            INST_DRUM_SNARE_WIRE => self.drums.trigger_snare_wire(vel),
-            INST_DRUM_SNARE_BODY => self.drums.trigger_snare_body(vel),
-            INST_DRUM_SNARE_GHOST => self.drums.trigger_snare_ghost(vel),
-            INST_DRUM_RIDE_BELL => self.drums.trigger_ride_bell(vel),
-            INST_DRUM_TOM_HIGH => self.drums.trigger_tom_high(vel),
-            INST_DRUM_TOM_MID => self.drums.trigger_tom_mid(vel),
-            INST_DRUM_TOM_LOW => self.drums.trigger_tom_low(vel),
-            INST_DRUM_CRASH_16 => self.drums.trigger_crash_16(vel),
-            INST_DRUM_CRASH_17 => self.drums.trigger_crash_17(vel),
-            INST_DRUM_CRASH_18 => self.drums.trigger_crash_18(vel),
-            INST_DRUM_SPLASH => self.drums.trigger_splash(vel),
-            INST_DRUM_CHINA => self.drums.trigger_china(vel),
-            INST_DRUM_COWBELL => self.drums.trigger_cowbell(vel),
-            _ => {
-                let pid = (inst_id as usize).min(MAX_PATCHES - 1);
-                let patch = self.patches[pid];
-                let target_bus = patch.bus_id as usize;
 
-                if patch.polyphony <= 1 {
-                    // 1. Monophonic mode: find existing active voice for this patch
-                    let mut found_mono: Option<usize> = None;
-                    for (i, v) in self.voices.iter().enumerate() {
-                        if v.active && v.patch_id == pid {
-                            found_mono = Some(i);
-                            break;
-                        }
-                    }
-
-                    if let Some(v_idx) = found_mono {
-                        if patch.glide > 0.001 {
-                            // Legato portamento glide without phase discontinuity
-                            self.voices[v_idx].glide_to(
-                                freq,
-                                vel,
-                                self.sample_rate,
-                                patch.glide,
-                                dur_s,
-                            );
-                            return;
-                        } else {
-                            // Retrigger same voice (prevents muddy bass buildup)
-                            self.voice_bus_map[v_idx] = target_bus;
-                            self.voices[v_idx].trigger(
-                                freq,
-                                vel,
-                                pid,
-                                &patch,
-                                self.sample_rate,
-                                dur_s,
-                            );
-                            return;
-                        }
-                    }
+            if let Some(v_idx) = found_mono {
+                if patch.glide > 0.001 {
+                    // Legato portamento glide without phase discontinuity
+                    self.voices[v_idx].glide_to(freq, vel, self.sample_rate, patch.glide, dur_s);
+                    return;
                 } else {
-                    // 2. Polyphonic mode: enforce max polyphony for this specific patch
-                    let mut patch_voice_indices: [usize; NUM_VOICES] = [0; NUM_VOICES];
-                    let mut patch_count = 0;
-                    for (i, v) in self.voices.iter().enumerate() {
-                        if v.active && v.patch_id == pid {
-                            patch_voice_indices[patch_count] = i;
-                            patch_count += 1;
-                        }
-                    }
+                    // Retrigger same voice (prevents muddy bass buildup)
+                    self.voice_bus_map[v_idx] = target_bus;
+                    self.voices[v_idx].trigger(freq, vel, pid, &patch, self.sample_rate, dur_s);
+                    return;
+                }
+            }
+        } else {
+            // 2. Polyphonic mode: enforce max polyphony for this specific patch
+            let mut patch_voice_indices: [usize; NUM_VOICES] = [0; NUM_VOICES];
+            let mut patch_count = 0;
+            for (i, v) in self.voices.iter().enumerate() {
+                if v.active && v.patch_id == pid {
+                    patch_voice_indices[patch_count] = i;
+                    patch_count += 1;
+                }
+            }
 
-                    if patch_count >= patch.polyphony as usize {
-                        // Steal the oldest voice playing this patch
-                        let mut oldest_idx = patch_voice_indices[0];
-                        let mut max_age = self.voices[oldest_idx].age;
-                        for &idx in &patch_voice_indices[1..patch_count] {
-                            if self.voices[idx].age > max_age {
-                                max_age = self.voices[idx].age;
-                                oldest_idx = idx;
-                            }
-                        }
-                        self.voice_bus_map[oldest_idx] = target_bus;
-                        self.voices[oldest_idx].trigger(
-                            freq,
-                            vel,
-                            pid,
-                            &patch,
-                            self.sample_rate,
-                            dur_s,
-                        );
-                        return;
+            if patch_count >= patch.polyphony as usize {
+                // Steal the oldest voice playing this patch
+                let mut oldest_idx = patch_voice_indices[0];
+                let mut max_age = self.voices[oldest_idx].age;
+                for &idx in &patch_voice_indices[1..patch_count] {
+                    if self.voices[idx].age > max_age {
+                        max_age = self.voices[idx].age;
+                        oldest_idx = idx;
                     }
                 }
-
-                // 3. Find first inactive voice in pool
-                let mut target_idx = None;
-                for (i, v) in self.voices.iter().enumerate() {
-                    if !v.active {
-                        target_idx = Some(i);
-                        break;
-                    }
-                }
-
-                // 4. If all 32 voices are active, steal the globally oldest voice (LRU)
-                let final_idx = target_idx.unwrap_or_else(|| {
-                    let mut oldest = 0;
-                    let mut max_age = self.voices[0].age;
-                    for (i, v) in self.voices.iter().enumerate().skip(1) {
-                        if v.age > max_age {
-                            max_age = v.age;
-                            oldest = i;
-                        }
-                    }
-                    oldest
-                });
-
-                self.voice_bus_map[final_idx] = target_bus;
-                self.voices[final_idx].trigger(freq, vel, pid, &patch, self.sample_rate, dur_s);
+                self.voice_bus_map[oldest_idx] = target_bus;
+                self.voices[oldest_idx].trigger(freq, vel, pid, &patch, self.sample_rate, dur_s);
+                return;
             }
         }
+
+        // 3. Find first inactive voice in pool
+        let mut target_idx = None;
+        for (i, v) in self.voices.iter().enumerate() {
+            if !v.active {
+                target_idx = Some(i);
+                break;
+            }
+        }
+
+        // 4. If all 32 voices are active, steal the globally oldest voice (LRU)
+        let final_idx = target_idx.unwrap_or_else(|| {
+            let mut oldest = 0;
+            let mut max_age = self.voices[0].age;
+            for (i, v) in self.voices.iter().enumerate().skip(1) {
+                if v.age > max_age {
+                    max_age = v.age;
+                    oldest = i;
+                }
+            }
+            oldest
+        });
+
+        self.voice_bus_map[final_idx] = target_bus;
+        self.voices[final_idx].trigger(freq, vel, pid, &patch, self.sample_rate, dur_s);
     }
 
     pub fn master_cutoff_hz(&self) -> f32 {

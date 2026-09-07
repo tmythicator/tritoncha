@@ -40,6 +40,41 @@ pub const DRUM_SPLASH: i32 = 71;
 pub const DRUM_CHINA: i32 = 72;
 pub const DRUM_COWBELL: i32 = 73;
 
+// Canonical engine instrument aliases
+pub const INST_DRUM_KICK: i32 = DRUM_KICK;
+pub const INST_DRUM_SNARE: i32 = DRUM_SNARE;
+pub const INST_DRUM_HH_CLOSED: i32 = DRUM_HH_CLOSED;
+pub const INST_DRUM_HH_OPEN: i32 = DRUM_HH_OPEN;
+pub const INST_DRUM_CLAP: i32 = DRUM_CLAP;
+pub const INST_DRUM_RIDE: i32 = DRUM_RIDE;
+pub const INST_DRUM_TOM: i32 = DRUM_TOM;
+pub const INST_DRUM_SNARE_CRACK: i32 = DRUM_SNARE_CRACK;
+pub const INST_DRUM_SNARE_WIRE: i32 = DRUM_SNARE_WIRE;
+pub const INST_DRUM_SNARE_BODY: i32 = DRUM_SNARE_BODY;
+pub const INST_DRUM_SNARE_GHOST: i32 = DRUM_SNARE_GHOST;
+pub const INST_DRUM_SNARE_RIM: i32 = DRUM_SNARE_RIM;
+pub const INST_DRUM_RIDE_BELL: i32 = DRUM_RIDE_BELL;
+pub const INST_DRUM_TOM_HIGH: i32 = DRUM_TOM_HIGH;
+pub const INST_DRUM_TOM_MID: i32 = DRUM_TOM_MID;
+pub const INST_DRUM_TOM_LOW: i32 = DRUM_TOM_LOW;
+pub const INST_DRUM_CRASH_16: i32 = DRUM_CRASH_16;
+pub const INST_DRUM_CRASH_17: i32 = DRUM_CRASH_17;
+pub const INST_DRUM_CRASH_18: i32 = DRUM_CRASH_18;
+pub const INST_DRUM_SPLASH: i32 = DRUM_SPLASH;
+pub const INST_DRUM_CHINA: i32 = DRUM_CHINA;
+pub const INST_DRUM_COWBELL: i32 = DRUM_COWBELL;
+
+#[inline(always)]
+pub fn is_drum_inst(inst_id: i32) -> bool {
+    matches!(
+        inst_id,
+        DRUM_KICK..=DRUM_HH_OPEN
+            | DRUM_CLAP
+            | DRUM_RIDE..=DRUM_SNARE_RIM
+            | DRUM_RIDE_BELL..=DRUM_COWBELL
+    )
+}
+
 /// Drum Machine Aggregate Root managing all drum voices.
 pub struct DrumMachine {
     pub kick: KickVoice,
@@ -331,6 +366,37 @@ impl DrumMachine {
     #[inline(always)]
     pub fn trigger_tom_low(&mut self, vel: f32) {
         self.tom_low.trigger(vel, 48000.0);
+    }
+
+    /// Dispatches a trigger to the corresponding drum voice by instrument ID.
+    /// Returns true if the ID matched a drum voice, false otherwise.
+    #[inline(always)]
+    pub fn trigger_by_id(&mut self, inst_id: i32, vel: f32, freq: f32) -> bool {
+        match inst_id {
+            DRUM_KICK => self.trigger_kick(vel),
+            DRUM_SNARE => self.trigger_snare(vel),
+            DRUM_HH_CLOSED => self.trigger_hh(vel, false),
+            DRUM_HH_OPEN => self.trigger_hh(vel, true),
+            DRUM_CLAP => self.trigger_clap(vel),
+            DRUM_RIDE => self.trigger_ride(vel),
+            DRUM_TOM => self.trigger_tom(vel, freq),
+            DRUM_SNARE_CRACK | DRUM_SNARE_RIM => self.trigger_snare_crack(vel),
+            DRUM_SNARE_WIRE => self.trigger_snare_wire(vel),
+            DRUM_SNARE_BODY => self.trigger_snare_body(vel),
+            DRUM_SNARE_GHOST => self.trigger_snare_ghost(vel),
+            DRUM_RIDE_BELL => self.trigger_ride_bell(vel),
+            DRUM_TOM_HIGH => self.trigger_tom_high(vel),
+            DRUM_TOM_MID => self.trigger_tom_mid(vel),
+            DRUM_TOM_LOW => self.trigger_tom_low(vel),
+            DRUM_CRASH_16 => self.trigger_crash_16(vel),
+            DRUM_CRASH_17 => self.trigger_crash_17(vel),
+            DRUM_CRASH_18 => self.trigger_crash_18(vel),
+            DRUM_SPLASH => self.trigger_splash(vel),
+            DRUM_CHINA => self.trigger_china(vel),
+            DRUM_COWBELL => self.trigger_cowbell(vel),
+            _ => return false,
+        }
+        true
     }
 
     #[inline(always)]

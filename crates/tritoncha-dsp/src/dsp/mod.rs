@@ -1,3 +1,4 @@
+pub mod bus;
 pub mod delay;
 pub mod effects;
 pub mod filter;
