@@ -105,11 +105,12 @@
     (.set (.-position mesh) (or px 0) (or py 0) (or pz 0))
     (.set (.-rotation mesh) (or rx 0) (or ry 0) (or rz 0))
     (.set (.-scale mesh) (or sx 1) (or sy 1) (or sz 1))
-    {:mesh       mesh
-     :geom-spec  geom-spec
-     :base-pos   [px py pz]
-     :base-scale [sx sy sz]
-     :rot-speed  rot-speed}))
+    {:mesh        mesh
+     :geom-spec   geom-spec
+     :base-pos    [px py pz]
+     :base-scale  [sx sy sz]
+     :rot-speed   rot-speed
+     :pulseable?  (get fig-spec :pulse? (not (or (false? (:pulse fig-spec)) (true? (:static fig-spec)))))}))
 
 (defn clear-figures!
   "Removes and disposes all active multi-figure meshes from the 3D scene.
@@ -122,6 +123,7 @@
         (when-let [g (.-geometry m)] (.dispose ^js g))
         (when-let [mat (.-material m)] (.dispose ^js mat))))
     (swap! engine-ctx update :three assoc :figures {})
+    (reset! visual-pulses {:default 0.0})
     (when mesh (set! (.-visible mesh) true))))
 
 (defn set-figures!
@@ -140,7 +142,6 @@
                           {}
                           figures-map)]
         (swap! engine-ctx update :three assoc :figures instantiated)
-        (pulse! :all 2.0)
         (vec (keys instantiated))))
     (do
       (when-let [{:keys [^js mesh]} (:three @engine-ctx)]
@@ -302,7 +303,9 @@
                 (let [^js fm        (:mesh fig-entry)
                       base-scale    (:base-scale fig-entry [1.0 1.0 1.0])
                       rot-speed     (:rot-speed fig-entry [0.006 0.01 0.0])
-                      fig-p         (get @visual-pulses fig-id 0.0)
+                      fig-p         (if (:pulseable? fig-entry true)
+                                      (get @visual-pulses fig-id 0.0)
+                                      0.0)
                       target-factor (+ 1.0 (* fig-p sensitivity 0.12))
                       cur-x         (.-x (.-scale fm))
                       target-x      (* (nth base-scale 0) target-factor)
