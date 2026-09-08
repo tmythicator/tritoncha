@@ -61,6 +61,15 @@
        (sequential? (first notes))
        (not (keyword? (first (first notes))))))
 
+(defn- clear-voice-slots!
+  "Deactivates and unassigns hardware sequencer sub-slots for polyphonic voice indices."
+  [track-key voice-indices]
+  (doseq [v-idx voice-indices]
+    (let [sub-tk (keyword (str (name track-key) "-v" (inc v-idx)))]
+      (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
+        (worklet/deactivate-track! sub-slot)
+        (swap! worklet/track-slot-assignments dissoc sub-tk)))))
+
 (defn sync-track-to-worklet!
   "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords."
   [tk pat-data]
@@ -84,19 +93,11 @@
                 slot        (worklet/get-or-assign-track-slot! sub-tk)]
             (worklet/set-track! slot inst-k voice-notes step-m dur-s voice-vel)))
         ;; Deactivate any remaining voices if chord density was reduced
-        (doseq [v-idx (range max-voices 4)]
-          (let [sub-tk (keyword (str (name tk) "-v" (inc v-idx)))]
-            (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
-              (worklet/deactivate-track! sub-slot)
-              (swap! worklet/track-slot-assignments dissoc sub-tk)))))
+        (clear-voice-slots! tk (range max-voices 4)))
       (let [slot (worklet/get-or-assign-track-slot! tk)]
         (worklet/set-track! slot inst-k (vec notes) step-m dur-s base-vel)
         ;; Deactivate any leftover polyphony sub-slots if switching to monophonic
-        (doseq [v-idx (range 1 4)]
-          (let [sub-tk (keyword (str (name tk) "-v" (inc v-idx)))]
-            (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
-              (worklet/deactivate-track! sub-slot)
-              (swap! worklet/track-slot-assignments dissoc sub-tk))))))))
+        (clear-voice-slots! tk (range 1 4))))))
 
 (defn sync-all-active-tracks!
   "Re-transmits all active session tracks to the Rust WASM sequencer."

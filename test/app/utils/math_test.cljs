@@ -15,7 +15,11 @@
   (testing "Linear interpolation"
     (is (= 50.0 (math/lerp 0 100 0.5)))
     (is (= 0 (math/lerp 0 100 0.0)))
-    (is (= 100 (math/lerp 0 100 1.0)))))
+    (is (= 100 (math/lerp 0 100 1.0))))
+  (testing "Component-wise 3D vector linear interpolation"
+    (is (= [5.0 10.0 15.0] (math/lerp-v3 [0 0 0] [10 20 30] 0.5)))
+    (is (= [0 0 0] (math/lerp-v3 [0 0 0] [10 20 30] 0.0)))
+    (is (= [10 20 30] (math/lerp-v3 [0 0 0] [10 20 30] 1.0)))))
 
 (deftest time-conversion-test
   (testing "Converts seconds to milliseconds and vice versa"

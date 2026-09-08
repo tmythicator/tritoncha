@@ -27,6 +27,14 @@
   [a b t]
   (+ a (* (- b a) t)))
 
+(defn lerp-v3
+  "Performs component-wise linear interpolation between two 3D vectors.
+  Examples: (lerp-v3 [0 0 0] [10 20 30] 0.5) -> [5.0 10.0 15.0]."
+  [[x1 y1 z1] [x2 y2 z2] t]
+  [(lerp x1 x2 t)
+   (lerp y1 y2 t)
+   (lerp z1 z2 t)])
+
 (defn scale-range
   "Maps a value from an input range to an output range.
   Examples: (scale-range 5 0 10 0 100) -> 50.0."

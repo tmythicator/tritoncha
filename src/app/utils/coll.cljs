@@ -51,3 +51,15 @@
   Examples: (prob 0.7)."
   [p]
   (< (rand) (or p 0.5)))
+
+(defn vec3
+  "Normalizes a scalar, vector or nil into a 3-element vector [x y z].
+  Examples: (vec3 1.5) -> [1.5 1.5 1.5], (vec3 [1 2 3]) -> [1 2 3], (vec3 nil 0) -> [0 0 0]."
+  ([val] (vec3 val 0))
+  ([val default-val]
+   (cond
+     (vector? val) [(or (nth val 0 nil) default-val)
+                    (or (nth val 1 nil) default-val)
+                    (or (nth val 2 nil) default-val)]
+     (number? val) [val val val]
+     :else         [default-val default-val default-val])))

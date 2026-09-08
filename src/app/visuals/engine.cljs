@@ -8,7 +8,7 @@
                       visual-pulses visual-state]]
    [app.utils.coll :as coll]
    [app.utils.dom :refer [max-dpr]]
-   [app.utils.math :refer [lerp]]))
+   [app.utils.math :refer [lerp lerp-v3]]))
 
 (defn all-scenes
   "Returns the complete merged catalog of built-in, custom and REPL-defined 3D scenes."
@@ -77,34 +77,58 @@
                      :opacity 0.25})]
       (three/Mesh. geom mat))))
 
+(defn- dispose-geom-mat!
+  "Disposes geometry and material attached to a Three.js mesh safely.
+  Examples: (dispose-geom-mat! mesh)."
+  [^js m]
+  (when m
+    (when-let [g (.-geometry m)] (.dispose ^js g))
+    (when-let [mat (.-material m)] (.dispose ^js mat))))
+
+(defn- dispose-mesh-entry!
+  "Disposes Three.js mesh geometry and material safely and removes mesh from scene.
+  Examples: (dispose-mesh-entry! scene mesh)."
+  [^js scene ^js m]
+  (when m
+    (when scene (.remove scene m))
+    (dispose-geom-mat! m)))
+
+(defn- parse-color-pair
+  "Extracts mesh and wire hex colors from a string, map or default fallback.
+  Examples: (parse-color-pair \"#ff0000\") -> [\"#ff0000\" \"#00ffff\"]."
+  [colors]
+  (let [def-mesh (:mesh cfg/default-scene-colors)
+        def-wire (:wire cfg/default-scene-colors)]
+    (cond
+      (string? colors) [colors def-wire]
+      (map? colors)    [(or (:mesh colors) (:color colors) def-mesh)
+                        (or (:wire colors) def-wire)]
+      :else            [def-mesh def-wire])))
+
+(defn- parse-rot-speed
+  "Normalizes rotation speed specification into a 3-element vector [rx ry rz].
+  Examples: (parse-rot-speed 0.01) -> [0.015 0.02 0.0]."
+  [speed-spec]
+  (cond
+    (vector? speed-spec) (coll/vec3 speed-spec 0.0)
+    (number? speed-spec) [(* 1.5 speed-spec) (* 2.0 speed-spec) 0.0]
+    :else                [0.01 0.015 0.0]))
+
 (defn- build-figure-mesh [fig-spec]
-  (let [geom-spec  (:geom fig-spec :torus-knot)
-        mat-spec   (:material fig-spec)
-        colors     (:colors fig-spec)
-        mesh-c     (cond
-                     (string? colors) colors
-                     (map? colors) (or (:mesh colors) (:color colors) (:mesh cfg/default-scene-colors))
-                     :else (:mesh cfg/default-scene-colors))
-        wire-c     (cond
-                     (map? colors) (or (:wire colors) (:wire cfg/default-scene-colors))
-                     :else (:wire cfg/default-scene-colors))
-        wireframe? (get mat-spec :wireframe (:wireframe? @visual-state true))
-        geom       (create-geom geom-spec)
-        mat        (build-mesh-material mesh-c wire-c wireframe? mat-spec)
-        mesh       (three/Mesh. geom mat)
-        pos        (:pos fig-spec [0 0 0])
-        rot        (:rot fig-spec [0 0 0])
-        scale      (:scale fig-spec 1.0)
-        rot-speed  (cond
-                     (vector? (:rot-speed fig-spec)) (:rot-speed fig-spec)
-                     (number? (:rot-speed fig-spec)) [(* 1.5 (:rot-speed fig-spec)) (* 2.0 (:rot-speed fig-spec)) 0.0]
-                     :else [0.01 0.015 0.0])
-        [px py pz] (if (vector? pos) pos [0 0 0])
-        [rx ry rz] (if (vector? rot) rot [0 0 0])
-        [sx sy sz] (if (vector? scale) scale [scale scale scale])]
-    (.set (.-position mesh) (or px 0) (or py 0) (or pz 0))
-    (.set (.-rotation mesh) (or rx 0) (or ry 0) (or rz 0))
-    (.set (.-scale mesh) (or sx 1) (or sy 1) (or sz 1))
+  (let [geom-spec       (:geom fig-spec :torus-knot)
+        mat-spec        (:material fig-spec)
+        [mesh-c wire-c] (parse-color-pair (:colors fig-spec))
+        wireframe?      (get mat-spec :wireframe (:wireframe? @visual-state true))
+        geom            (create-geom geom-spec)
+        mat             (build-mesh-material mesh-c wire-c wireframe? mat-spec)
+        mesh            (three/Mesh. geom mat)
+        [px py pz]      (coll/vec3 (:pos fig-spec) 0)
+        [rx ry rz]      (coll/vec3 (:rot fig-spec) 0)
+        [sx sy sz]      (coll/vec3 (:scale fig-spec 1.0) 1.0)
+        rot-speed       (parse-rot-speed (:rot-speed fig-spec))]
+    (.set (.-position mesh) px py pz)
+    (.set (.-rotation mesh) rx ry rz)
+    (.set (.-scale mesh) sx sy sz)
     {:mesh        mesh
      :geom-spec   geom-spec
      :base-pos    [px py pz]
@@ -118,10 +142,7 @@
   []
   (when-let [{:keys [scene figures ^js mesh]} (:three @engine-ctx)]
     (doseq [[_ fig-entry] figures]
-      (when-let [^js m (:mesh fig-entry)]
-        (when scene (.remove scene m))
-        (when-let [g (.-geometry m)] (.dispose ^js g))
-        (when-let [mat (.-material m)] (.dispose ^js mat))))
+      (dispose-mesh-entry! scene (:mesh fig-entry)))
     (swap! engine-ctx update :three assoc :figures {})
     (reset! visual-pulses {:default 0.0})
     (when mesh (set! (.-visible mesh) true))))
@@ -181,17 +202,12 @@
               (.set (.-position camera) cx cy cz)))
 
           (when mesh
-            (when-let [old-geom (.-geometry mesh)]
-              (.dispose ^js old-geom))
-            (when-let [old-mat (.-material mesh)]
-              (.dispose ^js old-mat))
+            (dispose-geom-mat! mesh)
             (set! (.-geometry mesh) (create-geom geom))
             (set! (.-material mesh) (build-mesh-material mesh wire wireframe? material)))
 
           (when (and scene outer-mesh)
-            (.remove scene outer-mesh)
-            (when-let [og (.-geometry outer-mesh)] (.dispose ^js og))
-            (when-let [om (.-material outer-mesh)] (.dispose ^js om)))
+            (dispose-mesh-entry! scene outer-mesh))
 
           (let [new-outer (build-outer-mesh outer-geom outer)]
             (when (and scene new-outer)
@@ -307,16 +323,12 @@
                                       (get @visual-pulses fig-id 0.0)
                                       0.0)
                       target-factor (+ 1.0 (* fig-p sensitivity 0.12))
-                      cur-x         (.-x (.-scale fm))
-                      target-x      (* (nth base-scale 0) target-factor)
-                      new-x         (lerp cur-x target-x 0.10)
-                      target-y      (* (nth base-scale 1) target-factor)
-                      new-y         (lerp (.-y (.-scale fm)) target-y 0.10)
-                      target-z      (* (nth base-scale 2) target-factor)
-                      new-z         (lerp (.-z (.-scale fm)) target-z 0.10)]
-                  (when (not (.-visible fm))
+                      target-scale  (mapv #(* % target-factor) base-scale)
+                      cur-scale     [(.. fm -scale -x) (.. fm -scale -y) (.. fm -scale -z)]
+                      [nx ny nz]    (lerp-v3 cur-scale target-scale 0.10)]
+                  (when-not (.-visible fm)
                     (set! (.-visible fm) true))
-                  (.set (.-scale fm) new-x new-y new-z)
+                  (.set (.-scale fm) nx ny nz)
                   (set! (.. fm -rotation -x) (+ (.. fm -rotation -x) (nth rot-speed 0)))
                   (set! (.. fm -rotation -y) (+ (.. fm -rotation -y) (nth rot-speed 1)))
                   (set! (.. fm -rotation -z) (+ (.. fm -rotation -z) (nth rot-speed 2)))
