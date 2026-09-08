@@ -83,6 +83,7 @@ pub struct TritonchaEngine {
 
     delay: StereoDelay,
     reverb: StereoReverb,
+    pub triggered_tracks_mask: u32,
 }
 
 impl TritonchaEngine {
@@ -128,7 +129,15 @@ impl TritonchaEngine {
             sidechain: SidechainPump::new(),
             delay: StereoDelay::new(),
             reverb: StereoReverb::with_sample_rate(sr),
+            triggered_tracks_mask: 0,
         }
+    }
+
+    #[inline]
+    pub fn take_triggered_tracks_mask(&mut self) -> u32 {
+        let mask = self.triggered_tracks_mask;
+        self.triggered_tracks_mask = 0;
+        mask
     }
 }
 
@@ -422,7 +431,7 @@ impl TritonchaEngine {
         let mut events: [(i32, f32, f32, f32); MAX_TRACKS] = [(-1, 0.0, 0.0, 0.0); MAX_TRACKS];
         let mut count = 0;
 
-        for tr in &self.tracks {
+        for (tr_idx, tr) in self.tracks.iter().enumerate() {
             if !tr.is_audible(self.solo_active) {
                 continue;
             }
@@ -453,6 +462,7 @@ impl TritonchaEngine {
                 };
                 events[count] = (inst_id, freq, vel, dur_s);
                 count += 1;
+                self.triggered_tracks_mask |= 1 << (tr_idx as u32);
             }
         }
 

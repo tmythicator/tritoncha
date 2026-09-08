@@ -11,6 +11,7 @@
 (def worklet-ready? transport/worklet-ready?)
 (def get-audio-context transport/get-audio-context)
 (def on-worklet-ready! transport/on-worklet-ready!)
+(def on-trigger-event! transport/on-trigger-event!)
 (def send-msg! transport/send-msg!)
 
 ;; Hardware Sequencer Slot Management

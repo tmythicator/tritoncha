@@ -140,6 +140,19 @@ pub unsafe extern "C" fn tritoncha_dsp_solo_track(
     }
 }
 
+/// Retrieves and resets the bitmask of tracks that triggered steps in the sequencer.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_take_trigger_mask(ptr: *mut TritonchaEngine) -> u32 {
+    if let Some(engine) = ptr.as_mut() {
+        engine.take_triggered_tracks_mask()
+    } else {
+        0
+    }
+}
+
 /// Configures mixer bus gain, mute status, and effect send levels.
 ///
 /// # Safety

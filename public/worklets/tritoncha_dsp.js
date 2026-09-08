@@ -335,6 +335,13 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
       if (channelRight) {
         channelRight.set(this.outRightView);
       }
+
+      if (this.wasmExports.tritoncha_dsp_take_trigger_mask) {
+        const triggerMask = this.wasmExports.tritoncha_dsp_take_trigger_mask(this.wasmEnginePtr);
+        if (triggerMask > 0) {
+          this.port.postMessage({ type: 'triggers', mask: triggerMask });
+        }
+      }
     } else {
       channelLeft.fill(0);
       if (channelRight) {
