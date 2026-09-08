@@ -4,7 +4,44 @@
             [app.audio.theory.patterns :refer [pattern]]))
 
 (def core-tracks
-  {:metro-roller
+  {:orbital-matrix
+   {:name   "Orbital Multi-Object Matrix"
+    :mod    :analog
+    :bpm    168
+    :scale  [:e :phrygian 1]
+    :colors ["#050410" "#00ffcc"]
+    :cutoff 5200
+    :figures
+    {:core   {:geom :torus-knot  :pos [0 0 0]     :scale 1.05 :colors {:mesh "#ff007f" :wire "#00ffff"} :rot-speed [0.006 0.009 0.0]}
+     :halo   {:geom :torus       :pos [0 2.8 0]   :rot [1.57 0 0] :scale 0.75 :colors {:mesh "#00ffff" :wire "#ffffff"} :rot-speed [0.002 0.010 0.0]}
+     :pillar {:geom :cylinder    :pos [-4.2 0 0]  :scale 0.85 :colors {:mesh "#9d4edd" :wire "#00ffcc"} :rot-speed [0.008 0.005 0.0]}
+     :sat    {:geom :octahedron  :pos [4.2 0 0]   :scale 0.80 :colors {:mesh "#00ffcc" :wire "#9d4edd"} :rot-speed [0.009 0.007 0.004]}
+     :ring   {:geom :dodecahedron :pos [0 -2.8 0] :scale 0.75 :colors {:mesh "#ffe600" :wire "#ff3300"} :rot-speed [0.005 0.009 0.003]}}
+    :tracks
+    {:kick    {:figure :core
+               :notes (pattern "k_ . . .  . . k_ .  . . . .  . . k_ .
+                               k_ . . .  . . k_ .  . . k_ .  . . . k_")
+               :step "16n"}
+     :snare   {:figure :halo
+               :notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .
+                               . . . .  rs . . g_  . . . .  rs . clk_ .")
+               :step "16n"}
+     :hats    {:figure :ring
+               :notes (pattern "hc_ . h_ .  hc_ . o_ .  hc_ . h_ clk_  hc_ . o_ .
+                               hc_ . h_ .  hc_ . o_ .  hc_ clk_ h_ .  hc_ . o_ .")
+               :step "16n"}
+     :bass    {:figure :pillar
+               :inst :bass-liquid
+               :notes (deg :e :phrygian [1 _ 1 2  _ 1 4 3  1 _ 5 4  _ 2 1 _
+                                         1 _ _ 2  _ 1 :b5 _  1 _ 4 3  _ 2 1 _] {:octave 1})
+               :step "16n" :dur "8n" :vel 0.75}
+     :echo    {:figure :sat
+               :inst :pad-glass
+               :bus  :bus/space
+               :notes (deg :e :phrygian [nil nil 1 nil  nil 3 nil nil  nil :b5 nil 5  nil 4 nil 2] {:octave 3})
+               :step "16n" :dur "16n" :vel 0.35}}}
+
+   :metro-roller
    {:name   "Metro Trip-Hop Roller"
     :mod    :natural
     :bpm    160

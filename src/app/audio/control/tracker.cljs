@@ -13,7 +13,7 @@
             [app.lib.tracks :refer [core-tracks]]
             [app.state :refer [audio-state repl-registry]]
             [app.utils.coll :as coll]
-            [app.visuals.engine :refer [set-colors! set-geometry!]]))
+            [app.visuals.engine :refer [clear-figures! set-colors! set-figures! set-geometry!]]))
 
 (defn register-track!
   "Registers or updates a dynamic track in the REPL registry."
@@ -57,7 +57,7 @@
                      (keyword? target-key) target-key
                      (keyword? preset-spec) preset-spec
                      :else :custom)
-        {:keys [bpm scale geom colors cutoff tracks mod kit]} preset-map
+        {:keys [bpm scale geom figures colors cutoff tracks mod kit]} preset-map
         [bg-c mesh-c] (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])]
 
     (swap! audio-state assoc :current-jam preset-key :active? true :track-cutoff cutoff)
@@ -67,7 +67,11 @@
       (let [[r m oct] scale]
         (session/set-key! r m (or oct (:octave cfg/default-key 1)))))
     (when bpm (set-bpm! bpm))
-    (when geom (set-geometry! geom))
+    (if (and figures (seq figures))
+      (set-figures! figures)
+      (do
+        (clear-figures!)
+        (when geom (set-geometry! geom))))
     (when colors (set-colors! bg-c mesh-c))
     (when cutoff (set-filter-cutoff! cutoff))
 

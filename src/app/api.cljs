@@ -184,6 +184,8 @@
 (def set-colors! visuals/set-colors!)
 (def w! visuals/toggle-wireframe!)
 (def toggle-wireframe! visuals/toggle-wireframe!)
+(def set-figures! visuals/set-figures!)
+(def clear-figures! visuals/clear-figures!)
 (def pulse! state/pulse!)
 
 ;; Realtime Diagnostics + UI HUD Overlays

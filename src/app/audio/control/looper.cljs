@@ -6,7 +6,7 @@
             [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
-            [app.state :refer [audio-state]]
+            [app.state :refer [audio-state pulse!]]
             [app.utils.audio :as audio-utils]
             [app.utils.math :refer [clamp]]
             [clojure.string :as str]
@@ -113,6 +113,29 @@
       (worklet/set-playing! true))))
 
 (worklet/on-worklet-ready! sync-all-active-tracks!)
+
+(defn- handle-sequencer-triggers!
+  "Dispatches hardware sequencer step triggers to bound visual figures and default pulse."
+  [mask]
+  (when (pos? mask)
+    (let [assignments @worklet/track-slot-assignments
+          active      (:active-tracks @audio-state)]
+      (doseq [[tk slot] assignments]
+        (when (pos? (bit-and mask (bit-shift-left 1 slot)))
+          (let [tr        (get active tk)
+                pat       (when tr (let [p (:pattern tr)] (if (satisfies? IDeref p) @p p)))
+                muted?    (boolean (:muted? pat false))
+                fig       (or (:figure pat) (:fig pat) tk)
+                vel       (let [v (:vel pat)] (if (number? v) v 0.85))
+                pulse-amt (or (:pulse pat) (* 1.0 vel))]
+            (when-not muted?
+              (pulse! fig pulse-amt)))))
+      (let [kick-slot (get assignments :kick)
+            kick-hit? (and kick-slot (pos? (bit-and mask (bit-shift-left 1 kick-slot))))]
+        (when kick-hit?
+          (pulse! :default 0.7))))))
+
+(worklet/on-trigger-event! handle-sequencer-triggers!)
 
 (defn loop!
   "Schedules or hot-swaps an audio loop track in the live-coding session.
