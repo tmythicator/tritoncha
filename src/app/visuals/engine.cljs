@@ -292,6 +292,28 @@
       (when-let [figs (:figures cur-scene)]
         (set-figures! figs)))))
 
+(defn- update-figure-frame!
+  "Updates transform, rotation and pulse decay for an individual multi-figure mesh."
+  [fig-id fig-entry sensitivity]
+  (let [^js fm        (:mesh fig-entry)
+        base-scale    (:base-scale fig-entry [1.0 1.0 1.0])
+        rot-speed     (:rot-speed fig-entry [0.006 0.01 0.0])
+        fig-p         (if (:pulseable? fig-entry true)
+                        (get @visual-pulses fig-id 0.0)
+                        0.0)
+        target-factor (+ 1.0 (* fig-p sensitivity cfg/default-figure-scale-factor))
+        target-scale  (mapv #(* % target-factor) base-scale)
+        cur-scale     [(.. fm -scale -x) (.. fm -scale -y) (.. fm -scale -z)]
+        [nx ny nz]    (lerp-v3 cur-scale target-scale cfg/default-figure-lerp)]
+    (when-not (.-visible fm)
+      (set! (.-visible fm) true))
+    (.set (.-scale fm) nx ny nz)
+    (set! (.. fm -rotation -x) (+ (.. fm -rotation -x) (nth rot-speed 0)))
+    (set! (.. fm -rotation -y) (+ (.. fm -rotation -y) (nth rot-speed 1)))
+    (set! (.. fm -rotation -z) (+ (.. fm -rotation -z) (nth rot-speed 2)))
+    (when (pos? fig-p)
+      (swap! visual-pulses assoc fig-id (js/Math.max 0.0 (- fig-p cfg/default-figure-decay))))))
+
 (defn render-loop!
   "Audio-reactive WebGL animation loop."
   []
@@ -316,24 +338,7 @@
               (when (and mesh (.-visible mesh))
                 (set! (.-visible mesh) false))
               (doseq [[fig-id fig-entry] figures]
-                (let [^js fm        (:mesh fig-entry)
-                      base-scale    (:base-scale fig-entry [1.0 1.0 1.0])
-                      rot-speed     (:rot-speed fig-entry [0.006 0.01 0.0])
-                      fig-p         (if (:pulseable? fig-entry true)
-                                      (get @visual-pulses fig-id 0.0)
-                                      0.0)
-                      target-factor (+ 1.0 (* fig-p sensitivity 0.12))
-                      target-scale  (mapv #(* % target-factor) base-scale)
-                      cur-scale     [(.. fm -scale -x) (.. fm -scale -y) (.. fm -scale -z)]
-                      [nx ny nz]    (lerp-v3 cur-scale target-scale 0.10)]
-                  (when-not (.-visible fm)
-                    (set! (.-visible fm) true))
-                  (.set (.-scale fm) nx ny nz)
-                  (set! (.. fm -rotation -x) (+ (.. fm -rotation -x) (nth rot-speed 0)))
-                  (set! (.. fm -rotation -y) (+ (.. fm -rotation -y) (nth rot-speed 1)))
-                  (set! (.. fm -rotation -z) (+ (.. fm -rotation -z) (nth rot-speed 2)))
-                  (when (pos? fig-p)
-                    (swap! visual-pulses assoc fig-id (js/Math.max 0.0 (- fig-p 0.035)))))))
+                (update-figure-frame! fig-id fig-entry sensitivity)))
             (do
               (when (and mesh (not (.-visible mesh)))
                 (set! (.-visible mesh) true))

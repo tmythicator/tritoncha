@@ -26,6 +26,10 @@
 (def default-scale-lerp 0.18)
 (def default-pulse-scale-factor 0.4)
 
+(def default-figure-scale-factor 0.12)
+(def default-figure-lerp 0.10)
+(def default-figure-decay 0.035)
+
 (def default-scene :cyber-torus)
 (def default-geometry :torus-knot)
 (def default-scene-colors
