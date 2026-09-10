@@ -314,6 +314,45 @@
     (when (pos? fig-p)
       (swap! visual-pulses assoc fig-id (js/Math.max 0.0 (- fig-p cfg/default-figure-decay))))))
 
+(defn- hide-all-meshes!
+  "Hides all meshes when canvas is hidden or scene is none."
+  [^js mesh ^js outer figures]
+  (when (and mesh (.-visible mesh))
+    (set! (.-visible mesh) false))
+  (when outer
+    (set! (.-visible outer) false))
+  (doseq [[_ fe] figures]
+    (when-let [^js fm (:mesh fe)]
+      (when (.-visible fm)
+        (set! (.-visible fm) false)))))
+
+(defn- update-default-mesh-frame!
+  "Updates transform, scale pulse, and rotation for the central single 3D mesh."
+  [^js mesh ^js outer animate sensitivity camera-speed]
+  (when (and mesh (not (.-visible mesh)))
+    (set! (.-visible mesh) true))
+  (let [pulse        @visual-pulse
+        target-scale (+ 1.0 (* pulse sensitivity cfg/default-pulse-scale-factor))
+        cur-scale    (if mesh (.-x (.-scale mesh)) 1.0)
+        new-scale    (lerp cur-scale target-scale cfg/default-scale-lerp)]
+    (when (pos? pulse)
+      (reset! visual-pulse (js/Math.max 0.0 (- pulse cfg/default-pulse-decay))))
+    (when mesh
+      (.set (.-scale mesh) new-scale new-scale new-scale))
+    (if (fn? animate)
+      (animate {:mesh         mesh
+                :outer        outer
+                :camera-speed camera-speed
+                :sensitivity  sensitivity
+                :pulse        pulse
+                :scale        new-scale})
+      (do
+        (when mesh
+          (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 1.5)))
+          (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 2.0))))
+        (when outer
+          (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5))))))))
+
 (defn render-loop!
   "Audio-reactive WebGL animation loop."
   []
@@ -323,50 +362,20 @@
         none?    (or (= :none (keyword scene-k)) (= :none (keyword mesh-k)))]
     (when-let [{:keys [scene camera ^js renderer ^js mesh ^js outer animate figures]} (:three @engine-ctx)]
       (if (or hidden? none?)
-        (do
-          (when (and mesh (.-visible mesh))
-            (set! (.-visible mesh) false))
-          (when outer (set! (.-visible outer) false))
-          (doseq [[_ fe] figures]
-            (when-let [^js fm (:mesh fe)]
-              (when (.-visible fm) (set! (.-visible fm) false))))
-          (.render renderer scene camera))
-        (let [{:keys [sensitivity camera-speed]} @visual-state
-              has-figures? (boolean (and figures (seq figures)))]
-          (if has-figures?
+        (hide-all-meshes! mesh outer figures)
+        (let [{:keys [sensitivity camera-speed]} @visual-state]
+          (if (seq figures)
             (do
               (when (and mesh (.-visible mesh))
                 (set! (.-visible mesh) false))
               (doseq [[fig-id fig-entry] figures]
                 (update-figure-frame! fig-id fig-entry sensitivity)))
-            (do
-              (when (and mesh (not (.-visible mesh)))
-                (set! (.-visible mesh) true))
-              (let [pulse        @visual-pulse
-                    target-scale (+ 1.0 (* pulse sensitivity cfg/default-pulse-scale-factor))
-                    cur-scale    (if mesh (.-x (.-scale mesh)) 1.0)
-                    new-scale    (lerp cur-scale target-scale cfg/default-scale-lerp)]
-                (when (pos? pulse)
-                  (reset! visual-pulse (js/Math.max 0.0 (- pulse cfg/default-pulse-decay))))
-                (when mesh
-                  (.set (.-scale mesh) new-scale new-scale new-scale))
-                (if (fn? animate)
-                  (animate {:mesh         mesh
-                            :outer        outer
-                            :camera-speed camera-speed
-                            :sensitivity  sensitivity
-                            :pulse        pulse
-                            :scale        new-scale})
-                  (do
-                    (when mesh
-                      (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 1.5)))
-                      (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 2.0))))
-                    (when outer
-                      (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5)))))))))
+            (update-default-mesh-frame! mesh outer animate sensitivity camera-speed))
           (when outer
-            (when (not (.-visible outer)) (set! (.-visible outer) true))
-            (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5))))
-          (.render renderer scene camera)))))
+            (when-not (.-visible outer)
+              (set! (.-visible outer) true))
+            (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5))))))
+      (.render renderer scene camera)))
   (js/requestAnimationFrame render-loop!))
 
 (defn set-geometry!
