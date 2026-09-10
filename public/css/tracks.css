@@ -1,6 +1,4 @@
-/* ==========================================================================
-   Track Presets Library Modal
-   ========================================================================== */
+/* Track library modal */
 
 .track-browser-modal {
     position: fixed;
@@ -40,7 +38,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: all var(--transition-fast);
 
     &:hover {
         border-color: var(--border-primary-subtle);

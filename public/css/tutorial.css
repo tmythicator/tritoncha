@@ -1,6 +1,4 @@
-/* ==========================================================================
-   Interactive Live REPL Tutorial Modal
-   ========================================================================== */
+/* Tutorial modal */
 
 .neo-tutorial-card {
     position: fixed;
@@ -41,6 +39,8 @@
     min-height: 0;
 }
 
+/* Modal tabs */
+
 .neo-modal-tabs {
     display: flex;
     align-items: center;
@@ -67,6 +67,8 @@
         background: var(--bg-interactive-hover);
     }
 }
+
+/* Scratchpad and toolbar */
 
 .scratchpad-container {
     display: flex;
@@ -137,6 +139,8 @@
     }
 }
 
+/* Code editor stage */
+
 .neo-editor-stage {
     position: relative;
     width: 100%;
@@ -151,7 +155,7 @@
 
     &:focus-within {
         border-color: var(--border-primary);
-        box-shadow: var(--glow-focus);
+        box-shadow: none;
     }
 }
 
@@ -185,7 +189,7 @@
 
 .neo-editor-highlight {
     pointer-events: none;
-    background: transparent !important;
+    background: transparent;
     color: var(--editor-text-default);
     z-index: 2;
 
@@ -199,30 +203,33 @@
 }
 
 .neo-code-editor {
-    background: var(--editor-bg) !important;
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-    caret-color: var(--editor-caret) !important;
+    background: var(--editor-bg);
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    caret-color: var(--editor-caret);
     z-index: 1;
     resize: none;
 
     &::selection {
-        background: var(--editor-selection) !important;
+        background: var(--editor-selection);
     }
 }
 
-/* High-Contrast Cyberpunk Syntax Highlighting Tokens */
-.syn-comment  { color: var(--syn-comment) !important; font-style: italic; font-weight: 500; }
-.syn-string   { color: var(--syn-string) !important; font-weight: 600; text-shadow: var(--syn-string-glow); }
-.syn-keyword  { color: var(--syn-keyword) !important; font-weight: 700; text-shadow: var(--syn-keyword-glow); }
-.syn-number   { color: var(--syn-number) !important; font-weight: 600; }
-.syn-paren    { color: var(--syn-paren) !important; font-weight: 700; }
-.syn-bracket  { color: var(--syn-bracket) !important; font-weight: 700; }
-.syn-brace    { color: var(--syn-brace) !important; font-weight: 700; }
-.syn-live     { color: var(--syn-live) !important; font-weight: 800; text-shadow: var(--syn-live-glow); }
-.syn-core     { color: var(--syn-core) !important; font-weight: 700; }
-.syn-const    { color: var(--syn-const) !important; font-weight: 700; }
-.syn-ident    { color: var(--syn-ident) !important; font-weight: 500; }
+/* Syntax highlighting */
+
+.syn-comment  { color: var(--syn-comment); font-style: italic; font-weight: 500; }
+.syn-string   { color: var(--syn-string); font-weight: 600; }
+.syn-keyword  { color: var(--syn-keyword); font-weight: 700; }
+.syn-number   { color: var(--syn-number); font-weight: 600; }
+.syn-paren    { color: var(--syn-paren); font-weight: 700; }
+.syn-bracket  { color: var(--syn-bracket); font-weight: 700; }
+.syn-brace    { color: var(--syn-brace); font-weight: 700; }
+.syn-live     { color: var(--syn-live); font-weight: 800; }
+.syn-core     { color: var(--syn-core); font-weight: 700; }
+.syn-const    { color: var(--syn-const); font-weight: 700; }
+.syn-ident    { color: var(--syn-ident); font-weight: 500; }
+
+/* Evaluation output console */
 
 .neo-output-container {
     display: flex;
@@ -247,13 +254,11 @@
 
     &.output-ok {
         border-color: var(--border-success-subtle);
-        .output-prompt { color: var(--text-success); }
-        .output-text   { color: var(--text-success); }
+        .output-text { color: var(--text-success); }
     }
 
     &.output-err {
         border-color: var(--border-danger-subtle);
-        .output-prompt { color: var(--text-danger); }
-        .output-text   { color: var(--text-danger); }
+        .output-text { color: var(--text-danger); }
     }
 }
