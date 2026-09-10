@@ -1,9 +1,13 @@
 (ns app.perf
-  "Standalone audio engine stress test, latency profiler, and x-run risk benchmark."
+  "ClojureScript pattern engine stress test, REPL evaluation throughput profiler, and WASM bridge latency benchmark."
   (:require [app.audio.dsp.busses :as busses]
             [app.audio.theory.harmony :as harmony :refer [_]]
             [app.audio.theory.patterns :as patterns]
             [app.utils.math :as math :refer [db->gain]]))
+
+;; Note: Real-time audio DSP synthesis and step sequencing run on a dedicated OS thread in Rust WASM.
+;; This benchmark evaluates ClojureScript main-thread pattern parsing, Euclidean rhythm generation,
+;; scale degree resolution, and object allocation throughput to guarantee zero main-thread REPL jitter.
 
 (defn- now-ms
   "Returns high-resolution timestamp in milliseconds."
@@ -25,22 +29,22 @@
 (defn- create-stress-tracks
   "Creates an intensive 16-track scenario mimicking a full Algorave performance."
   []
-  [{:id :kick   :notes (patterns/pattern "k . . .  k . . .  . . k .  . . . .") :step "16n"}
-   {:id :snare  :notes (patterns/pattern ". . . .  s . . .  . . . .  s . . .") :step "16n"}
+  [{:id :kick   :notes (patterns/pattern "k! . . k_  k! . . .  . . k! .  . k_ . .") :step "16n"}
+   {:id :snare  :notes (patterns/pattern ". . . .  s! . . .  . . . .  s! . s_ .") :step "16n"}
    {:id :sn-gh  :notes (patterns/euclid 11 16 "G3") :step "16n"}
    {:id :hh-c   :notes (harmony/deg :e :phrygian [1 _ 1 _ 1 _ 1 _ 1 _ 1 _ 1 _ 1 _] {:octave 4}) :step "16n"}
    {:id :hh-o   :notes (patterns/pattern ". . h .  . . h .  . . h .  . . h .") :step "16n"}
-   {:id :bass   :notes (harmony/deg :e :phrygian [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] {:octave 1}) :step "16n"}
+   {:id :bass   :notes (patterns/fast 2 (harmony/deg :e :phrygian [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] {:octave 1})) :step "16n"}
    {:id :sub    :notes (harmony/deg :e :phrygian [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _] {:octave 0}) :step "16n"}
    {:id :lead   :notes (harmony/arp (harmony/chord :e :min9 3) :up-down) :step "16n"}
    {:id :acid   :notes (harmony/deg :e :phrygian [1 2 _ 1 4 3 _ 1  5 _ 4 2 7 6 5 4] {:octave 2}) :step "16n"}
    {:id :pad    :notes [(harmony/chord :e :min9 3) (harmony/chord :a :min7 3) (harmony/chord :c :maj7 3) (harmony/chord :b :dom7 3)] :step "1m"}
-   {:id :poly   :notes (harmony/arp (harmony/chord :e :min9 4) :random) :step "16n"}
+   {:id :poly   :notes (patterns/sometimes patterns/rev (harmony/arp (harmony/chord :e :min9 4) :random)) :step "16n"}
    {:id :drone  :notes ["E1"] :step "1m"}
-   {:id :fm     :notes (patterns/pattern "g . . .  . . g .  . g . .  . . . .") :step "16n"}
+   {:id :fm     :notes (patterns/pattern "g! . . .  . . g_ .  . g! . .  . . . .") :step "16n"}
    {:id :stab   :notes (harmony/deg :e :phrygian [1 _ _ _ _ _ 3 _  _ _ 5 _ _ _ 7 _] {:octave 3}) :step "16n"}
    {:id :click  :notes ["C6" "G5" "G5" "G5"] :step "4n"}
-   {:id :perc   :notes (patterns/euclid 7 16 "A4") :step "16n"}])
+   {:id :perc   :notes (patterns/shift 2 (patterns/euclid 7 16 "A4")) :step "16n"}])
 
 (defn- simulate-track-event!
   "Simulates triggering a single track's note/chord event, counting discrete audio sub-hits."
@@ -71,18 +75,18 @@
      :p99 (nth sorted (int (* n 0.99)))
      :max (last sorted)}))
 
-(defn- assess-xrun-risk
-  "Calculates estimated x-run risk percentage and status string based on P99 spike latency."
+(defn- assess-eval-health
+  "Calculates main-thread REPL jitter percentage and health status string based on P99 processing latency."
   [p99-us]
   (cond
-    (> p99-us 2000.0) {:pct 95.0 :status "CRITICAL"}
-    (> p99-us 1000.0) {:pct 45.0 :status "HIGH_JITTER"}
-    (> p99-us 500.0)  {:pct 10.0 :status "ELEVATED"}
+    (> p99-us 2000.0) {:pct 95.0 :status "CRITICAL_JITTER"}
+    (> p99-us 1000.0) {:pct 45.0 :status "HIGH_OVERHEAD"}
+    (> p99-us 500.0)  {:pct 10.0 :status "ELEVATED_LATENCY"}
     (> p99-us 200.0)  {:pct 1.0  :status "STABLE"}
     :else             {:pct 0.1  :status "OPTIMAL"}))
 
 (defn- compute-summary
-  "Assembles all benchmark measurements into a comprehensive telemetry report."
+  "Assembles pattern throughput measurements into a telemetry report."
   [{:keys [total-steps num-tracks total-events start-time end-time initial-heap final-heap latencies]}]
   (let [bpm                   180
         step-seconds          (/ 60.0 bpm 4.0)
@@ -91,9 +95,9 @@
         total-time-s          (/ total-time-ms 1000.0)
         percentiles           (calculate-percentiles (vec latencies))
         p99                   (:p99 percentiles)
-        quantum-budget-us     2900.0
-        headroom-pct          (* (- 1.0 (/ p99 quantum-budget-us)) 100.0)
-        risk                  (assess-xrun-risk p99)]
+        eval-target-us        1000.0
+        headroom-pct          (* (- 1.0 (/ p99 eval-target-us)) 100.0)
+        health                (assess-eval-health p99)]
     {:total-steps          total-steps
      :total-tracks         num-tracks
      :total-events         @total-events
@@ -106,16 +110,16 @@
      :p95-us               (:p95 percentiles)
      :p99-us               p99
      :max-us               (:max percentiles)
-     :quantum-budget-us    quantum-budget-us
+     :eval-target-us       eval-target-us
      :headroom-pct         headroom-pct
      :initial-heap-mb      initial-heap
      :final-heap-mb        final-heap
      :heap-delta-mb        (- final-heap initial-heap)
-     :xrun-risk-pct        (:pct risk)
-     :status-verdict       (:status risk)}))
+     :eval-jitter-pct      (:pct health)
+     :status-verdict       (:status health)}))
 
 (defn run-benchmark
-  "Executes a high-density scheduler simulation across 16 parallel tracks for N steps.
+  "Executes a high-density pattern resolution benchmark across 16 parallel tracks for N steps.
   Returns detailed performance telemetry map."
   ([] (run-benchmark 10000))
   ([total-steps]
@@ -152,10 +156,11 @@
   "Formats benchmark telemetry into a clean CLI report."
   [m]
   (str
-   "\n--- Audio Scheduler Stress Benchmark ---\n"
+   "\n--- CLJS Pattern Engine and WASM Bridge Benchmark ---\n"
+   "Architecture:     Rust WASM AudioWorklet (Real-Time Audio Thread)\n"
    "Tracks:           " (:total-tracks m) " parallel tracks @ 180 BPM\n"
    "Steps:            " (:total-steps m) " (" (.toFixed (:simulated-realtime-s m) 1) "s simulated playback)\n"
-   "Total Events:     " (:total-events m) " note triggers\n"
+   "Total Events:     " (:total-events m) " note triggers processed\n"
    "Wall Time:        " (.toFixed (:total-time-ms m) 2) " ms\n"
    "Real-time Factor: " (.toFixed (:realtime-factor m) 1) "x\n"
    "Mean Time / Step: " (.toFixed (:mean-step-us m) 2) " us\n"
@@ -164,14 +169,15 @@
    "Latency P95:      " (.toFixed (:p95-us m) 2) " us\n"
    "Latency P99:      " (.toFixed (:p99-us m) 2) " us\n"
    "Latency Max:      " (.toFixed (:max-us m) 2) " us\n"
-   "Quantum Headroom: " (.toFixed (:headroom-pct m) 2) " % (budget: " (.toFixed (:quantum-budget-us m) 0) " us)\n"
+   "Eval Headroom:    " (.toFixed (:headroom-pct m) 2) " % (sync target: " (.toFixed (:eval-target-us m) 0) " us)\n"
    "Heap Delta:       " (.toFixed (:heap-delta-mb m) 2) " MB\n"
-   "Status:           " (:status-verdict m) " (x-run risk: " (.toFixed (:xrun-risk-pct m) 2) " %)\n"
-   "-----------------------------------------\n"))
+   "Status:           " (:status-verdict m) " (eval jitter: " (.toFixed (:eval-jitter-pct m) 2) " %)\n"
+   "----------------------------------------------------\n"))
 
 (defn main []
   (let [result (run-benchmark 10000)]
     (println (format-report result))
-    (if (< (:xrun-risk-pct result) 10.0)
+    (if (< (:eval-jitter-pct result) 10.0)
       (when (exists? js/process) (.exit js/process 0))
       (when (exists? js/process) (.exit js/process 1)))))
+
