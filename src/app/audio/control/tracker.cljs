@@ -10,7 +10,7 @@
             [app.audio.theory.patterns :refer [pattern]]
             [app.config :as cfg]
             [app.custom.tracks :refer [user-tracks]]
-            [app.lib.tracks :refer [core-tracks]]
+            [app.lib.tracks :refer [core-track-order core-tracks]]
             [app.state :refer [audio-state repl-registry]]
             [app.utils.coll :as coll]
             [app.visuals.engine :refer [clear-figures! set-colors! set-figures! set-geometry!]]))
@@ -22,7 +22,7 @@
   track-key)
 
 (def ^:private track-aliases
-  {:roller :metro-roller})
+  {})
 
 (defn all-tracks
   "Returns a merged map of core built-in tracks, user custom tracks, and REPL tracks."
@@ -30,29 +30,41 @@
   (merge core-tracks user-tracks (:tracks @repl-registry)))
 
 (defn track-keys
-  "Returns a vector of all available track keywords across core, custom, and REPL catalogs."
+  "Returns a vector of all available track keywords across core, custom, and REPL catalogs,
+  preserving core declaration order followed by custom and REPL tracks."
   []
-  (vec (keys (all-tracks))))
+  (let [core-keys   core-track-order
+        custom-keys (keys user-tracks)
+        repl-keys   (keys (:tracks @repl-registry))]
+    (vec (distinct (concat core-keys custom-keys repl-keys)))))
 
 (defn default-track-key
-  "Returns the default track keyword."
+  "Returns the default track keyword (the first available track in catalog order)."
   []
-  (or (first (track-keys)) :metro-roller))
+  (first (track-keys)))
+
+(defn- resolve-track-key
+  "Resolves track aliases (e.g. :roller to the default track), index numbers, or returns the preset spec as-is."
+  [preset-spec]
+  (cond
+    (integer? preset-spec)  (nth (track-keys) preset-spec nil)
+    (= preset-spec :roller) (default-track-key)
+    (keyword? preset-spec)  (get track-aliases preset-spec preset-spec)
+    :else preset-spec))
 
 (defn play-preset!
-  "Launches a track by keyword (from all-tracks) or custom data map.
-  Examples: (play-preset! :metro-roller), (play-preset! {:bpm 165 :scale [:f :phrygian 1] ...})."
+  "Launches a track by keyword (from all-tracks), 0-based catalog index, or custom data map.
+  Examples: (play-preset! 0), (play-preset! :roller), (play-preset! {:bpm 165 :scale [:f :phrygian 1] ...})."
   [preset-spec]
   (init-audio!)
   (stop!)
   (let [available  (all-tracks)
-        target-key (if (keyword? preset-spec)
-                     (get track-aliases preset-spec preset-spec)
-                     preset-spec)
+        def-key    (default-track-key)
+        target-key (resolve-track-key preset-spec)
         preset-map (cond
                      (map? target-key) target-key
                      (contains? available target-key) (get available target-key)
-                     :else (or (val (first available)) (get core-tracks :metro-roller)))
+                     :else (or (get available def-key) (val (first available))))
         preset-key (cond
                      (keyword? target-key) target-key
                      (keyword? preset-spec) preset-spec
@@ -77,6 +89,13 @@
 
     (doseq [[track-name track-opts] tracks]
       (loop! track-name track-opts))))
+
+(defn play-track-at!
+  "Launches the track preset at the specified 0-based index from the catalog.
+  Examples: (play-track-at! 0) -> plays the 1st track in library order."
+  [idx]
+  (when-let [k (nth (track-keys) idx nil)]
+    (play-preset! k)))
 
 (defn toggle-play!
   "Toggles playback between active jam preset and stop.
@@ -108,15 +127,18 @@
 
 (defn jam-list
   "Returns a vector of metadata maps for all available jam presets across core, custom, and REPL catalogs.
+  Preserves exact declaration order from track-keys.
   Useful for UI dropdowns, modals, and preset preview cards."
   []
-  (mapv (fn [[k t]]
-          {:id    k
-           :name  (or (:name t) (name k))
-           :bpm   (or (:bpm t) 168)
-           :scale (or (:scale t) [:e :minor 1])
-           :geom  (or (:geom t) :torus-knot)})
-        (all-tracks)))
+  (let [tracks-map (all-tracks)]
+    (mapv (fn [k]
+            (let [t (get tracks-map k)]
+              {:id    k
+               :name  (or (:name t) (name k))
+               :bpm   (or (:bpm t) 168)
+               :scale (or (:scale t) [:e :minor 1])
+               :geom  (or (:geom t) :torus-knot)}))
+          (track-keys))))
 
 (defn reload-track!
   "Reloads and restarts the currently active track preset with updated track data."

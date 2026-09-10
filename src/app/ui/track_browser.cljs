@@ -1,5 +1,5 @@
 (ns app.ui.track-browser
-  "Modal track browser and preset preview selector for all 20 catalog tracks."
+  "Modal track browser and preset preview selector for catalog tracks."
   (:require
    [app.audio.control.tracker :as tracker]
    [app.state :refer [audio-state]]
@@ -11,11 +11,11 @@
       (str (str/upper-case (name (or root :e))) " " (str/capitalize (name (or mode :minor)))))
     "Custom"))
 
-(defn- track-header [on-close]
+(defn- track-header [on-close track-count]
   [:div.neo-header
    [:div.neo-title
     [:span.neo-prompt "> "]
-    [:span "TRACK PRESETS LIBRARY (20 TRACKS)"]]
+    [:span (str "TRACK PRESETS LIBRARY (" track-count " TRACKS)")]]
    [:button.neo-btn-close {:on-click on-close
                            :aria-label "Close track browser"}
     "[X]"]])
@@ -53,8 +53,8 @@
     [:div.track-browser-modal
      {:role       "dialog"
       :aria-modal true
-      :aria-label "Track Presets Library (20 Tracks)"}
-     [track-header on-close]
+      :aria-label (str "Track Presets Library (" (count jams) " Tracks)")}
+     [track-header on-close (count jams)]
 
      [:div.track-browser-list
       (doall

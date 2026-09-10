@@ -1,6 +1,7 @@
 (ns app.state
   "Source of truth for UI, audio, visuals, REPL and engine states."
   (:require [app.config :as cfg]
+            [app.lib.tracks :refer [core-track-order]]
             [reagent.core :as r]))
 
 (defonce ui-state
@@ -14,7 +15,7 @@
 (defonce audio-state
   (r/atom {:active?          false
            :bpm              cfg/default-bpm
-           :current-jam      cfg/default-jam
+           :current-jam      (first core-track-order)
            :current-routing  :default
            :reverb-mode      :fdn
            :drive-mode       :adaa

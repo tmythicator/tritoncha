@@ -3,6 +3,7 @@
    [app.audio.control.looper-test]
    [app.audio.control.mixer-test]
    [app.audio.control.session-test]
+   [app.audio.control.tracker-test]
    [app.audio.dsp.busses-test]
    [app.audio.dsp.telemetry-test]
    [app.audio.dsp.worklet-test]
