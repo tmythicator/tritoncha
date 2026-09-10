@@ -17,7 +17,7 @@
                                :class (when active? "active-success")
                                :title "Play or Stop Engine (Space)"}
        (if active? "[■ Stop]" "[▶ Jam]")]
-      [:button.neo-action-btn {:on-click cycle-jam! :title "Switch Track Preset (1-4)"} "[1-4] Jam"]
+      [:button.neo-action-btn {:on-click cycle-jam! :title "Switch Track Preset (1-9)"} "[1-9] Jam"]
       [:button.neo-action-btn {:on-click toggle-drums!
                                :class (when drums-muted? "active-danger")
                                :title "Toggle Drums Undrum / Redrum (D)"}
@@ -34,11 +34,11 @@
       [:button.neo-action-btn {:on-click toggle-tutorial!
                                :class (when tutorial-visible? "active")
                                :title "Toggle Tutorial (T)"}
-       "[T] Code"]
+       "[T] Tutorial"]
       [:button.neo-action-btn {:on-click toggle-stats!
                                :class (when stats-visible? "active")
-                               :title "Toggle Stats (I)"}
-       "[I] Stats"]
+                               :title "Toggle Info and Busses (I)"}
+       "[I] Info and Busses"]
       [:button.neo-action-btn {:on-click toggle-hud!
                                :class (when hud-visible? "active")
                                :title "Toggle HUD (H)"}

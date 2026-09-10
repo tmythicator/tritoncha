@@ -1,7 +1,7 @@
 (ns app.ui.top-bar.controls
   "Top bar engine playback and preset controls."
   (:require
-   [app.audio.control.tracker :refer [next-jam! prev-jam!]]
+   [app.audio.control.tracker :refer [default-track-key next-jam! prev-jam!]]
    [app.state :refer [audio-state ui-state visual-state]]
    [clojure.string :as str]))
 
@@ -9,7 +9,7 @@
   (let [{:keys [stats-visible? tutorial-visible? instrument-browser-open?]} @ui-state
         {:keys [active? current-jam]} @audio-state
         {:keys [current-scene]}        @visual-state
-        jam-name   (-> (or current-jam :roller) name str/upper-case)
+        jam-name   (-> (or current-jam (default-track-key)) name str/upper-case)
         scene-name (-> (or current-scene :cyber-torus) name str/upper-case)]
     [:div.top-bar-controls
      [:button.neo-btn-stats.btn-engine {:on-click toggle-play!
@@ -24,7 +24,7 @@
        "◀"]
       [:button.neo-btn-stats.badge-jam {:on-click (or toggle-track-browser! cycle-jam!)
                                         :aria-label "Open track browser or cycle preset"
-                                        :title "Click to open 20-track library browser"}
+                                        :title "Click to open track library browser"}
        (str "JAM: " jam-name " ▾")]
       [:button.neo-btn-stats.btn-arrow {:on-click next-jam!
                                         :aria-label "Next track preset"
@@ -45,7 +45,7 @@
      [:button.neo-btn-stats {:on-click toggle-tutorial!
                              :aria-label (if tutorial-visible? "Close interactive tutorial" "Open interactive tutorial")
                              :class (when tutorial-visible? "active")}
-      "CODE [T]"]
+      "TUTORIAL [T]"]
 
      [:button.neo-btn-stats {:on-click toggle-stats!
                              :aria-label (if stats-visible? "Close statistics modal" "Open statistics modal")
