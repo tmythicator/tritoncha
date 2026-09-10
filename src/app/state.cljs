@@ -75,3 +75,71 @@
          :three  nil
          :events false
          :root   nil}))
+
+;; Domain State Selectors (Dependency Inversion Principle)
+
+(defn select-active-tracks
+  "Returns map of active session tracks from audio state."
+  [st]
+  (:active-tracks st {}))
+
+(defn select-bpm
+  "Returns active tempo in BPM from audio state."
+  [st]
+  (:bpm st cfg/default-bpm))
+
+(defn select-key-info
+  "Returns active key context map from audio state."
+  [st]
+  (:key st cfg/default-key))
+
+(defn select-active?
+  "Returns true if master audio transport is currently active."
+  [st]
+  (boolean (:active? st false)))
+
+(defn select-current-jam
+  "Returns keyword ID of currently loaded track preset."
+  [st]
+  (:current-jam st (first core-track-order)))
+
+(defn select-current-routing
+  "Returns keyword ID of active audio routing topology."
+  [st]
+  (:current-routing st :default))
+
+(defn select-reverb-mode
+  "Returns active reverb DSP mode (:fdn or :freeverb)."
+  [st]
+  (:reverb-mode st :fdn))
+
+(defn select-drive-mode
+  "Returns active master saturation mode (:tan-h, :soft, :adaa)."
+  [st]
+  (:drive-mode st :adaa))
+
+(defn select-hud-visible?
+  "Returns true if track loop HUD overlay is visible."
+  [st]
+  (boolean (:hud-visible? st true)))
+
+(defn select-stats-visible?
+  "Returns true if telemetry stats modal overlay is visible."
+  [st]
+  (boolean (:stats-visible? st false)))
+
+(defn select-tutorial-visible?
+  "Returns true if tutorial modal overlay is visible."
+  [st]
+  (boolean (:tutorial-visible? st false)))
+
+(defn select-track-browser-open?
+  "Returns true if track browser modal is open."
+  [st]
+  (boolean (:track-browser-open? st false)))
+
+(defn select-instrument-browser-open?
+  "Returns true if instrument browser overlay is open."
+  [st]
+  (boolean (:instrument-browser-open? st false)))
+
