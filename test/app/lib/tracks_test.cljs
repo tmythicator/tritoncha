@@ -1,5 +1,5 @@
 (ns app.lib.tracks-test
-  (:require [app.lib.tracks :refer [core-tracks]]
+  (:require [app.lib.tracks :refer [core-track-order core-tracks]]
             [cljs.test :refer [deftest is testing]]))
 
 (deftest core-tracks-catalog-test
@@ -20,6 +20,16 @@
       (is (some? (:notes dt-drums)))
       (is (vector? (first (:notes dt-drums))))
       (is (= :kick (first (first (:notes dt-drums))))))
-    (let [roller-kick (get-in core-tracks [:metro-roller :tracks :kick])]
+    (let [roller-kick (get-in core-tracks [:orbital-roller :tracks :kick])]
       (is (some? (:notes roller-kick)))
       (is (vector? (:notes roller-kick))))))
+
+(deftest core-tracks-order-test
+  (testing "Core tracks preserve declaration order with the top 5 designated presets"
+    (is (= [:orbital-roller
+            :street-roller
+            :orbital-matrix
+            :industrial-techno
+            :downtempo-chill]
+           (subvec core-track-order 0 5)))
+    (is (= 19 (count core-track-order)))))

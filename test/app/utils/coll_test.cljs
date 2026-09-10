@@ -17,3 +17,11 @@
     (is (= [4 1 2 3] (coll/rotate -1 [1 2 3 4])))
     (is (= [1 2 3 4] (coll/rotate 4 [1 2 3 4])))
     (is (= [] (coll/rotate 1 [])))))
+
+(deftest vec3-test
+  (testing "Normalizes scalar, vector and nil into 3-element vector"
+    (is (= [1.5 1.5 1.5] (coll/vec3 1.5)))
+    (is (= [1 2 3] (coll/vec3 [1 2 3])))
+    (is (= [1 2 0] (coll/vec3 [1 2])))
+    (is (= [0 0 0] (coll/vec3 nil)))
+    (is (= [1.0 1.0 1.0] (coll/vec3 nil 1.0)))))

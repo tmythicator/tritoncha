@@ -1,14 +1,19 @@
 //! Core real-time DSP audio engine and mixer orchestration.
 
 use crate::dsp::delay::StereoDelay;
-use crate::dsp::effects::{BitcrusherDrive, SidechainPump, StereoChorus, MAX_SAMPLE_HOLD};
-use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{db_to_gain, midi_to_freq, soft_clip};
-use crate::dsp::reverb::StereoReverb;
-use crate::sequencer::track::{
-    TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
-    MAX_STEPS, MAX_TRACKS,
+use crate::dsp::effects::{
+    BitcrusherDrive, DriveMode, SidechainPump, StereoChorus, MAX_SAMPLE_HOLD,
 };
+use crate::dsp::filter::StateVariableFilter;
+use crate::dsp::math::{db_to_gain, soft_clip};
+use crate::dsp::reverb::{ReverbMode, StereoReverb};
+use crate::sequencer::master::DEFAULT_SAMPLE_RATE;
+pub use crate::sequencer::master::{
+    DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, INST_CLICK, MIN_AUDIBLE_VELOCITY,
+    SEQUENCER_TICK_MODULO,
+};
+use crate::sequencer::track::MAX_TRACKS;
+use crate::sequencer::MasterSequencer;
 use crate::synth::drums::DrumMachine;
 use crate::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
 
@@ -23,16 +28,6 @@ pub use crate::synth::drums::{
 
 pub const NUM_VOICES: usize = 32;
 
-// Audio Clock and Timing Constants
-pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
-pub const DEFAULT_BPM: f32 = 168.0;
-pub const MIN_BPM: f32 = 30.0;
-pub const MAX_BPM: f32 = 300.0;
-pub const SECONDS_PER_MINUTE: f32 = 60.0;
-pub const STEPS_PER_BEAT_64TH: f32 = 16.0;
-pub const SEQUENCER_TICK_MODULO: usize = 65536;
-pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
-
 // Master Filter Cutoff and Resonance Boundaries
 pub const MIN_MASTER_CUTOFF_HZ: f32 = 40.0;
 pub const MAX_MASTER_CUTOFF_HZ: f32 = 18000.0;
@@ -43,21 +38,10 @@ pub const MIN_AUDIBLE_RESONANCE: f32 = 0.01;
 pub const MIN_SWEEP_DURATION_S: f32 = 0.01;
 pub const MASTER_HEADROOM_GAIN: f32 = 0.95;
 
-pub const INST_CLICK: i32 = 11;
-pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
-pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
-
 /// Tritoncha Real-Time Audio Engine.
 pub struct TritonchaEngine {
     pub sample_rate: f32,
-    pub playing: bool,
-    pub bpm: f32,
-    samples_per_step: f32,
-    step_timer: f32,
-    current_step: usize,
-
-    tracks: [TrackPattern; MAX_TRACKS],
-    solo_active: bool,
+    pub sequencer: MasterSequencer,
 
     pub voices: [SynthVoice; NUM_VOICES],
     voice_bus_map: [usize; NUM_VOICES],
@@ -90,18 +74,10 @@ impl TritonchaEngine {
         } else {
             DEFAULT_SAMPLE_RATE
         };
-        let bpm = DEFAULT_BPM;
-        let samples_per_64th = (sr * SECONDS_PER_MINUTE) / (bpm * STEPS_PER_BEAT_64TH);
 
         Self {
             sample_rate: sr,
-            playing: false,
-            bpm,
-            samples_per_step: samples_per_64th,
-            step_timer: 0.0,
-            current_step: 0,
-            tracks: std::array::from_fn(|_| TrackPattern::new()),
-            solo_active: false,
+            sequencer: MasterSequencer::new(sr),
             voices: std::array::from_fn(|_| SynthVoice::new()),
             voice_bus_map: [BUS_BASS; NUM_VOICES],
             patches: std::array::from_fn(ModularPatch::default_for),
@@ -125,8 +101,13 @@ impl TritonchaEngine {
             chorus: StereoChorus::new(),
             sidechain: SidechainPump::new(),
             delay: StereoDelay::new(),
-            reverb: StereoReverb::new(),
+            reverb: StereoReverb::with_sample_rate(sr),
         }
+    }
+
+    #[inline]
+    pub fn take_triggered_tracks_mask(&mut self) -> u32 {
+        self.sequencer.triggered_mask.take()
     }
 }
 
@@ -138,18 +119,12 @@ impl Default for TritonchaEngine {
 
 impl TritonchaEngine {
     pub fn set_bpm(&mut self, bpm: f32) {
-        if (MIN_BPM..=MAX_BPM).contains(&bpm) {
-            self.bpm = bpm;
-            self.samples_per_step =
-                (self.sample_rate * SECONDS_PER_MINUTE) / (bpm * STEPS_PER_BEAT_64TH);
-        }
+        self.sequencer.set_bpm(bpm);
     }
 
     pub fn set_playing(&mut self, playing: bool) {
-        self.playing = playing;
+        self.sequencer.set_playing(playing);
         if !playing {
-            self.current_step = 0;
-            self.step_timer = 0.0;
             for v in &mut self.voices {
                 v.active = false;
             }
@@ -165,69 +140,24 @@ impl TritonchaEngine {
         durs: &[f32],
         step_mult: usize,
     ) {
-        if track_idx >= MAX_TRACKS {
-            return;
-        }
-
-        let tr = &mut self.tracks[track_idx];
-        let len = notes.len().min(MAX_STEPS);
-
-        // If track has no notes or all notes are rests, deactivate it
-        if len == 0 || notes.iter().all(|&n| n < 0) {
-            tr.clear();
-            return;
-        }
-
-        tr.active = true;
-        tr.length = len;
-        tr.step_multiplier = step_mult.max(1);
-
-        for i in 0..len {
-            let inst = if i < inst_ids.len() {
-                inst_ids[i]
-            } else {
-                DEFAULT_SYNTH_PATCH_ID
-            };
-            let vel = if i < vels.len() {
-                vels[i]
-            } else {
-                DEFAULT_STEP_VELOCITY
-            };
-            let dur = if i < durs.len() {
-                durs[i]
-            } else {
-                DEFAULT_STEP_DURATION_S
-            };
-            tr.set_step(i, inst, notes[i], vel, dur);
-        }
+        self.sequencer
+            .set_track(track_idx, inst_ids, notes, vels, durs, step_mult);
     }
 
     pub fn deactivate_track(&mut self, track_idx: usize) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].clear();
-        }
+        self.sequencer.deactivate_track(track_idx);
     }
 
     pub fn clear_tracks(&mut self) {
-        for tr in &mut self.tracks {
-            tr.clear();
-            tr.muted = false;
-            tr.solo = false;
-        }
-        self.solo_active = false;
+        self.sequencer.clear_tracks();
     }
 
     pub fn mute_track(&mut self, track_idx: usize, muted: bool) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].muted = muted;
-        }
+        self.sequencer.mute_track(track_idx, muted);
     }
 
     pub fn solo_track(&mut self, track_idx: usize, solo: bool) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].solo = solo;
-            self.solo_active = self.tracks.iter().any(|t| t.solo);
-        }
+        self.sequencer.solo_track(track_idx, solo);
     }
 
     pub fn set_bus_params(
@@ -372,9 +302,18 @@ impl TritonchaEngine {
     }
 
     pub fn set_drive_bitcrush(&mut self, drive: f32, bit_depth: f32, sample_hold: f32) {
-        self.bitcrush_drive.drive = drive.clamp(0.0, 1.0);
+        self.bitcrush_drive.set_drive(drive);
         self.bitcrush_drive.bit_depth = bit_depth.clamp(1.0, 16.0);
         self.bitcrush_drive.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
+    }
+
+    pub fn set_drive_mode(&mut self, mode: u8) {
+        let m = if mode == 0 {
+            DriveMode::Classic
+        } else {
+            DriveMode::Adaa
+        };
+        self.bitcrush_drive.set_mode(m);
     }
 
     pub fn set_chorus(&mut self, rate_hz: f32, depth: f32, mix: f32) {
@@ -396,53 +335,16 @@ impl TritonchaEngine {
         self.reverb.set_params(room_size, wet);
     }
 
-    #[inline(always)]
-    fn tick_sequencer_step(&mut self) {
-        let step = self.current_step;
-        let mut events: [(i32, f32, f32, f32); MAX_TRACKS] = [(-1, 0.0, 0.0, 0.0); MAX_TRACKS];
-        let mut count = 0;
-
-        for tr in &self.tracks {
-            if !tr.is_audible(self.solo_active) {
-                continue;
-            }
-
-            if !step.is_multiple_of(tr.step_multiplier) {
-                continue;
-            }
-
-            let pat_idx = (step / tr.step_multiplier) % tr.length.max(1);
-            let note = tr.notes[pat_idx];
-            let vel = tr.velocities[pat_idx];
-            let inst_id = tr.inst_kinds[pat_idx] as i32;
-            let dur_s = tr.durations[pat_idx];
-
-            if note >= 0 && vel > MIN_AUDIBLE_VELOCITY {
-                let freq = if !is_drum_inst(inst_id) {
-                    if note > 0 {
-                        midi_to_freq(note as f32)
-                    } else if inst_id == INST_CLICK {
-                        DEFAULT_CLICK_FREQ_HZ
-                    } else {
-                        DEFAULT_NOTE_FREQ_HZ
-                    }
-                } else if inst_id == INST_DRUM_TOM {
-                    midi_to_freq(note as f32)
-                } else {
-                    DEFAULT_NOTE_FREQ_HZ
-                };
-                events[count] = (inst_id, freq, vel, dur_s);
-                count += 1;
-            }
-        }
-
-        for &(inst_id, freq, vel, dur_s) in &events[..count] {
-            self.trigger_note(inst_id, freq, vel, dur_s);
-        }
-
-        self.current_step = (self.current_step + 1) % SEQUENCER_TICK_MODULO;
+    pub fn set_reverb_mode(&mut self, mode: u8) {
+        let m = if mode == 0 {
+            ReverbMode::Freeverb
+        } else {
+            ReverbMode::Fdn
+        };
+        self.reverb.set_mode(m);
     }
 
+    #[inline(always)]
     pub fn process_block(&mut self, out_l: &mut [f32], out_r: &mut [f32]) {
         let len = out_l.len().min(out_r.len());
 
@@ -460,14 +362,13 @@ impl TritonchaEngine {
             }
         }
 
+        let mut step_events = [(-1, 0.0, 0.0, 0.0); MAX_TRACKS];
+
         for i in 0..len {
-            // 1. Advance sequencer clock
-            if self.playing {
-                self.step_timer += 1.0;
-                if self.step_timer >= self.samples_per_step {
-                    self.step_timer -= self.samples_per_step;
-                    self.tick_sequencer_step();
-                }
+            // 1. Advance sequencer clock and dispatch events if step reached
+            let event_count = self.sequencer.advance_sample(&mut step_events);
+            for &(inst_id, freq, vel, dur_s) in &step_events[..event_count] {
+                self.trigger_note(inst_id, freq, vel, dur_s);
             }
 
             // 2. Clear bus accumulation buffers
@@ -509,7 +410,9 @@ impl TritonchaEngine {
 
             // 4. Run Delay and Reverb effects on their send lines (WET ONLY)
             let (wet_dl, wet_dr) = self.delay.process_wet(delay_send, delay_send);
-            let (wet_rl, wet_rr) = self.reverb.process_wet(reverb_send, reverb_send);
+            let (wet_rl, wet_rr) = self
+                .reverb
+                .process_wet(reverb_send + wet_dl * 0.20, reverb_send + wet_dr * 0.20);
 
             // 5. Combine direct dry mix with wet effects
             let mut combined_l = direct_mix + wet_dl + wet_rl;
@@ -564,8 +467,8 @@ mod tests {
     #[test]
     fn test_engine_initial_state() {
         let engine = TritonchaEngine::new(48000.0);
-        assert_eq!(engine.bpm, DEFAULT_BPM);
-        assert!(!engine.playing);
+        assert_eq!(engine.sequencer.bpm, DEFAULT_BPM);
+        assert!(!engine.sequencer.playing);
         assert_eq!(engine.voices.len(), NUM_VOICES);
         assert_eq!(engine.busses.len(), NUM_BUSSES);
     }
@@ -574,11 +477,11 @@ mod tests {
     fn test_engine_bpm_and_timing() {
         let mut engine = TritonchaEngine::new(48000.0);
         engine.set_bpm(174.0);
-        assert_eq!(engine.bpm, 174.0);
+        assert_eq!(engine.sequencer.bpm, 174.0);
 
         // Clamping check
         engine.set_bpm(10.0);
-        assert_eq!(engine.bpm, 174.0); // Out of bounds, ignored
+        assert_eq!(engine.sequencer.bpm, 174.0); // Out of bounds, ignored
     }
 
     #[test]

@@ -1,6 +1,4 @@
-/* ==========================================================================
-   Base Reset + Canvas Layout
-   ========================================================================== */
+/* Base reset and canvas layout */
 
 * {
     box-sizing: border-box;
@@ -27,6 +25,8 @@ html, body {
     touch-action: none;
 }
 
+/* Close button */
+
 .neo-btn-close {
     font-family: inherit;
     font-size: var(--font-size-sm);
@@ -39,6 +39,6 @@ html, body {
     transition: color var(--transition-fast);
 
     &:hover {
-        color: var(--palette-pink);
+        color: var(--text-primary);
     }
 }

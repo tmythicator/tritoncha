@@ -1,6 +1,4 @@
-/* ==========================================================================
-   HUD, Top Bar, Bottom Bar, Badges
-   ========================================================================== */
+/* Minimal HUD layout */
 
 .minimal-hud {
     position: absolute;
@@ -45,6 +43,8 @@
         color: var(--text-inverse);
     }
 }
+
+/* Top bar branding and controls */
 
 .hud-top {
     display: flex;
@@ -113,6 +113,8 @@
     }
 }
 
+/* Bottom bar and status hints */
+
 .hud-bottom {
     display: flex;
     align-items: center;
@@ -172,6 +174,8 @@
 .neo-prompt {
     color: var(--text-brand);
 }
+
+/* Badges, stats and action buttons */
 
 .neo-badge,
 .neo-btn-stats,
@@ -291,6 +295,8 @@
         display: none;
     }
 }
+
+/* Mobile layout and warning notice */
 
 .hud-bottom-area {
     display: flex;

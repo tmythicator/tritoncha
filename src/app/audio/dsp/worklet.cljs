@@ -11,6 +11,7 @@
 (def worklet-ready? transport/worklet-ready?)
 (def get-audio-context transport/get-audio-context)
 (def on-worklet-ready! transport/on-worklet-ready!)
+(def on-trigger-event! transport/on-trigger-event!)
 (def send-msg! transport/send-msg!)
 
 ;; Hardware Sequencer Slot Management
@@ -218,3 +219,21 @@
   (transport/send-msg! #js {:type "setReverb"
                             :roomSize room-size
                             :wet wet}))
+
+(defn set-worklet-drive-mode!
+  "Configures saturation algorithm mode (0 = Classic Pade, 1 = ADAA-1 Antialiased).
+  Examples: (set-worklet-drive-mode! :adaa), (set-worklet-drive-mode! :classic)."
+  [mode-kw]
+  (let [norm (if (= (keyword mode-kw) :classic) :classic :adaa)
+        mode-id (if (= norm :classic) 0 1)]
+    (transport/send-msg! #js {:type "setDriveMode" :mode mode-id})
+    norm))
+
+(defn set-worklet-reverb-mode!
+  "Configures reverb algorithm mode (0 = Freeverb, 1 = 8-Channel Householder FDN).
+  Examples: (set-worklet-reverb-mode! :fdn), (set-worklet-reverb-mode! :freeverb)."
+  [mode-kw]
+  (let [norm (if (= (keyword mode-kw) :freeverb) :freeverb :fdn)
+        mode-id (if (= norm :freeverb) 0 1)]
+    (transport/send-msg! #js {:type "setReverbMode" :mode mode-id})
+    norm))

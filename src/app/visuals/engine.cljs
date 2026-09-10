@@ -5,10 +5,10 @@
    [app.custom.scenes :as custom-scenes]
    [app.lib.scenes :as lib-scenes]
    [app.state :refer [engine-ctx pulse! repl-registry visual-pulse
-                      visual-state]]
+                      visual-pulses visual-state]]
    [app.utils.coll :as coll]
    [app.utils.dom :refer [max-dpr]]
-   [app.utils.math :refer [lerp]]))
+   [app.utils.math :refer [lerp lerp-v3]]))
 
 (defn all-scenes
   "Returns the complete merged catalog of built-in, custom and REPL-defined 3D scenes."
@@ -77,6 +77,98 @@
                      :opacity 0.25})]
       (three/Mesh. geom mat))))
 
+(defn- dispose-geom-mat!
+  "Disposes geometry and material attached to a Three.js mesh safely.
+  Examples: (dispose-geom-mat! mesh)."
+  [^js m]
+  (when m
+    (when-let [g (.-geometry m)] (.dispose ^js g))
+    (when-let [mat (.-material m)] (.dispose ^js mat))))
+
+(defn- dispose-mesh-entry!
+  "Disposes Three.js mesh geometry and material safely and removes mesh from scene.
+  Examples: (dispose-mesh-entry! scene mesh)."
+  [^js scene ^js m]
+  (when m
+    (when scene (.remove scene m))
+    (dispose-geom-mat! m)))
+
+(defn- parse-color-pair
+  "Extracts mesh and wire hex colors from a string, map or default fallback.
+  Examples: (parse-color-pair \"#ff0000\") -> [\"#ff0000\" \"#00ffff\"]."
+  [colors]
+  (let [def-mesh (:mesh cfg/default-scene-colors)
+        def-wire (:wire cfg/default-scene-colors)]
+    (cond
+      (string? colors) [colors def-wire]
+      (map? colors)    [(or (:mesh colors) (:color colors) def-mesh)
+                        (or (:wire colors) def-wire)]
+      :else            [def-mesh def-wire])))
+
+(defn- parse-rot-speed
+  "Normalizes rotation speed specification into a 3-element vector [rx ry rz].
+  Examples: (parse-rot-speed 0.01) -> [0.015 0.02 0.0]."
+  [speed-spec]
+  (cond
+    (vector? speed-spec) (coll/vec3 speed-spec 0.0)
+    (number? speed-spec) [(* 1.5 speed-spec) (* 2.0 speed-spec) 0.0]
+    :else                [0.01 0.015 0.0]))
+
+(defn- build-figure-mesh [fig-spec]
+  (let [geom-spec       (:geom fig-spec :torus-knot)
+        mat-spec        (:material fig-spec)
+        [mesh-c wire-c] (parse-color-pair (:colors fig-spec))
+        wireframe?      (get mat-spec :wireframe (:wireframe? @visual-state true))
+        geom            (create-geom geom-spec)
+        mat             (build-mesh-material mesh-c wire-c wireframe? mat-spec)
+        mesh            (three/Mesh. geom mat)
+        [px py pz]      (coll/vec3 (:pos fig-spec) 0)
+        [rx ry rz]      (coll/vec3 (:rot fig-spec) 0)
+        [sx sy sz]      (coll/vec3 (:scale fig-spec 1.0) 1.0)
+        rot-speed       (parse-rot-speed (:rot-speed fig-spec))]
+    (.set (.-position mesh) px py pz)
+    (.set (.-rotation mesh) rx ry rz)
+    (.set (.-scale mesh) sx sy sz)
+    {:mesh        mesh
+     :geom-spec   geom-spec
+     :base-pos    [px py pz]
+     :base-scale  [sx sy sz]
+     :rot-speed   rot-speed
+     :pulseable?  (get fig-spec :pulse? (not (or (false? (:pulse fig-spec)) (true? (:static fig-spec)))))}))
+
+(defn clear-figures!
+  "Removes and disposes all active multi-figure meshes from the 3D scene.
+  Examples: (clear-figures!)."
+  []
+  (when-let [{:keys [scene figures ^js mesh]} (:three @engine-ctx)]
+    (doseq [[_ fig-entry] figures]
+      (dispose-mesh-entry! scene (:mesh fig-entry)))
+    (swap! engine-ctx update :three assoc :figures {})
+    (reset! visual-pulses {:default 0.0})
+    (when mesh (set! (.-visible mesh) true))))
+
+(defn set-figures!
+  "Configures multiple named 3D figures in the Three.js scene.
+  Examples: (set-figures! {:core {:geom :torus-knot :pos [0 0 0]} :halo {:geom :torus :pos [0 2.5 0]}})."
+  [figures-map]
+  (clear-figures!)
+  (if (and (map? figures-map) (seq figures-map))
+    (when-let [{:keys [scene ^js mesh]} (:three @engine-ctx)]
+      (when mesh (set! (.-visible mesh) false))
+      (let [instantiated (reduce-kv
+                          (fn [acc k spec]
+                            (let [entry (build-figure-mesh spec)]
+                              (when scene (.add scene (:mesh entry)))
+                              (assoc acc (keyword k) entry)))
+                          {}
+                          figures-map)]
+        (swap! engine-ctx update :three assoc :figures instantiated)
+        (vec (keys instantiated))))
+    (do
+      (when-let [{:keys [^js mesh]} (:three @engine-ctx)]
+        (when mesh (set! (.-visible mesh) true)))
+      [])))
+
 (defn load-scene!
   "Switches active 3D scene preset live without dropping WebGL context."
   [scene-key-or-spec]
@@ -86,7 +178,7 @@
                     scene-key-or-spec
                     (get available (keyword scene-key-or-spec) (get available cfg/default-scene)))]
     (when spec
-      (let [{:keys [geom colors material outer-geom camera-pos animate]} spec
+      (let [{:keys [geom colors material outer-geom camera-pos animate figures]} spec
             {:keys [bg mesh wire outer]
              :or {bg    (:bg cfg/default-scene-colors)
                   mesh  (:mesh cfg/default-scene-colors)
@@ -110,22 +202,21 @@
               (.set (.-position camera) cx cy cz)))
 
           (when mesh
-            (when-let [old-geom (.-geometry mesh)]
-              (.dispose ^js old-geom))
-            (when-let [old-mat (.-material mesh)]
-              (.dispose ^js old-mat))
+            (dispose-geom-mat! mesh)
             (set! (.-geometry mesh) (create-geom geom))
             (set! (.-material mesh) (build-mesh-material mesh wire wireframe? material)))
 
           (when (and scene outer-mesh)
-            (.remove scene outer-mesh)
-            (when-let [og (.-geometry outer-mesh)] (.dispose ^js og))
-            (when-let [om (.-material outer-mesh)] (.dispose ^js om)))
+            (dispose-mesh-entry! scene outer-mesh))
 
           (let [new-outer (build-outer-mesh outer-geom outer)]
             (when (and scene new-outer)
               (.add scene new-outer))
-            (swap! engine-ctx update :three assoc :outer new-outer :outer-mesh new-outer :animate animate)))
+            (swap! engine-ctx update :three assoc :outer new-outer :outer-mesh new-outer :animate animate))
+
+          (if (and figures (seq figures))
+            (set-figures! figures)
+            (clear-figures!)))
 
         (pulse! 2.0)
         (or scene-key :custom)))))
@@ -196,7 +287,71 @@
               :mesh       mesh
               :outer      outer
               :outer-mesh outer
-              :animate    (:animate cur-scene)}))))
+              :figures    {}
+              :animate    (:animate cur-scene)})
+      (when-let [figs (:figures cur-scene)]
+        (set-figures! figs)))))
+
+(defn- update-figure-frame!
+  "Updates transform, rotation and pulse decay for an individual multi-figure mesh."
+  [fig-id fig-entry sensitivity]
+  (let [^js fm        (:mesh fig-entry)
+        base-scale    (:base-scale fig-entry [1.0 1.0 1.0])
+        rot-speed     (:rot-speed fig-entry [0.006 0.01 0.0])
+        fig-p         (if (:pulseable? fig-entry true)
+                        (get @visual-pulses fig-id 0.0)
+                        0.0)
+        target-factor (+ 1.0 (* fig-p sensitivity cfg/default-figure-scale-factor))
+        target-scale  (mapv #(* % target-factor) base-scale)
+        cur-scale     [(.. fm -scale -x) (.. fm -scale -y) (.. fm -scale -z)]
+        [nx ny nz]    (lerp-v3 cur-scale target-scale cfg/default-figure-lerp)]
+    (when-not (.-visible fm)
+      (set! (.-visible fm) true))
+    (.set (.-scale fm) nx ny nz)
+    (set! (.. fm -rotation -x) (+ (.. fm -rotation -x) (nth rot-speed 0)))
+    (set! (.. fm -rotation -y) (+ (.. fm -rotation -y) (nth rot-speed 1)))
+    (set! (.. fm -rotation -z) (+ (.. fm -rotation -z) (nth rot-speed 2)))
+    (when (pos? fig-p)
+      (swap! visual-pulses assoc fig-id (js/Math.max 0.0 (- fig-p cfg/default-figure-decay))))))
+
+(defn- hide-all-meshes!
+  "Hides all meshes when canvas is hidden or scene is none."
+  [^js mesh ^js outer figures]
+  (when (and mesh (.-visible mesh))
+    (set! (.-visible mesh) false))
+  (when outer
+    (set! (.-visible outer) false))
+  (doseq [[_ fe] figures]
+    (when-let [^js fm (:mesh fe)]
+      (when (.-visible fm)
+        (set! (.-visible fm) false)))))
+
+(defn- update-default-mesh-frame!
+  "Updates transform, scale pulse, and rotation for the central single 3D mesh."
+  [^js mesh ^js outer animate sensitivity camera-speed]
+  (when (and mesh (not (.-visible mesh)))
+    (set! (.-visible mesh) true))
+  (let [pulse        @visual-pulse
+        target-scale (+ 1.0 (* pulse sensitivity cfg/default-pulse-scale-factor))
+        cur-scale    (if mesh (.-x (.-scale mesh)) 1.0)
+        new-scale    (lerp cur-scale target-scale cfg/default-scale-lerp)]
+    (when (pos? pulse)
+      (reset! visual-pulse (js/Math.max 0.0 (- pulse cfg/default-pulse-decay))))
+    (when mesh
+      (.set (.-scale mesh) new-scale new-scale new-scale))
+    (if (fn? animate)
+      (animate {:mesh         mesh
+                :outer        outer
+                :camera-speed camera-speed
+                :sensitivity  sensitivity
+                :pulse        pulse
+                :scale        new-scale})
+      (do
+        (when mesh
+          (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 1.5)))
+          (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 2.0))))
+        (when outer
+          (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5))))))))
 
 (defn render-loop!
   "Audio-reactive WebGL animation loop."
@@ -205,43 +360,22 @@
         scene-k  (:current-scene @visual-state)
         mesh-k   (:mesh-type @visual-state)
         none?    (or (= :none (keyword scene-k)) (= :none (keyword mesh-k)))]
-    (when-let [{:keys [scene camera ^js renderer ^js mesh ^js outer animate]} (:three @engine-ctx)]
+    (when-let [{:keys [scene camera ^js renderer ^js mesh ^js outer animate figures]} (:three @engine-ctx)]
       (if (or hidden? none?)
-        (when (and mesh (.-visible mesh))
-          (set! (.-visible mesh) false)
-          (when outer (set! (.-visible outer) false))
-          (.render renderer scene camera))
-        (do
-          (when (and mesh (not (.-visible mesh)))
-            (set! (.-visible mesh) true)
-            (when outer (set! (.-visible outer) true)))
-          (let [{:keys [sensitivity camera-speed]} @visual-state
-                pulse        @visual-pulse
-                target-scale (+ 1.0 (* pulse sensitivity cfg/default-pulse-scale-factor))
-                cur-scale    (if mesh (.-x (.-scale mesh)) 1.0)
-                new-scale    (lerp cur-scale target-scale cfg/default-scale-lerp)]
-
-            (when (pos? pulse)
-              (reset! visual-pulse (js/Math.max 0.0 (- pulse cfg/default-pulse-decay))))
-
-            (when mesh
-              (.set (.-scale mesh) new-scale new-scale new-scale))
-
-            (if (fn? animate)
-              (animate {:mesh         mesh
-                        :outer        outer
-                        :camera-speed camera-speed
-                        :sensitivity  sensitivity
-                        :pulse        pulse
-                        :scale        new-scale})
-              (do
-                (when mesh
-                  (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 1.5)))
-                  (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 2.0))))
-                (when outer
-                  (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5))))))
-
-            (.render renderer scene camera))))))
+        (hide-all-meshes! mesh outer figures)
+        (let [{:keys [sensitivity camera-speed]} @visual-state]
+          (if (seq figures)
+            (do
+              (when (and mesh (.-visible mesh))
+                (set! (.-visible mesh) false))
+              (doseq [[fig-id fig-entry] figures]
+                (update-figure-frame! fig-id fig-entry sensitivity)))
+            (update-default-mesh-frame! mesh outer animate sensitivity camera-speed))
+          (when outer
+            (when-not (.-visible outer)
+              (set! (.-visible outer) true))
+            (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5))))))
+      (.render renderer scene camera)))
   (js/requestAnimationFrame render-loop!))
 
 (defn set-geometry!
@@ -264,9 +398,13 @@
     (.set (.. mesh -material -color) (three/Color. mesh-hex))))
 
 (defn toggle-wireframe!
-  "Toggles wireframe rendering mode on the central 3D mesh."
+  "Toggles wireframe rendering mode on the central 3D mesh and active multi-figures."
   []
   (let [new-val (not (:wireframe? @visual-state true))]
     (swap! visual-state assoc :wireframe? new-val)
-    (when-let [{:keys [^js mesh]} (:three @engine-ctx)]
-      (set! (.. mesh -material -wireframe) new-val))))
+    (when-let [{:keys [^js mesh figures]} (:three @engine-ctx)]
+      (when mesh
+        (set! (.. mesh -material -wireframe) new-val))
+      (doseq [[_ fig-entry] figures]
+        (when-let [^js fm (:mesh fig-entry)]
+          (set! (.. fm -material -wireframe) new-val))))))

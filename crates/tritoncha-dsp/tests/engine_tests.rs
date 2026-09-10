@@ -320,3 +320,65 @@ fn test_master_filter_sweep() {
         "Cutoff should reach target frequency at completion"
     );
 }
+
+#[test]
+fn test_engine_hi_fi_modes_switching() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+
+    // Verify default engine initializes in FDN and ADAA mode
+    engine.trigger_note(0, 55.0, 0.9, 0.1);
+    engine.process_block(&mut out_l, &mut out_r);
+    assert!(out_l[0].is_finite());
+    assert!(out_r[0].is_finite());
+
+    // Switch to Freeverb and Classic Pade drive
+    engine.set_reverb_mode(0); // Freeverb
+    engine.set_drive_mode(0); // Classic
+    engine.trigger_note(1, 200.0, 0.85, 0.1);
+    engine.process_block(&mut out_l, &mut out_r);
+    assert!(out_l[0].is_finite());
+
+    // Switch back to Householder FDN and ADAA-1
+    engine.set_reverb_mode(1); // FDN
+    engine.set_drive_mode(1); // ADAA
+    engine.trigger_note(2, 5000.0, 0.8, 0.05);
+    engine.process_block(&mut out_l, &mut out_r);
+    assert!(out_l[0].is_finite());
+}
+
+#[test]
+fn test_sequencer_track_trigger_mask() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    engine.set_playing(true);
+
+    // Track 0 has a kick on step 0, Track 2 has a snare on step 0
+    let inst_ids = [0, 1];
+    let notes = [60, 62];
+    let vels = [0.9, 0.85];
+    let durs = [0.2, 0.2];
+
+    engine.set_track(0, &inst_ids, &notes, &vels, &durs, 1);
+    engine.set_track(2, &inst_ids, &notes, &vels, &durs, 1);
+
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+
+    // Initial trigger mask should be 0 before step tick
+    assert_eq!(engine.take_triggered_tracks_mask(), 0);
+
+    // Process blocks until step triggers
+    for _ in 0..10 {
+        engine.process_block(&mut out_l, &mut out_r);
+        let mask = engine.take_triggered_tracks_mask();
+        if mask > 0 {
+            // Both track 0 (bit 0) and track 2 (bit 2) should be present
+            assert_eq!(mask & (1 << 0), 1 << 0);
+            assert_eq!(mask & (1 << 2), 1 << 2);
+            // Mask is reset after take
+            assert_eq!(engine.take_triggered_tracks_mask(), 0);
+            break;
+        }
+    }
+}

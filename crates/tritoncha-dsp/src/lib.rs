@@ -140,6 +140,19 @@ pub unsafe extern "C" fn tritoncha_dsp_solo_track(
     }
 }
 
+/// Retrieves and resets the bitmask of tracks that triggered steps in the sequencer.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_take_trigger_mask(ptr: *mut TritonchaEngine) -> u32 {
+    if let Some(engine) = ptr.as_mut() {
+        engine.take_triggered_tracks_mask()
+    } else {
+        0
+    }
+}
+
 /// Configures mixer bus gain, mute status, and effect send levels.
 ///
 /// # Safety
@@ -228,6 +241,17 @@ pub unsafe extern "C" fn tritoncha_dsp_set_drive_bitcrush(
     }
 }
 
+/// Configures master overdrive saturation algorithm mode (0 = Classic Pade, 1 = ADAA-1 Antialiased).
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_drive_mode(ptr: *mut TritonchaEngine, mode: i32) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_drive_mode(mode.max(0) as u8);
+    }
+}
+
 /// Sets stereo chorus modulation rate, depth, and mix level.
 ///
 /// # Safety
@@ -283,6 +307,17 @@ pub unsafe extern "C" fn tritoncha_dsp_set_reverb(
 ) {
     if let Some(engine) = ptr.as_mut() {
         engine.set_reverb(room_size, wet);
+    }
+}
+
+/// Configures reverb algorithm mode (0 = Freeverb, 1 = 8-Channel Householder FDN).
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_reverb_mode(ptr: *mut TritonchaEngine, mode: i32) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_reverb_mode(mode.max(0) as u8);
     }
 }
 

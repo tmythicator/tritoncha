@@ -168,16 +168,13 @@
           (worklet/set-worklet-voice-patch! pid spec)))))
   :reloaded)
 
-(def ^:private inst-pulses
-  {:kick 2.6 :snare 1.8 :hh-o 1.2 :bass 1.4 :bass-analog 1.4 :sub 1.5 :sub-pure 1.5 :pad 1.1 :pad-cinema 1.1 :worklet 1.4 :worklet-synth 1.4})
-
 (defn trigger-drum!
   "Triggers an analog drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.)."
   ([drum-key] (trigger-drum! drum-key 0.9))
   ([drum-key vel]
    (let [v (or vel 0.9)]
      (worklet/trigger-worklet-note! drum-key "C3" v)
-     (pulse! (get inst-pulses (keyword drum-key) 1.5))))
+     (pulse! (keyword drum-key) (* 2.2 v))))
   ([drum-key _pitch _dur _time vel]
    (trigger-drum! drum-key vel)))
 
@@ -199,6 +196,6 @@
            (worklet/trigger-worklet-note! kw n chord-v dur-s)))
        (when note-val
          (worklet/trigger-worklet-note! kw note-val v dur-s)))
-     (pulse! (get inst-pulses kw 1.0))))
+     (pulse! kw (* 1.8 v))))
   ([_synth-node note-val dur _time vel inst-key]
    (trigger-note! inst-key note-val dur vel)))

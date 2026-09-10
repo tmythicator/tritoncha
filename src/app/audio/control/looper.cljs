@@ -6,7 +6,7 @@
             [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
-            [app.state :refer [audio-state]]
+            [app.state :refer [audio-state engine-ctx pulse!]]
             [app.utils.audio :as audio-utils]
             [app.utils.math :refer [clamp]]
             [clojure.string :as str]
@@ -61,6 +61,15 @@
        (sequential? (first notes))
        (not (keyword? (first (first notes))))))
 
+(defn- clear-voice-slots!
+  "Deactivates and unassigns hardware sequencer sub-slots for polyphonic voice indices."
+  [track-key voice-indices]
+  (doseq [v-idx voice-indices]
+    (let [sub-tk (keyword (str (name track-key) "-v" (inc v-idx)))]
+      (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
+        (worklet/deactivate-track! sub-slot)
+        (swap! worklet/track-slot-assignments dissoc sub-tk)))))
+
 (defn sync-track-to-worklet!
   "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords."
   [tk pat-data]
@@ -78,27 +87,17 @@
             voice-vel    (if (number? base-vel)
                            (* (float base-vel) scale-factor)
                            (mapv #(* % scale-factor) (if (sequential? base-vel) base-vel [0.9])))]
-        (dotimes [v-idx max-voices]
-          (let [sub-tk      (if (zero? v-idx) tk (keyword (str (name tk) "-v" v-idx)))
-                slot        (worklet/get-or-assign-track-slot! sub-tk)
-                voice-notes (mapv (fn [step-item]
-                                    (if (sequential? step-item)
-                                      (nth step-item v-idx nil)
-                                      (when (zero? v-idx) step-item)))
-                                  notes)]
+        (doseq [v-idx (range max-voices)]
+          (let [sub-tk      (keyword (str (name tk) "-v" (inc v-idx)))
+                voice-notes (mapv #(if (sequential? %) (nth % v-idx nil) (when (zero? v-idx) %)) notes)
+                slot        (worklet/get-or-assign-track-slot! sub-tk)]
             (worklet/set-track! slot inst-k voice-notes step-m dur-s voice-vel)))
-        (doseq [v-idx (range max-voices 4)]
-          (let [sub-tk (keyword (str (name tk) "-v" v-idx))]
-            (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
-              (worklet/deactivate-track! sub-slot)
-              (swap! worklet/track-slot-assignments dissoc sub-tk)))))
+        ;; Deactivate any remaining voices if chord density was reduced
+        (clear-voice-slots! tk (range max-voices 4)))
       (let [slot (worklet/get-or-assign-track-slot! tk)]
         (worklet/set-track! slot inst-k (vec notes) step-m dur-s base-vel)
-        (doseq [v-idx (range 1 4)]
-          (let [sub-tk (keyword (str (name tk) "-v" v-idx))]
-            (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
-              (worklet/deactivate-track! sub-slot)
-              (swap! worklet/track-slot-assignments dissoc sub-tk))))))))
+        ;; Deactivate any leftover polyphony sub-slots if switching to monophonic
+        (clear-voice-slots! tk (range 1 4))))))
 
 (defn sync-all-active-tracks!
   "Re-transmits all active session tracks to the Rust WASM sequencer."
@@ -113,6 +112,33 @@
       (worklet/set-playing! true))))
 
 (worklet/on-worklet-ready! sync-all-active-tracks!)
+
+(defn- handle-sequencer-triggers!
+  "Dispatches hardware sequencer step triggers strictly to bound visual figures."
+  [mask]
+  (when (pos? mask)
+    (let [assignments  @worklet/track-slot-assignments
+          active       (:active-tracks @audio-state)
+          has-figures? (boolean (seq (:figures (:three @engine-ctx))))]
+      (doseq [[tk slot] assignments]
+        (when (pos? (bit-and mask (bit-shift-left 1 slot)))
+          (let [tr        (get active tk)
+                pat       (when tr (let [p (:pattern tr)] (if (satisfies? IDeref p) @p p)))
+                muted?    (boolean (:muted? pat false))
+                fig       (or (:figure pat) (:fig pat))
+                vel       (let [v (:vel pat)] (if (number? v) v 0.85))
+                pulse-amt (or (:pulse pat) (* 1.0 vel))]
+            ;; Strictly require an explicit figure assignment (no fallback to track-key)
+            (when (and (not muted?) (some? fig) (not= fig :none) (not= fig false))
+              (pulse! (keyword fig) pulse-amt)))))
+      ;; Only pulse default scene background/mesh if no multi-figure setup is active
+      (when-not has-figures?
+        (let [kick-slot (get assignments :kick)
+              kick-hit? (and kick-slot (pos? (bit-and mask (bit-shift-left 1 kick-slot))))]
+          (when kick-hit?
+            (pulse! :default 0.7)))))))
+
+(worklet/on-trigger-event! handle-sequencer-triggers!)
 
 (defn loop!
   "Schedules or hot-swaps an audio loop track in the live-coding session.

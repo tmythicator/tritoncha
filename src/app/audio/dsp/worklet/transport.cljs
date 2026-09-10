@@ -11,6 +11,9 @@
 (defonce ^:private ready-callbacks
   (atom []))
 
+(defonce ^:private trigger-callbacks
+  (atom []))
+
 (defn worklet-ready?
   "Returns true if the AudioWorklet WASM engine is initialized and ready.
   Examples: (worklet-ready?) -> true."
@@ -30,6 +33,12 @@
   (if (:ready? @worklet-state)
     (cb)
     (swap! ready-callbacks conj cb)))
+
+(defn on-trigger-event!
+  "Registers a callback to receive hardware sequencer trigger bitmask events.
+  Examples: (on-trigger-event! (fn [mask] ...))."
+  [cb]
+  (swap! trigger-callbacks conj cb))
 
 (defn send-msg!
   "Sends a JSON or JS message to the AudioWorklet processor message port.
@@ -73,8 +82,17 @@
     (.connect node (.-destination audio-ctx))
     (set! (.-onmessage (.-port node))
           (fn [^js ev]
-            (when (= (.-type (.-data ev)) "ready")
-              (notify-worklet-ready!))))
+            (when-let [d (.-data ev)]
+              (let [t (.-type d)]
+                (cond
+                  (= t "ready")
+                  (notify-worklet-ready!)
+
+                  (= t "triggers")
+                  (let [mask (.-mask d)
+                        cbs  @trigger-callbacks]
+                    (doseq [cb cbs]
+                      (try (cb mask) (catch :default _)))))))))
     (.postMessage (.-port node) #js {:type "initWasm" :wasmBinary wasm-buffer :wasmBytes wasm-buffer})
     (swap! worklet-state assoc :node node)
     (flush-pending-messages! node)

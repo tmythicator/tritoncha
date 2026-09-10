@@ -2,19 +2,29 @@
 
 use crate::dsp::math::lerp;
 
+pub const NUM_COMB_FILTERS: usize = 8;
+pub const NUM_ALLPASS_FILTERS: usize = 4;
+
+pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
 pub const DEFAULT_REVERB_WET: f32 = 0.35;
 pub const MIN_WET_THRESHOLD: f32 = 0.001;
 pub const COMB_FEEDBACK_DEFAULT: f32 = 0.85;
 pub const MAX_COMB_FEEDBACK: f32 = 0.98;
 pub const COMB_DAMPING_DEFAULT: f32 = 0.20;
+pub const COMB_FEEDBACK_OFFSET: f32 = 0.70;
+pub const COMB_FEEDBACK_SCALE: f32 = 0.28;
 pub const ALLPASS_FEEDBACK_DEFAULT: f32 = 0.50;
 pub const REVERB_STEREO_SPREAD_GAIN: f32 = 0.015;
+pub const REVERB_DRY_MIX_FACTOR: f32 = 0.5;
+pub const STEREO_TO_MONO_SCALE: f32 = 0.5;
 
-pub const FREEVERB_COMB_TUNINGS_L: [usize; 8] = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
-pub const FREEVERB_COMB_TUNINGS_R: [usize; 8] = [1139, 1211, 1300, 1379, 1445, 1514, 1580, 1640];
+pub const FREEVERB_COMB_TUNINGS_L: [usize; NUM_COMB_FILTERS] =
+    [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
+pub const FREEVERB_COMB_TUNINGS_R: [usize; NUM_COMB_FILTERS] =
+    [1139, 1211, 1300, 1379, 1445, 1514, 1580, 1640];
 
-pub const FREEVERB_ALLPASS_TUNINGS_L: [usize; 4] = [556, 441, 341, 225];
-pub const FREEVERB_ALLPASS_TUNINGS_R: [usize; 4] = [579, 464, 364, 248];
+pub const FREEVERB_ALLPASS_TUNINGS_L: [usize; NUM_ALLPASS_FILTERS] = [556, 441, 341, 225];
+pub const FREEVERB_ALLPASS_TUNINGS_R: [usize; NUM_ALLPASS_FILTERS] = [579, 464, 364, 248];
 
 /// Feedback Comb Filter with lowpass damping.
 pub struct CombFilter {
@@ -87,61 +97,60 @@ impl AllpassFilter {
     }
 }
 
-/// Studio-Quality Stereo Schroeder / Freeverb Diffusion Reverb.
+use crate::dsp::fdn_reverb::FdnReverb;
+
+/// Reverb Engine Algorithm Mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReverbMode {
+    Freeverb = 0,
+    Fdn = 1,
+}
+
+/// Studio-Quality Stereo Reverb with selectable Freeverb and 8-channel Householder FDN modes.
 pub struct StereoReverb {
-    combs_l: [CombFilter; 8],
-    combs_r: [CombFilter; 8],
-    allpasses_l: [AllpassFilter; 4],
-    allpasses_r: [AllpassFilter; 4],
+    pub mode: ReverbMode,
+    pub fdn: FdnReverb,
+    combs_l: [CombFilter; NUM_COMB_FILTERS],
+    combs_r: [CombFilter; NUM_COMB_FILTERS],
+    allpasses_l: [AllpassFilter; NUM_ALLPASS_FILTERS],
+    allpasses_r: [AllpassFilter; NUM_ALLPASS_FILTERS],
     wet: f32,
 }
 
 impl StereoReverb {
     pub fn new() -> Self {
+        Self::with_sample_rate(DEFAULT_SAMPLE_RATE)
+    }
+
+    pub fn with_sample_rate(sample_rate: f32) -> Self {
         Self {
-            combs_l: [
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[0]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[1]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[2]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[3]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[4]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[5]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[6]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_L[7]),
-            ],
-            combs_r: [
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[0]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[1]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[2]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[3]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[4]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[5]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[6]),
-                CombFilter::new(FREEVERB_COMB_TUNINGS_R[7]),
-            ],
-            allpasses_l: [
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_L[0]),
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_L[1]),
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_L[2]),
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_L[3]),
-            ],
-            allpasses_r: [
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_R[0]),
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_R[1]),
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_R[2]),
-                AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_R[3]),
-            ],
+            mode: ReverbMode::Fdn,
+            fdn: FdnReverb::new(sample_rate),
+            combs_l: std::array::from_fn(|i| CombFilter::new(FREEVERB_COMB_TUNINGS_L[i])),
+            combs_r: std::array::from_fn(|i| CombFilter::new(FREEVERB_COMB_TUNINGS_R[i])),
+            allpasses_l: std::array::from_fn(|i| AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_L[i])),
+            allpasses_r: std::array::from_fn(|i| AllpassFilter::new(FREEVERB_ALLPASS_TUNINGS_R[i])),
             wet: DEFAULT_REVERB_WET,
         }
     }
 
+    /// Sets the reverb algorithm mode.
+    pub fn set_mode(&mut self, mode: ReverbMode) {
+        self.mode = mode;
+    }
+
     pub fn set_wet(&mut self, wet: f32) {
         self.wet = wet.clamp(0.0, 1.0);
+        self.fdn.set_wet(self.wet);
     }
 
     pub fn set_params(&mut self, room_size: f32, wet: f32) {
         self.wet = wet.clamp(0.0, 1.0);
-        let fb = (0.7 + room_size * 0.28).clamp(0.0, MAX_COMB_FEEDBACK);
+        self.fdn.set_room_size(room_size);
+        self.fdn.set_wet(self.wet);
+
+        let fb =
+            (COMB_FEEDBACK_OFFSET + room_size * COMB_FEEDBACK_SCALE).clamp(0.0, MAX_COMB_FEEDBACK);
         for c in &mut self.combs_l {
             c.set_feedback(fb);
         }
@@ -156,27 +165,32 @@ impl StereoReverb {
             return (0.0, 0.0);
         }
 
-        let mono_in = (in_l + in_r) * 0.5;
+        match self.mode {
+            ReverbMode::Fdn => self.fdn.process_wet(in_l, in_r),
+            ReverbMode::Freeverb => {
+                let mono_in = (in_l + in_r) * STEREO_TO_MONO_SCALE;
 
-        let mut out_l = 0.0;
-        let mut out_r = 0.0;
+                let mut out_l = 0.0;
+                let mut out_r = 0.0;
 
-        for c in &mut self.combs_l {
-            out_l += c.process(mono_in);
-        }
-        for c in &mut self.combs_r {
-            out_r += c.process(mono_in);
-        }
+                for c in &mut self.combs_l {
+                    out_l += c.process(mono_in);
+                }
+                for c in &mut self.combs_r {
+                    out_r += c.process(mono_in);
+                }
 
-        for ap in &mut self.allpasses_l {
-            out_l = ap.process(out_l);
-        }
-        for ap in &mut self.allpasses_r {
-            out_r = ap.process(out_r);
-        }
+                for ap in &mut self.allpasses_l {
+                    out_l = ap.process(out_l);
+                }
+                for ap in &mut self.allpasses_r {
+                    out_r = ap.process(out_r);
+                }
 
-        let wet_gain = self.wet * REVERB_STEREO_SPREAD_GAIN;
-        (out_l * wet_gain, out_r * wet_gain)
+                let wet_gain = self.wet * REVERB_STEREO_SPREAD_GAIN;
+                (out_l * wet_gain, out_r * wet_gain)
+            }
+        }
     }
 
     #[inline(always)]
@@ -185,7 +199,7 @@ impl StereoReverb {
             return (in_l, in_r);
         }
 
-        let mono_in = (in_l + in_r) * 0.5;
+        let mono_in = (in_l + in_r) * STEREO_TO_MONO_SCALE;
 
         // Parallel comb filters
         let mut out_l = 0.0;
@@ -207,7 +221,7 @@ impl StereoReverb {
         }
 
         let wet_gain = self.wet * REVERB_STEREO_SPREAD_GAIN;
-        let dry_gain = 1.0 - self.wet * 0.5;
+        let dry_gain = 1.0 - self.wet * REVERB_DRY_MIX_FACTOR;
 
         (
             in_l * dry_gain + out_l * wet_gain,

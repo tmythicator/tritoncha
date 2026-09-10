@@ -75,6 +75,17 @@
                  (cons curr (step (get adj curr) (conj visited curr) (inc depth)))))]
     (vec (step bus-key #{} 0))))
 
+(defn- format-route-title [rk spec]
+  (or (:title spec)
+      (-> (name rk)
+          (str/replace #"-" " ")
+          str/upper-case)))
+
+(defn- prioritize-default [keys-coll]
+  (if (some #{:default} keys-coll)
+    (cons :default (remove #{:default} keys-coll))
+    keys-coll))
+
 (defn routing-graph-component []
   (let [routings     (routing/all-routings)
         cur-route-k  (:current-routing @audio-state :default)
@@ -85,9 +96,22 @@
         processors   (:processors active-spec)
         routes       (:routes active-spec)
         live-ctx     (:tone @engine-ctx)
-        bus-keys     (keys busses)]
+        bus-keys     (keys busses)
+        route-keys   (prioritize-default (keys routings))]
     [:div.neo-section
-     [:div.neo-section-label (str "$ routing_topology [" (str/upper-case (name cur-route-k)) "]")]
+     [:div.neo-section-header
+      [:div.neo-section-label (str "$ routing_topology [" (str/upper-case (name cur-route-k)) "]")]
+      [:div.neo-route-selector
+       (for [rk route-keys
+             :let [active?   (= rk cur-route-k)
+                   spec      (get routings rk)
+                   title-str (format-route-title rk spec)]]
+         ^{:key (str rk)}
+         [:button.neo-route-tab-btn
+          {:class    (when active? "active")
+           :title    (str "Activate " (name rk) " routing topology")
+           :on-click #(routing/set-routing! rk)}
+          title-str])]]
      [:div.neo-routing-box
       (for [bk bus-keys
             :let [{:keys [label class]} (bus-badge-info bk)

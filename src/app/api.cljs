@@ -18,6 +18,8 @@
 ;; Master Playback + Transport
 (def play! tracker/play-preset!)
 (def jam! tracker/play-preset!)
+(def play-track-at! tracker/play-track-at!)
+(def track! tracker/play-track-at!)
 (def toggle-play! tracker/toggle-play!)
 (def cycle-jam! tracker/cycle-jam!)
 (def next-jam! tracker/next-jam!)
@@ -141,6 +143,10 @@
 (def wq! fx/set-filter-q!)
 (def worklet-cutoff! fx/set-filter-cutoff!)
 (def worklet-resonance! fx/set-filter-q!)
+(def drive-mode! fx/set-drive-mode!)
+(def set-drive-mode! fx/set-drive-mode!)
+(def reverb-mode! fx/set-reverb-mode!)
+(def set-reverb-mode! fx/set-reverb-mode!)
 
 ;; SFX Drops + Dub One-Shots
 (def s! fx/trigger-dub-siren!)
@@ -180,6 +186,8 @@
 (def set-colors! visuals/set-colors!)
 (def w! visuals/toggle-wireframe!)
 (def toggle-wireframe! visuals/toggle-wireframe!)
+(def set-figures! visuals/set-figures!)
+(def clear-figures! visuals/clear-figures!)
 (def pulse! state/pulse!)
 
 ;; Realtime Diagnostics + UI HUD Overlays
