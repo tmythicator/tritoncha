@@ -2,11 +2,12 @@
 
 .instrument-browser-modal {
     position: fixed;
-    top: 50%;
+    top: clamp(130px, 15vh, 145px);
+    bottom: clamp(90px, 11vh, 105px);
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     width: min(1080px, 96vw);
-    max-height: 90vh;
+    max-height: calc(100dvh - 240px);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
@@ -16,7 +17,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    z-index: 60;
+    z-index: 40;
     pointer-events: auto;
 }
 
@@ -86,10 +87,11 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     height: 100%;
-    max-height: calc(90vh - 190px);
-    padding-right: var(--space-sm);
+    flex: 1;
+    min-height: 0;
+    padding-right: var(--space-md);
 }
 
 .inst-empty-view {
@@ -100,16 +102,19 @@
 }
 
 .inst-catalog-card {
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-xs) var(--space-sm);
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: var(--space-2xs);
     background: var(--bg-surface-subtle);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
     border-left: 3px solid transparent;
+    overflow: hidden;
+    box-sizing: border-box;
+    flex-shrink: 0;
 
     &:hover {
         border-color: var(--border-primary-subtle);
@@ -127,19 +132,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-2xs);
 }
 
 .inst-card-title-group {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
+    min-width: 0;
+    flex: 1;
 }
 
 .inst-card-title {
     font-family: var(--font-mono);
     font-weight: 700;
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-sm);
     color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &.selected {
         color: var(--color-primary);
@@ -149,35 +160,50 @@
 .inst-card-badges {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 2px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .inst-card-subtitle {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--space-2xs);
     font-size: var(--font-size-xs);
     color: var(--text-tertiary);
 }
 
+.inst-subtitle-text {
+    font-size: var(--font-size-2xs);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+
 .inst-audition-btn-group {
     display: flex;
-    gap: var(--space-2xs);
+    gap: 2px;
+    flex-shrink: 0;
 }
 
 .inst-audition-btn {
-    padding: var(--space-2xs) var(--space-xs);
-    font-size: var(--font-size-xs);
-    min-width: 44px;
+    padding: 1px var(--space-2xs);
+    font-size: var(--font-size-2xs);
+    min-width: 32px;
     text-align: center;
 
     &.wide {
-        min-width: 48px;
+        min-width: 36px;
     }
 }
 
 .neo-badge.badge-custom {
-    font-size: var(--font-size-2xs);
+    font-size: 9px;
     padding: 1px var(--space-xs);
     background: var(--bg-secondary-subtle);
     color: var(--color-secondary);
@@ -186,7 +212,7 @@
 }
 
 .neo-badge.badge-session {
-    font-size: var(--font-size-2xs);
+    font-size: 9px;
     padding: 1px var(--space-xs);
     background: var(--bg-warning-subtle);
     color: var(--color-warning);
@@ -195,14 +221,16 @@
 }
 
 .neo-badge.mini {
-    font-size: var(--font-size-2xs);
-    padding: 1px var(--space-xs);
+    font-size: 9px;
+    padding: 1px 3px;
+    letter-spacing: 0.2px;
 }
 
 .neo-bus-tag.mini {
-    font-size: var(--font-size-2xs);
-    padding: 1px var(--space-xs);
+    font-size: 9px;
+    padding: 1px 3px;
     min-width: auto;
+    letter-spacing: 0.2px;
 }
 
 .neo-bus-tag.inspector-bus {
@@ -222,7 +250,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     height: 100%;
-    max-height: calc(90vh - 190px);
+    flex: 1;
+    min-height: 0;
     padding-right: var(--space-sm);
 }
 

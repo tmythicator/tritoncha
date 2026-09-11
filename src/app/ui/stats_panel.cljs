@@ -22,8 +22,7 @@
        [:span.neo-dot {:class (if (= st "running") "online" "offline")}]
        [:span (if (= st "running") "ONLINE" "OFFLINE")]]
       [:button.neo-btn-close {:on-click on-close
-                              :aria-label "Close stats modal"
-                              :title "Close"} "[X]"]]]))
+                              :aria-label "Close stats modal"} "[X]"]]]))
 
 (defn- stats-footer []
   [:div.neo-footer

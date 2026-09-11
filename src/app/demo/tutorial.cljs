@@ -1,9 +1,10 @@
 (ns app.demo.tutorial
   "Live-coding audio + visuals tutorial for Tritoncha."
   (:require [app.api :refer [_ arp b! c! chord d definst! deftrack! demo! demo-stop!
-                             drop! euc every-n f! fast fb! jam! l! mod-all! pat redrum! rev
-                             s! scale scene! shift slow sometimes sometimes-by stack! stop!
-                             sw! take-steps tr-all! undrum! v! w! wet!]]))
+                             drive-mode! drop! euc every-n f! fast fb! hud! inst! jam! jams!
+                             l! mod! mod-all! pat redrum! rev reverb-mode! s! scale scene!
+                             shift slow sometimes sometimes-by stack! stats! stop! sw!
+                             take-steps tr-all! undrum! v! w! wet!]]))
 
 (comment
   ;; =============================================================================
@@ -12,10 +13,9 @@
   ;; Web Browser Shortcuts:
   ;;   [Ctrl+Enter]       -> Evaluate form under cursor / current line
   ;;   [Ctrl+Shift+Enter] -> Evaluate entire script buffer
-  ;;   [I]                -> Toggle Realtime Telemetry HUD (FPS, clock drift, DSP)
   ;;
   ;; Emacs + CIDER Live Performance:
-  ;;   M-x cider-connect-cljs -> localhost:46073 -> :app -> (in-ns 'app.core)
+  ;;   M-x cider-connect-cljs -> select shadow -> :app -> (in-ns 'app.core)
   ;; =============================================================================
 
   ;; Built-in Jams
@@ -43,8 +43,8 @@
   ;; Live Breakbeat Masterclass: Articulations and Ghost Rudiments
   ;;
   ;; Mini-notation modifiers:
-  ;;   ! -> Accent (punchy rimshot / hit: vel 1.15)
-  ;;   _ -> Ghost note (soft, delicate touch: vel 0.35)
+  ;;   ! -> Accent (vel 1.15)
+  ;;   _ -> Ghost note (vel 0.35)
   ;;   (no suffix) -> Normal hit (vel 0.90)
   ;;   . or _ (standalone) -> Musical rest (nil)
   ;;
@@ -112,10 +112,10 @@
   (l! :bass {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95})
 
   ;; Double-time kick drum buildup before the drop:
-  (l! :kick {:pattern (fast 2 (pat "k . . .  k . . .")) :step "16n"})
+  (l! :kick {:notes (fast 2 (pat "k . . .  k . . .")) :step "16n"})
 
   ;; Restore the syncopated breakbeat:
-  (l! :kick {:pattern (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
+  (l! :kick {:notes (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
 
   ;; Threading Pipelines (->>)
   ;; 1. Shifting and doubling an arpeggio on the fly
@@ -225,6 +225,17 @@
   ;; Volume control
   (v! :bus/drums +2)
   (v! :bus/space -3)
+
+  ;; Rust WASM Audio Core sound modes
+  (mod! :idm)          ;; Drum synthesis mode (:natural, :analog, :idm, :industrial)
+  (drive-mode! :adaa)  ;; ADAA anti-aliased saturation (:tan-h, :soft, :adaa)
+  (reverb-mode! :fdn)   ;; Feedback Delay Network reverb (:fdn, :freeverb)
+
+  ;; UI Overlays and REPL Introspection Modals
+  (stats!)             ;; Toggle telemetry HUD modal (or press [I])
+  (hud!)               ;; Toggle live active track loop HUD
+  (inst!)              ;; Toggle instrument browser overlay
+  (jams!)              ;; Toggle track browser modal
 
   ;; 3D WebGL Scenes
   (scene! :synthwave-grid)

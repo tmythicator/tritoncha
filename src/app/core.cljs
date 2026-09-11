@@ -6,7 +6,7 @@
    [app.audio.control.mixer :refer [toggle-bus! toggle-drums!]]
    [app.audio.control.tracker :refer [next-jam! play-track-at! prev-jam! toggle-play!]]
    [app.audio.dsp.engine :refer [init-audio! resume-audio-context!]]
-   [app.audio.dsp.fx :refer [trigger-dub-siren! trigger-sub-drop!]]
+   [app.audio.dsp.fx :refer [trigger-sub-drop!]]
    [app.audio.dsp.instruments]
    [app.custom.instruments]
    [app.custom.routes]
@@ -51,13 +51,12 @@
         "ArrowLeft" (prev-jam!)
         "ArrowRight" (next-jam!)
         ("j" "J") (toggle-track-browser!)
-        ("k" "K") (toggle-instrument-browser!)
+        ("s" "S") (toggle-instrument-browser!)
         ("1" "2" "3" "4" "5" "6" "7" "8" "9")
         (play-track-at! (dec (js/parseInt k 10)))
         ("d" "D") (toggle-drums!)
         ("c" "C") (toggle-click!)
         ("b" "B") (toggle-bus! :bus/bass)
-        ("s" "S") (trigger-dub-siren!)
         ("x" "X") (trigger-sub-drop!)
         ("g" "G") (cycle-scene!)
         ("w" "W") (toggle-wireframe!)

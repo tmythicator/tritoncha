@@ -28,7 +28,28 @@
   (testing "Extracts inner forms inside (comment ...) instead of the comment wrapper"
     (let [code "(comment\n  (jam! :roller)\n  (jam! :sub-roller))"]
       (is (= "(jam! :roller)" (buffer/find-sexp-at-cursor code 15)))
-      (is (= "(jam! :sub-roller)" (buffer/find-sexp-at-cursor code 30))))))
+      (is (= "(jam! :sub-roller)" (buffer/find-sexp-at-cursor code 30)))))
+
+  (testing "Extracts multi-line stack! form when cursor is right after form or on comment lines below it"
+    (let [stack-str "(stack!\n   [:kick (pat \"k!\")]\n   [:snare (pat \"s!\")])"
+          code (str "(comment\n  " stack-str "\n\n  ;; Live Breakbeat Masterclass\n  ;; Mini-notation modifiers:\n  (b! 168))")
+          stack-end (+ 13 (count stack-str))]
+      ;; Cursor right at closing parenthesis of stack!
+      (is (= stack-str (buffer/find-sexp-at-cursor code stack-end)))
+      ;; Cursor on newline right after stack!
+      (is (= stack-str (buffer/find-sexp-at-cursor code (inc stack-end))))
+      ;; Cursor on comment line below stack!
+      (is (= stack-str (buffer/find-sexp-at-cursor code (+ stack-end 20))))))
+
+  (testing "Evaluates innermost S-expression (pat ...) when cursor is placed inside it"
+    (let [pat-str "(pat \"s! s_ s_ s!\")"
+          loop-str (str "(l! :snare\n    {:inst :snare\n     :notes " pat-str "\n     :step \"16n\"})")
+          code (str "(comment\n  " loop-str ")")
+          pat-pos (+ (.indexOf code "(pat") 3)]
+      ;; Cursor inside (pat ...) -> returns (pat ...)
+      (is (= pat-str (buffer/find-sexp-at-cursor code pat-pos)))
+      ;; Cursor on :step "16n" -> returns (l! ...)
+      (is (= loop-str (buffer/find-sexp-at-cursor code (+ (.indexOf code ":step") 2)))))))
 
 (deftest get-code-at-cursor-test
   (testing "Returns selection when non-empty range selected"

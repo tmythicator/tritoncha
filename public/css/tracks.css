@@ -2,11 +2,12 @@
 
 .track-browser-modal {
     position: fixed;
-    top: 50%;
+    top: clamp(130px, 15vh, 145px);
+    bottom: clamp(90px, 11vh, 105px);
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     width: min(680px, 94vw);
-    max-height: 85vh;
+    max-height: calc(100dvh - 240px);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
@@ -16,7 +17,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    z-index: 60;
+    z-index: 40;
     pointer-events: auto;
 }
 
@@ -39,6 +40,7 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-fast);
+    flex-shrink: 0;
 
     &:hover {
         border-color: var(--border-primary-subtle);

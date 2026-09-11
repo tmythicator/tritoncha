@@ -47,6 +47,8 @@
 /* Top bar branding and controls */
 
 .hud-top {
+    position: relative;
+    z-index: 50;
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -80,7 +82,7 @@
 .top-bar-controls {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: var(--space-sm);
     width: 100%;
     flex-wrap: wrap;
     pointer-events: auto;
@@ -90,32 +92,136 @@
     }
 }
 
-.jam-rotator {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2xs);
+.player-play-btn {
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: var(--space-2xs) var(--space-sm);
+    border: 1px solid var(--border-primary);
+    background: var(--bg-surface);
+    color: var(--text-brand);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+
+    &:hover {
+        background: var(--color-primary);
+        color: var(--text-inverse);
+        box-shadow: var(--glow-primary);
+    }
+
+    &.active {
+        background: var(--color-success);
+        color: var(--text-inverse);
+        border-color: var(--color-success);
+        box-shadow: var(--glow-success);
+
+        &:hover {
+            background: var(--palette-lime);
+            border-color: var(--palette-lime);
+        }
+    }
 }
 
-.jam-rotator .btn-arrow {
-    padding: var(--space-xs) var(--space-md);
+.player-track-deck {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.player-btn-nav {
+    font-family: inherit;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    min-width: 28px;
+    padding: 0 var(--space-xs);
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+
+    &:hover {
+        color: var(--text-brand);
+        background: var(--bg-interactive-hover);
+    }
+
+    &:active {
+        background: var(--bg-primary-subtle);
+        color: var(--color-primary);
+    }
+}
+
+.player-track-badge {
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: var(--space-2xs) var(--space-sm);
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    transition: all var(--transition-fast);
+
+    &:hover {
+        color: var(--text-brand);
+        background: var(--bg-interactive-hover);
+    }
+}
+
+.top-bar-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+    margin-left: auto;
+
+    @media (max-width: 900px) {
+        margin-left: 0;
+    }
 }
 
 .top-bar-loops {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: var(--space-sm);
     width: 100%;
     flex-wrap: wrap;
     pointer-events: auto;
+    margin-top: var(--space-2xs);
 
     @media (max-width: 640px) {
         gap: var(--space-xs);
     }
 }
 
+.loop-tags-label {
+    font-family: inherit;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-tertiary);
+}
+
 /* Bottom bar and status hints */
 
 .hud-bottom {
+    position: relative;
+    z-index: 50;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -237,8 +343,26 @@
 }
 
 .neo-action-btn {
+    font-family: inherit;
     font-size: var(--font-size-xs);
-    padding: var(--space-2xs) var(--space-xs);
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    pointer-events: auto;
+
+    &:hover {
+        color: var(--text-brand);
+        border-color: var(--border-primary);
+        background: var(--bg-interactive-hover);
+        box-shadow: var(--glow-focus);
+    }
 
     &.active {
         color: var(--color-primary);
@@ -287,13 +411,10 @@
 }
 
 .hud-by {
-    font-size: var(--font-size-sm);
+    font-size: inherit;
     color: var(--text-tertiary);
-    white-space: nowrap;
-
-    @media (max-width: 640px) {
-        display: none;
-    }
+    font-weight: 400;
+    margin-right: 2px;
 }
 
 /* Mobile layout and warning notice */

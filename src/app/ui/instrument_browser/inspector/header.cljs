@@ -30,12 +30,7 @@
         (= (:type cur-spec) :poly)
         (let [poly (or (:polyphony cur-spec) (:maxPolyphony cur-spec) (:max-polyphony cur-spec) 16)]
           (str "POLY (" poly "x)"))
-        :else "MONOPHONIC")]]]
-   [:div.inst-inspector-subtitle
-    (if drum?
-      "Dedicated Rust WASM Analog Drum Synthesis Core"
-      (str "Oscillator: " (str/upper-case (name (get-in cur-spec [:osc :type] :saw)))
-           " | FX Chain: " (comps/bus-fx-summary (:bus cur-spec))))]])
+        :else "MONOPHONIC")]]]])
 
 (defn audition-bar
   "Render quick test trigger buttons and continuous audition loop toggle.

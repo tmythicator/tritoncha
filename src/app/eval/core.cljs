@@ -24,6 +24,8 @@
    'clear-loops!        api/clear-loops!
    'stack!              api/stack!
    'unstack!            api/unstack!
+   'set-drum-mode!      api/set-drum-mode!
+   'mod!                api/mod!
 
    ;; Harmonic Music Theory + Generative Rhythms
    '_                   api/_
@@ -73,11 +75,23 @@
    'undrum!             api/undrum!
    'redrum!             api/redrum!
    'toggle-drums!       api/toggle-drums!
+   'unbass!             api/unbass!
+   'rebass!             api/rebass!
+   'toggle-bass!        api/toggle-bass!
+   'unlead!             api/unlead!
+   'relead!             api/relead!
+   'toggle-leads!       api/toggle-leads!
+   'unpad!              api/unpad!
+   'repad!              api/repad!
+   'toggle-pads!        api/toggle-pads!
    'set-volume!         api/set-volume!
    'v!                  api/v!
    'toggle-bus!         api/toggle-bus!
    'mute-bus!           api/mute-bus!
    'unmute-bus!         api/unmute-bus!
+   'set-send!           api/set-send!
+   'send!               api/send!
+   'bus-send!           api/bus-send!
 
    ;; Master DSP Automations + Effects
    'f!                  api/f!
@@ -88,12 +102,19 @@
    'sweep-filter!       api/sweep-filter!
    'dist!               api/dist!
    'set-distortion!     api/set-distortion!
+   'bitcrush!           api/bitcrush!
+   'chorus!             api/chorus!
+   'sidechain!          api/sidechain!
    'fb!                 api/fb!
    'set-delay-feedback! api/set-delay-feedback!
    'dt!                 api/dt!
    'set-delay-time!     api/set-delay-time!
    'wet!                api/wet!
    'set-reverb-wet!     api/set-reverb-wet!
+   'drive-mode!         api/drive-mode!
+   'set-drive-mode!     api/set-drive-mode!
+   'reverb-mode!        api/reverb-mode!
+   'set-reverb-mode!    api/set-reverb-mode!
 
    ;; SFX Drops + Dub One-Shots
    's!                  api/s!
@@ -137,7 +158,9 @@
    'stat                api/stat
    'status!             api/status!
    'stats!              api/stats!
-   'hud!                api/hud!})
+   'hud!                api/hud!
+   'inst!               api/inst!
+   'jams!               api/jams!})
 
 (def ^:private sci-ctx
   (delay
