@@ -2,34 +2,34 @@
 
 .neo-tutorial-card {
     position: fixed;
-    top: clamp(130px, 15vh, 145px);
-    bottom: clamp(105px, 14vh, 125px);
+    top: var(--modal-top);
+    bottom: var(--modal-bottom);
     right: var(--tutorial-card-right);
     left: auto;
-    width: var(--tutorial-card-width);
+    width: var(--modal-tutorial-width);
     max-width: calc(100vw - 20px);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
-    padding: var(--tutorial-card-padding);
+    padding: var(--modal-card-padding);
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    z-index: 60;
+    z-index: var(--z-modal);
     pointer-events: auto;
-    max-height: calc(100dvh - 260px);
+    max-height: var(--modal-max-height);
     box-shadow: var(--shadow-modal);
     border-radius: var(--radius-sm);
 
     @media (max-width: 768px) {
-        top: clamp(130px, 15vh, 145px);
-        bottom: clamp(105px, 14vh, 125px);
+        top: var(--modal-top);
+        bottom: var(--modal-bottom);
         left: var(--space-xs);
         right: var(--space-xs);
         width: auto;
         padding: var(--space-sm) var(--space-md);
         gap: var(--space-xs);
-        max-height: calc(100dvh - 240px);
+        max-height: var(--modal-max-height);
     }
 }
 
