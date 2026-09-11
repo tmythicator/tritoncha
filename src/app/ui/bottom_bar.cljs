@@ -6,11 +6,6 @@
         {:keys [tutorial-visible? instrument-browser-open? stats-visible? hud-visible?]} @ui-state
         click-active? (contains? active-tracks :click)]
     [:footer.hud-bottom {:role "contentinfo" :aria-label "Performance shortcuts and author link"}
-     [:div.neo-links-group
-      [:a.neo-link-btn {:href "https://timcha.dev" :target "_blank" :rel "noreferrer"}
-       [:span.hud-by "by "]
-       "timcha.dev"]]
-
      [:div.hotkey-hints
       [:button.neo-action-btn {:on-click toggle-tutorial!
                                :class (when tutorial-visible? "active")
@@ -35,7 +30,12 @@
       [:button.neo-action-btn {:on-click toggle-hud!
                                :class (when hud-visible? "active")
                                :aria-label "Toggle HUD"}
-       "[H] HUD"]]]))
+       "[H] HUD"]]
+
+     [:div.neo-links-group
+      [:a.neo-link-btn {:href "https://timcha.dev" :target "_blank" :rel "noreferrer"}
+       [:span.hud-by "by "]
+       "timcha.dev"]]]))
 
 
 

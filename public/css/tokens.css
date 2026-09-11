@@ -172,20 +172,31 @@
     --hud-padding-y:           clamp(8px, 2vh, 20px);
     --hud-padding-x:           clamp(10px, 3vw, 24px);
 
-    --stats-card-width:        min(480px, calc(100vw - 16px));
-    --stats-card-right:        clamp(8px, 2vw, 24px);
-    --stats-card-bottom:       clamp(38px, 5vh, 48px);
-    --stats-card-padding:      clamp(8px, 1.5vw, 16px);
-    --stats-max-height:        calc(100dvh - 80px);
-    --stats-grid-cols:         repeat(auto-fit, minmax(180px, 1fr));
-    --stats-loops-height:      clamp(110px, 20vh, 180px);
+    --z-canvas:                1;
+    --z-hud-base:              10;
+    --z-hud-controls:          20;
+    --z-hud-bar:               50;
+    --z-modal:                 60;
 
-    --tutorial-card-width:     min(760px, calc(100vw - 32px));
-    --tutorial-card-top:       clamp(92px, 11.5vh, 110px);
+    --modal-top:               clamp(130px, 15vh, 145px);
+    --modal-bottom:            clamp(105px, 14vh, 125px);
+    --modal-max-height:        calc(100dvh - 260px);
+
+    --stats-card-width:        var(--modal-stats-width);
+    --stats-card-right:        clamp(8px, 2vw, 24px);
+    --stats-card-padding:      var(--modal-card-padding);
+    --stats-grid-cols:         repeat(auto-fit, minmax(180px, 1fr));
+
+    --modal-stats-width:       min(480px, calc(100vw - 16px));
+    --modal-tutorial-width:    min(760px, calc(100vw - 32px));
+    --modal-inst-width:        min(1080px, 96vw);
+    --modal-track-width:       min(680px, 94vw);
+    --modal-card-padding:      clamp(8px, 1.5vw, 16px);
+
+    --tutorial-card-width:     var(--modal-tutorial-width);
     --tutorial-card-right:     clamp(12px, 2vw, 24px);
-    --tutorial-card-bottom:    clamp(12px, 2.5vh, 24px);
-    --tutorial-card-padding:   clamp(10px, 1.4vw, 16px);
-    --tutorial-max-height:     calc(100dvh - var(--tutorial-card-top) - var(--tutorial-card-bottom));
+    --tutorial-card-padding:   var(--modal-card-padding);
+    --tutorial-max-height:     calc(100dvh - 260px);
     --editor-min-height:       clamp(280px, 46vh, 560px);
     --editor-max-height:       calc(var(--tutorial-max-height) - 170px);
     --console-max-height:      clamp(60px, 12vh, 110px);

@@ -2,22 +2,22 @@
 
 .instrument-browser-modal {
     position: fixed;
-    top: clamp(130px, 15vh, 145px);
-    bottom: clamp(90px, 11vh, 105px);
+    top: var(--modal-top);
+    bottom: var(--modal-bottom);
     left: 50%;
     transform: translateX(-50%);
-    width: min(1080px, 96vw);
-    max-height: calc(100dvh - 240px);
+    width: var(--modal-inst-width);
+    max-height: var(--modal-max-height);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
-    padding: var(--stats-card-padding);
+    padding: var(--modal-card-padding);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-modal);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    z-index: 40;
+    z-index: var(--z-modal);
     pointer-events: auto;
 }
 
