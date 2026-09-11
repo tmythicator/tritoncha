@@ -3,11 +3,12 @@
   (:require
    [app.audio.control.tracker :refer [default-track-key next-jam! prev-jam!]]
    [app.state :refer [audio-state visual-state]]
+   [app.utils.audio :refer [format-key]]
    [clojure.string :as str]))
 
 (defn controls-component [{:keys [toggle-play! cycle-jam! toggle-track-browser! cycle-scene!]}]
-  (let [{:keys [active? current-jam]} @audio-state
-        {:keys [current-scene]}        @visual-state
+  (let [{:keys [active? current-jam bpm key]} @audio-state
+        {:keys [current-scene]}               @visual-state
         jam-name   (-> (or current-jam (default-track-key)) name str/upper-case)
         scene-name (-> (or current-scene :cyber-torus) name str/upper-case)]
     [:div.top-bar-controls
@@ -28,7 +29,8 @@
        "►"]]
 
      [:div.top-bar-tools
+      [:span.neo-badge (str bpm " BPM")]
+      [:span.neo-badge.badge-cyan (format-key key)]
       [:button.neo-btn-stats {:on-click cycle-scene!
                               :aria-label "Cycle 3D Scene"}
        (str "SCENE: " scene-name)]]]))
-

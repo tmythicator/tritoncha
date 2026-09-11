@@ -32,15 +32,19 @@
             (sync-scroll! ta)))
 
         restore-state!
-        (fn [^js ta]
-          (when ta
-            (let [{:keys [scroll-top scroll-left selection-s selection-e]} @editor-state]
-              (set! (.-scrollTop ta) scroll-top)
-              (set! (.-scrollLeft ta) scroll-left)
-              (set! (.-selectionStart ta) (or selection-s 0))
-              (set! (.-selectionEnd ta) (or selection-e 0))
-              (sync-scroll! ta)
-              (.focus ta))))
+        (fn restore-state!
+          ([^js ta]
+           (restore-state! ta false))
+          ([^js ta focus?]
+           (when ta
+             (let [{:keys [scroll-top scroll-left selection-s selection-e]} @editor-state]
+               (set! (.-scrollTop ta) scroll-top)
+               (set! (.-scrollLeft ta) scroll-left)
+               (set! (.-selectionStart ta) (or selection-s 0))
+               (set! (.-selectionEnd ta) (or selection-e 0))
+               (sync-scroll! ta)
+               (when focus?
+                 (.focus ta))))))
 
         handle-key-down
         (fn [^js e eval-fn on-eval-all]
@@ -56,7 +60,7 @@
                   (on-eval-all @content-state)
                   (let [expr (buffer/get-code-at-cursor @content-state (.-selectionStart target) (.-selectionEnd target))]
                     (eval-fn expr)))
-                (js/requestAnimationFrame #(restore-state! target)))
+                (js/requestAnimationFrame #(restore-state! target true)))
 
               (= k "Tab")
               (do
@@ -91,7 +95,7 @@
                            (let [start (.-selectionStart ta)
                                  end   (.-selectionEnd ta)]
                              (eval-fn (buffer/get-code-at-cursor @content-state start end)))
-                           (js/requestAnimationFrame #(restore-state! ta))))
+                           (js/requestAnimationFrame #(restore-state! ta true))))
              :title "Evaluate enclosing S-expression under cursor (Ctrl+Enter)"}
             "EVAL SEXP"]
            [:button.neo-run-btn.btn-all
@@ -99,7 +103,7 @@
                          (when-let [ta @textarea-ref]
                            (sync-state! ta)
                            (on-eval-all @content-state)
-                           (js/requestAnimationFrame #(restore-state! ta))))
+                           (js/requestAnimationFrame #(restore-state! ta true))))
              :title "Evaluate full script buffer (Ctrl+Shift+Enter)"}
             "EVAL ALL"]]]
 
@@ -109,7 +113,7 @@
             :ref           (fn [el]
                              (when el
                                (reset! textarea-ref el)
-                               (restore-state! el)))
+                               (restore-state! el false)))
             :value         (or @content-state "")
             :on-change     (fn [^js e]
                              (let [v (.. e -target -value)]
