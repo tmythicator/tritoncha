@@ -113,14 +113,14 @@
     }
 
     &.active {
-        background: #00ff88;
-        color: #050508;
-        border-color: #00ff88;
-        box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+        background: var(--color-success);
+        color: var(--text-inverse);
+        border-color: var(--color-success);
+        box-shadow: var(--glow-success);
 
         &:hover {
-            background: #00cc6d;
-            border-color: #00cc6d;
+            background: var(--palette-lime);
+            border-color: var(--palette-lime);
         }
     }
 }
@@ -361,7 +361,7 @@
         color: var(--text-brand);
         border-color: var(--border-primary);
         background: var(--bg-interactive-hover);
-        box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+        box-shadow: var(--glow-focus);
     }
 
     &.active {
