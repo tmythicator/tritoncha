@@ -41,6 +41,8 @@
 (def unstack! looper/unstack!)
 (def set-drum-mode! looper/set-drum-mode!)
 (def mod! looper/mod!)
+(def set-track-vel! looper/set-track-vel!)
+(def vel! looper/set-track-vel!)
 
 ;; Harmonic Music Theory + Generative Rhythms
 (def _ harmony/_)

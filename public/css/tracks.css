@@ -3,11 +3,11 @@
 .track-browser-modal {
     position: fixed;
     top: clamp(130px, 15vh, 145px);
-    bottom: clamp(90px, 11vh, 105px);
+    bottom: clamp(105px, 14vh, 125px);
     left: 50%;
     transform: translateX(-50%);
     width: min(680px, 94vw);
-    max-height: calc(100dvh - 240px);
+    max-height: calc(100dvh - 260px);
     background: var(--bg-surface);
     backdrop-filter: var(--blur-glass);
     border: 1px solid var(--border-strong);
@@ -17,7 +17,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    z-index: 40;
+    z-index: 60;
     pointer-events: auto;
 }
 

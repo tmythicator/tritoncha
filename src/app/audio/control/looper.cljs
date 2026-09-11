@@ -167,6 +167,21 @@
                              (nil? (:transport-start st)) (assoc :transport-start hw-now)))))
     tk))
 
+(defn set-track-vel!
+  "Sets the velocity / volume multiplier for an active track loop.
+  Examples: (set-track-vel! :kick 1.2), (set-track-vel! :bass 0.8)."
+  [track-key vel]
+  (let [kw (keyword track-key)]
+    (when-let [tr (get (:active-tracks @audio-state) kw)]
+      (let [old-pat    @(:pattern tr)
+            raw-val    (js/parseFloat vel)
+            valid-val  (if (js/isNaN raw-val) 0.9 raw-val)
+            clamped-v  (clamp valid-val 0.0 2.0)
+            new-pat    (assoc old-pat :vel clamped-v)]
+        (reset! (:pattern tr) new-pat)
+        (sync-track-to-worklet! kw new-pat)
+        (swap! audio-state update :tracks-ver (fnil inc 0))))))
+
 (defn set-bpm!
   "Updates the master tempo in BPM.
   Examples: (set-bpm! 174)."

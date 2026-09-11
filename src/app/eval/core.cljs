@@ -26,6 +26,8 @@
    'unstack!            api/unstack!
    'set-drum-mode!      api/set-drum-mode!
    'mod!                api/mod!
+   'set-track-vel!      api/set-track-vel!
+   'vel!                api/vel!
 
    ;; Harmonic Music Theory + Generative Rhythms
    '_                   api/_

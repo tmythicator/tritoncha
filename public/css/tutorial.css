@@ -3,7 +3,7 @@
 .neo-tutorial-card {
     position: fixed;
     top: clamp(130px, 15vh, 145px);
-    bottom: clamp(90px, 11vh, 105px);
+    bottom: clamp(105px, 14vh, 125px);
     right: var(--tutorial-card-right);
     left: auto;
     width: var(--tutorial-card-width);
@@ -15,15 +15,15 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    z-index: 40;
+    z-index: 60;
     pointer-events: auto;
-    max-height: calc(100dvh - 240px);
+    max-height: calc(100dvh - 260px);
     box-shadow: var(--shadow-modal);
     border-radius: var(--radius-sm);
 
     @media (max-width: 768px) {
         top: clamp(130px, 15vh, 145px);
-        bottom: clamp(90px, 11vh, 105px);
+        bottom: clamp(105px, 14vh, 125px);
         left: var(--space-xs);
         right: var(--space-xs);
         width: auto;
