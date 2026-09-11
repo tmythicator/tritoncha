@@ -16,6 +16,7 @@
    [app.lib.routes-test]
    [app.lib.scenes-test]
    [app.lib.tracks-test]
+   [app.ui.hud-test]
    [app.utils.audio-test]
    [app.utils.coll-test]
    [app.utils.dom-test]
