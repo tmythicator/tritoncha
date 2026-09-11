@@ -2,7 +2,8 @@
 
 .neo-stats-card {
     position: fixed;
-    bottom: var(--stats-card-bottom);
+    top: clamp(130px, 15vh, 145px);
+    bottom: clamp(90px, 11vh, 105px);
     right: var(--stats-card-right);
     width: var(--stats-card-width);
     max-width: calc(100vw - 16px);
@@ -13,17 +14,18 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
-    z-index: 50;
+    z-index: 40;
     pointer-events: auto;
     box-shadow: var(--shadow-modal);
     border-radius: var(--radius-sm);
-    max-height: var(--stats-max-height);
+    max-height: calc(100dvh - 240px);
     overflow-y: auto;
 
     @media (max-width: 640px) {
         left: var(--space-md);
         right: var(--space-md);
-        bottom: var(--stats-card-bottom);
+        top: clamp(130px, 15vh, 145px);
+        bottom: clamp(90px, 11vh, 105px);
         gap: var(--space-sm);
     }
 }

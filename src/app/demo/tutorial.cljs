@@ -13,10 +13,9 @@
   ;; Web Browser Shortcuts:
   ;;   [Ctrl+Enter]       -> Evaluate form under cursor / current line
   ;;   [Ctrl+Shift+Enter] -> Evaluate entire script buffer
-  ;;   [I]                -> Toggle Realtime Telemetry HUD (FPS, clock drift, DSP)
   ;;
   ;; Emacs + CIDER Live Performance:
-  ;;   M-x cider-connect-cljs -> localhost:46073 -> :app -> (in-ns 'app.core)
+  ;;   M-x cider-connect-cljs -> select shadow -> :app -> (in-ns 'app.core)
   ;; =============================================================================
 
   ;; Built-in Jams
@@ -44,8 +43,8 @@
   ;; Live Breakbeat Masterclass: Articulations and Ghost Rudiments
   ;;
   ;; Mini-notation modifiers:
-  ;;   ! -> Accent (punchy rimshot / hit: vel 1.15)
-  ;;   _ -> Ghost note (soft, delicate touch: vel 0.35)
+  ;;   ! -> Accent (vel 1.15)
+  ;;   _ -> Ghost note (vel 0.35)
   ;;   (no suffix) -> Normal hit (vel 0.90)
   ;;   . or _ (standalone) -> Musical rest (nil)
   ;;

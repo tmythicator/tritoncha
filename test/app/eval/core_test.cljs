@@ -2,6 +2,7 @@
   (:require [app.audio.control.session :as session]
             [app.audio.theory.harmony :as harmony]
             [app.audio.theory.patterns :as patterns]
+            [app.eval.core :as eval]
             [cljs.test :refer [deftest is testing]]
             [sci.core :as sci]))
 
@@ -49,3 +50,11 @@
 (deftest eval-code-error-handling-test
   (testing "Catches syntax and runtime errors gracefully in SCI"
     (is (thrown? js/Error (sci/eval-string* test-ctx "(non-existent-function-call 1 2 3)")))))
+
+(deftest eval-audio-modes-test
+  (testing "Evaluates audio DSP modes (mod!, drive-mode!, reverb-mode!, etc.) via app.eval.core/eval-code"
+    (is (:ok? (eval/eval-code "(mod! :idm)")))
+    (is (:ok? (eval/eval-code "(drive-mode! :adaa)")))
+    (is (:ok? (eval/eval-code "(reverb-mode! :fdn)")))
+    (is (:ok? (eval/eval-code "(inst!)")))
+    (is (:ok? (eval/eval-code "(jams!)")))))

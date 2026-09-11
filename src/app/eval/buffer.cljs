@@ -83,60 +83,64 @@
 
 (defn find-sexp-at-cursor
   "Finds the best matching S-expression around cursor pos:
-   1. If cursor is immediately at the end of a closed list form, return it.
-   2. Otherwise find the enclosing top-level parenthesized form (or top-level inside comment).
-   3. If cursor is between forms (e.g. on a comment or blank line), find nearest adjacent form."
+   1. If cursor is inside or immediately at the end of a parenthesized form, return the innermost parenthesized form.
+   2. If cursor is between forms (e.g. on a comment or blank line), find nearest preceding or closest form."
   [text pos]
   (let [forms (parse-all-forms text)]
     (when (seq forms)
       (let [len (count text)
             safe-pos (min (max 0 (or pos 0)) len)
 
-            prev-non-space (loop [i (dec safe-pos)]
-                             (cond
-                               (< i 0) -1
-                               (let [c (.charAt text i)]
-                                 (or (= c "\n") (= c "\r"))) -1
-                               (let [c (.charAt text i)]
-                                 (or (= c " ") (= c "\t"))) (recur (dec i))
-                               :else i))
-            target-end (if (and (>= prev-non-space 0)
-                                (let [c (.charAt text prev-non-space)]
-                                  (or (= c ")") (= c "]") (= c "}"))))
-                         (inc prev-non-space)
-                         safe-pos)
+            ;; Filter out (comment ...) wrappers
+            non-comment-forms (into [] (remove comment-form?) forms)
+            parens (into [] (filter #(= (:type %) "(")) non-comment-forms)
 
-            exact-end-form (when (pos? target-end)
-                             (first (filter (fn [f]
-                                              (and (= (:end f) target-end)
-                                                   (not (comment-form? f))
-                                                   (= (:type f) "(")))
-                                            forms)))
+            ;; 1. Check if cursor is directly inside or at boundary of any parenthesized form
+            enclosing-parens (filter (fn [f]
+                                       (and (<= (:start f) safe-pos)
+                                            (<= safe-pos (:end f))))
+                                     parens)
 
-            enclosing (filter (fn [f]
-                                (and (<= (:start f) safe-pos)
-                                     (<= safe-pos (:end f))
-                                     (not (comment-form? f))))
-                              forms)
+            ;; Innermost enclosing paren form (highest depth)
+            innermost-enclosing (last (sort-by :depth enclosing-parens))
 
-            outermost-paren (first (sort-by :depth (filter #(= (:type %) "(") enclosing)))
-            outermost-any   (first (sort-by :depth enclosing))]
+            ;; Also check if cursor is on the same line after a paren form's end (trailing spaces/comment on same line)
+            same-line-paren (when-not innermost-enclosing
+                              (last (sort-by :depth
+                                             (filter (fn [f]
+                                                       (let [end (:end f)]
+                                                         (and (<= end safe-pos)
+                                                              (not (str/includes? (.substring text end safe-pos) "\n")))))
+                                                     parens))))]
 
         (cond
-          (and exact-end-form (not outermost-paren))
-          (:text exact-end-form)
+          innermost-enclosing
+          (:text innermost-enclosing)
 
-          outermost-paren
-          (:text outermost-paren)
-
-          outermost-any
-          (:text outermost-any)
+          same-line-paren
+          (:text same-line-paren)
 
           :else
-          (let [non-comment-forms (filter (complement comment-form?) forms)
-                next-form (first (filter #(>= (:start %) safe-pos) non-comment-forms))
-                prev-form (last (filter #(<= (:end %) safe-pos) non-comment-forms))]
-            (:text (or next-form prev-form (first non-comment-forms)))))))))
+          (let [candidates (if (seq parens) parens non-comment-forms)
+                prev-form (last (filter #(<= (:end %) safe-pos) candidates))
+                next-form (first (filter #(>= (:start %) safe-pos) candidates))
+                dist-prev (when prev-form (- safe-pos (:end prev-form)))
+                dist-next (when next-form (- (:start next-form) safe-pos))]
+            (cond
+              (and prev-form next-form)
+              ;; Prefer prev-form unless next-form is strictly closer
+              (if (and dist-next dist-prev (< dist-next dist-prev))
+                (:text next-form)
+                (:text prev-form))
+
+              prev-form
+              (:text prev-form)
+
+              next-form
+              (:text next-form)
+
+              :else
+              (:text (first candidates)))))))))
 
 (defn find-top-level-form-around
   "Finds the boundary of the outermost balanced parenthesized S-expression surrounding pos."

@@ -26,8 +26,7 @@
         scale-str (format-scale scale)]
     [:div.track-browser-item
      {:class    (when active? "active")
-      :on-click #(on-select id)
-      :title    (str "Click to play " name)}
+      :on-click #(on-select id)}
      [:div.track-item-left
       [:span.track-item-num num-str]
       [:span.track-item-title {:class (when active? "active")} name]]

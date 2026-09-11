@@ -22,38 +22,30 @@
       "SESSION"])])
 
 (defn- card-routing-and-poly-badges
-  "Render bus destination tag and polyphony/mono indicator.
-  Examples: [card-routing-and-poly-badges spec :leads true]."
-  [spec cat poly?]
+  "Render bus destination tag.
+  Examples: [card-routing-and-poly-badges spec]."
+  [spec]
   [:div.inst-card-badges
    [:span.neo-bus-tag.mini {:class (comps/bus-badge-class (:bus spec))}
-    (str/upper-case (str/replace (name (or (:bus spec) :direct)) #"bus/" ""))]
-   [:span.neo-badge.mini
-    (cond
-      (= cat :drums) "DRUM"
-      (= cat :fx)    (if poly? (str "FX " (or (:polyphony spec) 16) "x") "FX")
-      poly?
-      (let [poly (or (:polyphony spec) (:maxPolyphony spec) (:max-polyphony spec) 16)]
-        (str "POLY " poly "x"))
-      :else "MONO")]])
+    (str/upper-case (str/replace (name (or (:bus spec) :direct)) #"bus/" ""))]])
 
 (defn- card-header-row
-  "Render title, origin tags, bus badge, and polyphony indicator.
-  Examples: [card-header-row :bass-analog spec :bass true true false false]."
-  [inst-key spec cat poly? selected? custom? session?]
+  "Render title, origin tags, and bus badge.
+  Examples: [card-header-row :bass-analog spec selected? custom? session?]."
+  [inst-key spec selected? custom? session?]
   [:div.inst-card-header
    [:div.inst-card-title-group
     [:span.inst-card-title {:class (when selected? "selected")}
      (str inst-key)]
     [card-origin-badges custom? session?]]
-   [card-routing-and-poly-badges spec cat poly?]])
+   [card-routing-and-poly-badges spec]])
 
 (defn- card-subtitle-row
   "Render oscillator waveform summary and quick audition trigger buttons.
   Examples: [card-subtitle-row :lead-pluck spec :leads true]."
   [inst-key spec cat poly?]
   [:div.inst-card-subtitle
-   [:span
+   [:span.inst-subtitle-text
     (cond
       (= cat :drums) "WASM Analog Drum"
       :else (str (name (get-in spec [:osc :type] :saw))
@@ -71,5 +63,5 @@
     [:div.inst-catalog-card
      {:class    (when selected? "selected")
       :on-click #(state/select-instrument! inst-key)}
-     [card-header-row inst-key spec cat poly? selected? custom? session?]
+     [card-header-row inst-key spec selected? custom? session?]
      [card-subtitle-row inst-key spec cat poly?]]))

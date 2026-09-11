@@ -1,45 +1,41 @@
 (ns app.ui.bottom-bar
-  (:require [app.state :refer [audio-state ui-state visual-state]]))
+  (:require [app.state :refer [audio-state ui-state]]))
 
-(defn bottom-bar-component [{:keys [toggle-play! cycle-jam! cycle-scene! toggle-drums! toggle-wireframe! toggle-click! toggle-stats! toggle-tutorial! toggle-hud!]}]
-  (let [{:keys [active? drums-muted? active-tracks]} @audio-state
-        {:keys [stats-visible? tutorial-visible? hud-visible?]} @ui-state
-        {:keys [wireframe?]} @visual-state
+(defn bottom-bar-component [{:keys [toggle-tutorial! toggle-drums! toggle-click! toggle-instrument-browser! toggle-stats! toggle-hud!]}]
+  (let [{:keys [drums-muted? active-tracks]} @audio-state
+        {:keys [tutorial-visible? instrument-browser-open? stats-visible? hud-visible?]} @ui-state
         click-active? (contains? active-tracks :click)]
     [:footer.hud-bottom {:role "contentinfo" :aria-label "Performance shortcuts and author link"}
      [:div.neo-links-group
-      [:span.hud-by "by "]
       [:a.neo-link-btn {:href "https://timcha.dev" :target "_blank" :rel "noreferrer"}
+       [:span.hud-by "by "]
        "timcha.dev"]]
 
      [:div.hotkey-hints
-      [:button.neo-action-btn {:on-click toggle-play!
-                               :class (when active? "active-success")
-                               :title "Play or Stop Engine (Space)"}
-       (if active? "[■ Stop]" "[▶ Jam]")]
-      [:button.neo-action-btn {:on-click cycle-jam! :title "Switch Track Preset (1-9)"} "[1-9] Jam"]
-      [:button.neo-action-btn {:on-click toggle-drums!
-                               :class (when drums-muted? "active-danger")
-                               :title "Toggle Drums Undrum / Redrum (D)"}
-       (if drums-muted? "[D] Drumless [ON]" "[D] Drumless")]
-      [:button.neo-action-btn {:on-click cycle-scene! :title "Cycle 3D Scene (G)"} "[G] Scene"]
-      [:button.neo-action-btn {:on-click toggle-wireframe!
-                               :class (when wireframe? "active")
-                               :title "Toggle Wireframe (W)"}
-       "[W] Wire"]
-      [:button.neo-action-btn {:on-click toggle-click!
-                               :class (when click-active? "active")
-                               :title "Toggle Metronome Click (C)"}
-       "[C] Click"]
       [:button.neo-action-btn {:on-click toggle-tutorial!
                                :class (when tutorial-visible? "active")
-                               :title "Toggle Tutorial (T)"}
-       "[T] Tutorial"]
+                               :aria-label "Toggle tutorial"}
+       "[T] TUTORIAL"]
+      [:button.neo-action-btn {:on-click toggle-drums!
+                               :class (when drums-muted? "active-danger")
+                               :aria-label "Toggle drum tracks"}
+       (if drums-muted? "[D] DRUMLESS [ON]" "[D] DRUMLESS")]
+      [:button.neo-action-btn {:on-click toggle-click!
+                               :class (when click-active? "active")
+                               :aria-label "Toggle click metronome"}
+       "[C] CLICK"]
+      [:button.neo-action-btn {:on-click toggle-instrument-browser!
+                               :class (when instrument-browser-open? "active")
+                               :aria-label "Toggle synth studio"}
+       "[S] SYNTH STUDIO"]
       [:button.neo-action-btn {:on-click toggle-stats!
                                :class (when stats-visible? "active")
-                               :title "Toggle Info and Busses (I)"}
-       "[I] Info and Busses"]
+                               :aria-label "Toggle telemetry info stats"}
+       "[I] INFO"]
       [:button.neo-action-btn {:on-click toggle-hud!
                                :class (when hud-visible? "active")
-                               :title "Toggle HUD (H)"}
+                               :aria-label "Toggle HUD"}
        "[H] HUD"]]]))
+
+
+

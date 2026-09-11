@@ -37,16 +37,16 @@
     [:div.instrument-browser-modal
      {:role       "dialog"
       :aria-modal true
-      :aria-label "Instrument Studio and Audition Lab"}
+      :aria-label "Synth Studio"}
 
      ;; Modal Header
      [:div.neo-header
       [:div.neo-title
        [:span.neo-prompt "> "]
-       [:span "INSTRUMENT STUDIO + AUDITION LAB (" (count primary-insts) " SOUNDS)"]]
+       [:span "SYNTH STUDIO (" (count primary-insts) " SOUNDS)"]]
       [:button.neo-btn-close
        {:on-click   #(do (audition/stop-audition-loop!) (when on-close (on-close)))
-        :aria-label "Close instrument lab"}
+        :aria-label "Close synth studio"}
        "[X]"]]
 
      ;; Search and Category Filters Bar

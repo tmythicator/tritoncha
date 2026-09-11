@@ -45,7 +45,7 @@
   Examples: [bus-section :saw-bass cur-spec]."
   [cur-sel-key cur-spec]
   [:div.inst-box
-   [:div.inst-section-label "MIXER BUS + FX ROUTING (:bus)"]
+   [:div.inst-section-label "MIXER BUS"]
    [comps/pill-selector
     {:label    "TARGET BUS:"
      :items    [:bus/drums :bus/bass :bus/lead :bus/space :bus/direct]
@@ -61,7 +61,7 @@
   [cur-sel-key cur-spec]
   [:div.inst-spec-container
    [:div.inst-spec-header
-    [:div.inst-section-label "DECLARATIVE SPECIFICATION (CLOJURESCRIPT)"]
+    [:div.inst-section-label "SYNTH SCRIPT"]
     [:span.inst-slider-label "Ready for custom/instruments.cljs"]]
    [:pre.inst-spec-pre
     (fmt/format-spec-map cur-sel-key cur-spec)]])

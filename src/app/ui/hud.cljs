@@ -12,7 +12,7 @@
    [app.ui.track-browser :refer [track-browser-component]]
    [app.ui.tutorial-modal :refer [tutorial-modal-component]]
    [app.utils.dom :refer [mobile?]]
-   [app.visuals.engine :refer [cycle-scene! toggle-wireframe!]]
+   [app.visuals.engine :refer [cycle-scene!]]
    [reagent.dom.client :as rdom]))
 
 (declare render-ui!)
@@ -44,8 +44,7 @@
     [:div
      (when-not hud-visible?
        [:button.hud-restore-btn {:on-click toggle-hud!
-                                 :aria-label "Restore HUD"
-                                 :title "Click or press [H] to show HUD"}
+                                 :aria-label "Restore HUD"}
         "[+] HUD"])
 
      [:div.minimal-hud {:class (when-not hud-visible? "hidden")}
@@ -73,15 +72,12 @@
       [:div.hud-bottom-area
        (when (and (mobile?) (not mobile-notice-dismissed?))
          [mobile-notice-component])
-       [bottom-bar-component {:toggle-play!      toggle-play!
-                              :cycle-jam!        cycle-jam!
-                              :cycle-scene!      cycle-scene!
-                              :toggle-drums!     toggle-drums!
-                              :toggle-wireframe! toggle-wireframe!
-                              :toggle-click!     toggle-click!
-                              :toggle-stats!     toggle-stats!
-                              :toggle-tutorial!  toggle-tutorial!
-                              :toggle-hud!       toggle-hud!}]]]]))
+       [bottom-bar-component {:toggle-tutorial!           toggle-tutorial!
+                              :toggle-drums!              toggle-drums!
+                              :toggle-click!              toggle-click!
+                              :toggle-instrument-browser! toggle-instrument-browser!
+                              :toggle-stats!              toggle-stats!
+                              :toggle-hud!                toggle-hud!}]]]]))
 
 (defn render-ui! []
   (when-let [el (.getElementById js/document "app")]
