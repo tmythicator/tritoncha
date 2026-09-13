@@ -8,33 +8,21 @@ Shape algorithmic music with ClojureScript, driven by a real-time Rust WebAssemb
 [![CI Status](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml/badge.svg)](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 
+**Live Studio:** [https://tmythicator.github.io/tritoncha/](https://tmythicator.github.io/tritoncha/)
+
 ---
 
 ## WebDAW Features
 
-<p align="center">
-  <img src="assets/synth_studio.png" alt="Tritoncha Visual Synth Studio" width="850"/>
-  <br>
-  <sub><strong>Synth Studio:</strong> Tweak oscillators, filters, and envelopes with live sliders. Audition sounds in real time and export ClojureScript code straight into your session.</sub>
-</p>
 
-<br>
+| Synth Studio |
+| :---: |
+| ![Visual Synth Studio](assets/synth_studio.png) |
+| Tweak oscillators, filters, and envelopes with live sliders. Audition sounds in real time and export ClojureScript code straight into your session. |
 
-<p align="center">
-  <img src="assets/audio-status.png" alt="System Audio Status and Mixer Matrix" width="850"/>
-  <br>
-  <sub><strong>System Audio Status + Mixer Matrix:</strong> Monitor DSP performance (latency, drift, dropouts), mix 5 stereo busses, switch routing topologies and adjust active loops.</sub>
-</p>
-
-<br>
-
-<p align="center">
-  <img src="assets/track_presets.png" alt="Track Presets Library" width="850"/>
-  <br>
-  <sub><strong>Track Presets Library:</strong> Instant auditioning and launching of 19 algorithmic track arrangements.</sub>
-</p>
-
-**Live Studio:** [https://tmythicator.github.io/tritoncha/](https://tmythicator.github.io/tritoncha/)
+| System Audio Status + Mixer Matrix | Track Presets Library |
+| :---: | :---: |
+| ![System Audio Status](assets/audio-status.png) | ![Track Presets Library](assets/track_presets.png) |
 
 ---
 
