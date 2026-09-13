@@ -3,10 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Tritoncha: Live-coding electronic music and audio-reactive 3D visuals in ClojureScript.">
+  <meta name="description" content="Live-coding WebDAW + audio-reactive 3D graphics built with ClojureScript and Rust WASM.">
   <meta name="author" content="Alexandr Timchenko">
-  <title>Tritoncha | Live Music + 3D Visuals</title>
+
+  <meta name="theme-color" content="#060913">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Tritoncha | Live-Coding Web Audio + Visual Studio">
+  <meta property="og:description" content="Live-coding WebDAW + audio-reactive 3D graphics built with ClojureScript and Rust WASM.">
+  <meta property="og:image" content="./favicon.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Tritoncha | Live-Coding Web Audio + Visual Studio">
+  <meta name="twitter:description" content="Live-coding WebDAW + audio-reactive 3D graphics built with ClojureScript and Rust WASM.">
+
+  <title>Tritoncha | Live-Coding Web Audio + Visual Studio</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+
   <link rel="stylesheet" href="./css/tokens.css">
   <link rel="stylesheet" href="./css/base.css">
   <link rel="stylesheet" href="./css/hud.css">
@@ -16,12 +31,19 @@
   <link rel="stylesheet" href="./css/tracks.css">
 </head>
 <body>
-  <!-- WebGL Canvas Container -->
   <main id="canvas-container" aria-label="3D WebGL Visual Canvas"></main>
-
-  <!-- Reagent React App Mount Point -->
   <div id="app"></div>
 
-  <script src="./js/main.js"></script>
+  <noscript>
+    <div class="noscript-overlay">
+      <div class="noscript-card">
+        <h1>JavaScript Required</h1>
+        <p>Tritoncha requires JavaScript and WebGL to synthesize audio and render 3D visuals.</p>
+      </div>
+    </div>
+  </noscript>
+
+  <script src="./js/main.js" defer></script>
 </body>
 </html>
+

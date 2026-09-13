@@ -42,3 +42,41 @@ html, body {
         color: var(--text-primary);
     }
 }
+
+/* Noscript fallback screen */
+
+.noscript-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-root);
+    padding: var(--space-3xl);
+}
+
+.noscript-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-danger-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3xl);
+    text-align: center;
+    max-width: 480px;
+    box-shadow: var(--shadow-modal), var(--glow-danger);
+}
+
+.noscript-card h1 {
+    color: var(--color-danger);
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--space-md);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.noscript-card p {
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+}
+
