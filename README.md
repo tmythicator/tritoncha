@@ -2,38 +2,60 @@
 
 <img src="public/favicon.svg" alt="Tritoncha" width="128" height="128" />
 
-**An expressive live-coding music studio and Web DAW in your browser.**  
-Shape algorithmic sound with ClojureScript, driven by a real-time Rust WebAssembly audio engine and audio-reactive 3D WebGL visuals.
+**Live-coding WebDAW + audio-reactive 3D visuals in your browser.**  
+Shape algorithmic music with ClojureScript, driven by a real-time Rust WebAssembly audio engine and Three.js.
 
 [![CI Status](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml/badge.svg)](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 
-Live Studio: **[https://tmythicator.github.io/tritoncha/](https://tmythicator.github.io/tritoncha/)**
+---
+
+## WebDAW Features
+
+<p align="center">
+  <img src="assets/synth_studio.png" alt="Tritoncha Visual Synth Studio" width="850"/>
+  <br>
+  <sub><strong>Synth Studio:</strong> Tweak oscillators, filters, and envelopes with live sliders. Audition sounds in real time and export ClojureScript code straight into your session.</sub>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="assets/audio-status.png" alt="System Audio Status and Mixer Matrix" width="850"/>
+  <br>
+  <sub><strong>System Audio Status + Mixer Matrix:</strong> Monitor DSP performance (latency, drift, dropouts), mix 5 stereo busses, switch routing topologies and adjust active loops.</sub>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="assets/track_presets.png" alt="Track Presets Library" width="850"/>
+  <br>
+  <sub><strong>Track Presets Library:</strong> Instant auditioning and launching of 19 algorithmic track arrangements.</sub>
+</p>
+
+**Live Studio:** [https://tmythicator.github.io/tritoncha/](https://tmythicator.github.io/tritoncha/)
 
 ---
 
-## The Philosophy
+## How It Works
 
-Tritoncha is built around a simple idea: **use the elegance of Lisp to compose and think, and the speed of Rust to synthesize.**
+Tritoncha combines ClojureScript for interactive live-coding with Rust compiled to WebAssembly for real-time audio:
 
-- **ClojureScript:** Use the expressive power of Lisp to define instruments, arrange tracks and modulate harmonic progressions with clean, concise Clojure maps. Everything can be re-evaluated live on the fly without interrupting the music.
-- **Rust WASM:** The heavy lifting — polyphonic synthesis, physical modeling drums, sample-accurate sequencing, and stereo effects — runs in compiled WebAssembly on a dedicated real-time audio thread. Every parameter is fully exposed so you can shape and modulate your sound live with zero latency.
-- **Friendly Visual Studio for Beginners:** You don't have to start with a blank REPL buffer. The built-in visual Instrument Studio makes it easy to see how sounds are actually built:
-  - Inspect mixer busses, volume levels, and audio routing.
-  - Tweak oscillator waveforms, filter sweeps, envelopes, and sound modifiers with live sliders.
-  - Audition single hits, rolls, chords, and continuous loops in real time.
-  - Export the generated ClojureScript code straight into your live set.
-- **Audio-Reactive 3D Visuals:** Sound triggers and pitch pulses stream directly into Three.js, morphing geometries, wireframes, and vertex shaders on every frame.
+- **ClojureScript (Live Coding):** Define synths, arrange patterns, and modulate scales on the fly using Clojure maps. Hot-reloads instantly without stopping playback.
+- **Rust WASM (Audio Engine):** Runs in a dedicated WebAudio worklet thread. Handles polyphonic synthesis, drum modeling, sequencing, and stereo effects with low latency and zero garbage collection pauses.
+- **Three.js (3D Visuals):** Audio triggers and pitch pulses stream directly into WebGL shaders, pulsing geometry and colors to the beat.
+- **Visual GUI Tools:** A built-in synth editor, mixer matrix, and preset browser make it easy to explore sounds without typing code from scratch.
 
 ---
 
-## Features at a Glance
+## Features
 
-- **Musical Live-Coding Engine:** Scales and modes (Dorian, Phrygian, Hirajoshi, Blues etc.), scale degrees (`deg`, `d`), chords, Euclidean rhythm generators (`euclid`, `euc`), and Tidal-style mini-notation (`pattern`, `pat`).
-- **Diverse Sound Palette:** 16 polyphonic synth voices, analog morphing, Karplus-Strong string modeling, resonant SVF filters, and 808/909-inspired drum synthesis (kicks, snare rattle, claps, hats, cymbals).
-- **5 Stereo Busses + FX Rack:** Route sounds into `:bus/drums`, `:bus/bass`, `:bus/lead`, `:bus/space`, or `:bus/direct` with ping-pong delay, Freeverb reverb, chorus, bitcrushing, and sidechain ducking.
-- **Zero Toolchain Friction:** Runs 100% in your web browser. No SuperCollider, no Jack/PipeWire daemons, no native plugins to install.
-- **Editor-First Workflow:** Native Emacs and CIDER nREPL live performance workflow.
+- **Algorithmic Composition:** Musical scales and modes, scale degrees (`deg`, `d`), chords, Euclidean rhythms (`euclid`, `euc`), and Tidal-style mini-notation (`pattern`, `pat`).
+- **Synthesis:** 16 polyphonic voices, analog drift, Karplus-Strong string modeling, state-variable filters, and 808/909-style drum synthesis.
+- **Mixer + Effects:** 5 stereo busses (`:drums`, `:bass`, `:lead`, `:space`, `:direct`) with delay, reverb, chorus, saturation, and sidechain compression.
+- **Zero Setup:** Runs entirely in modern browsers. No DAWs, background daemons, or native plugins required.
+- **Emacs + CIDER:** First-class nREPL support for live performance.
 
 ---
 
@@ -48,15 +70,15 @@ nix develop
 pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and click anywhere on the page to unlock the WebAudio context.
+Open [http://localhost:3000](http://localhost:3000) and click anywhere on the page to unlock WebAudio.
 
 ---
 
 ## Emacs + CIDER Setup
 
-Tritoncha is built for an interactive Emacs live-coding workflow during jams and Algorave performances:
+Tritoncha is built for an interactive Emacs live-coding workflow:
 
-1. **Start the watch server:** Run `pnpm run dev` in your Nix shell.
+1. **Start the watch server:** Run `pnpm run dev` in your shell.
 2. **Connect from Emacs:** In Emacs, run:
    ```
    M-x cider-connect-cljs
@@ -69,7 +91,7 @@ Tritoncha is built for an interactive Emacs live-coding workflow during jams and
 ## Cheatsheet
 
 > [!TIP]
-> For the interactive masterclass covering breakbeat grooves, ghost note rudiments, probabilistic mutations (`sometimes`, `every-n`), and procedural 3D scenes, see [src/app/demo/tutorial.cljs](src/app/demo/tutorial.cljs).
+> For the interactive masterclass covering breakbeat grooves, ghost notes, probabilistic mutations (`sometimes`, `every-n`), and procedural 3D scenes, see [src/app/demo/tutorial.cljs](src/app/demo/tutorial.cljs).
 
 ### 1. Playback and Preset Jams
 
@@ -211,5 +233,5 @@ Tritoncha is built for an interactive Emacs live-coding workflow during jams and
 
 ## License
 
-Copyright © 2026 Alexandr Timchenko.
+Copyright © 2026 Alexandr Timchenko.  
 Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
