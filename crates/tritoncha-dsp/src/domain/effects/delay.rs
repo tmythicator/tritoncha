@@ -1,6 +1,6 @@
 //! Stereo Ping-Pong Dub Delay with Lowpass Analog Damping and Feedback Limiting.
 
-use crate::dsp::math::lerp;
+use crate::core::math::lerp;
 
 pub const MAX_DELAY_SAMPLES: usize = 96000;
 pub const MIN_DELAY_SAMPLES: f32 = 500.0;

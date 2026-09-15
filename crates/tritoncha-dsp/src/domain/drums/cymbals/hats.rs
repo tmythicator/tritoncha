@@ -1,8 +1,10 @@
 //! Hi-hat voice modeling closed, open, and pedal hi-hats.
 
-use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{soft_clip, xorshift32_norm};
-use crate::synth::drums::{MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use crate::core::math::{soft_clip, xorshift32_norm};
+use crate::domain::drums::{
+    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
+};
+use crate::domain::effects::StateVariableFilter;
 
 /// Noise Hi-Hat Voice (Closed and Open).
 #[derive(Clone)]
@@ -17,7 +19,7 @@ pub struct NoiseHatVoice {
     cutoff_hz: f32,
     decay_closed: f32,
     decay_open: f32,
-    pub mode: u8,
+    pub mode: DrumMode,
 }
 
 impl NoiseHatVoice {
@@ -33,7 +35,7 @@ impl NoiseHatVoice {
             cutoff_hz: 7200.0,
             decay_closed: 0.9940,
             decay_open: 0.9992,
-            mode: 0,
+            mode: DrumMode::default(),
         }
     }
 
@@ -56,7 +58,7 @@ impl NoiseHatVoice {
             self.decay_open = (-6.90775 / samples).exp().clamp(0.990, 0.9999);
         }
         if mode >= 0.0 {
-            self.mode = (mode.round() as u8).clamp(0, 3);
+            self.mode = DrumMode::from(mode);
         }
     }
 
@@ -82,17 +84,17 @@ impl NoiseHatVoice {
         let noise_raw = xorshift32_norm(&mut self.noise_seed);
         let click = if self.click_env > 0.001 {
             let c = noise_raw * self.click_env * 0.55;
-            self.click_env *= 0.965; // ~4ms sharp stick tip transient
+            self.click_env *= 0.965;
             c
         } else {
             0.0
         };
 
         let noise = match self.mode {
-            1 => noise_raw * 0.85,
-            2 => (noise_raw * 8.0).round() / 8.0,
-            3 => soft_clip(noise_raw * 2.4),
-            _ => noise_raw,
+            DrumMode::Natural => noise_raw * 0.85,
+            DrumMode::Idm => (noise_raw * 8.0).round() / 8.0,
+            DrumMode::Industrial => soft_clip(noise_raw * 2.4),
+            DrumMode::Analog => noise_raw,
         };
         let filtered = self
             .filter

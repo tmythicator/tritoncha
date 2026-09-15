@@ -84,6 +84,43 @@ pub fn midi_to_freq(midi_pitch: f32) -> f32 {
     STANDARD_TUNING_A4_HZ * 2.0_f32.powf(exponent)
 }
 
+pub const TAU: f32 = std::f32::consts::TAU;
+pub const LN_MIN_60DB: f32 = -6.907755; // ln(0.001) for standard T60 decay
+
+/// Returns sine for a normalized phase [0.0, 1.0) using tau = 2 * pi.
+#[inline(always)]
+pub fn sin_phase(phase: f32) -> f32 {
+    (phase * TAU).sin()
+}
+
+/// Returns cosine for a normalized phase [0.0, 1.0) using tau = 2 * pi.
+#[inline(always)]
+pub fn cos_phase(phase: f32) -> f32 {
+    (phase * TAU).cos()
+}
+
+/// Computes the per-sample multiplier for exponential decay reaching -60dB (0.001) in `decay_sec`.
+#[inline(always)]
+pub fn t60_decay_coeff(decay_sec: f32, sample_rate: f32) -> f32 {
+    let samples = (decay_sec.max(0.001) * sample_rate).max(1.0);
+    (LN_MIN_60DB / samples).exp()
+}
+
+/// Calculates per-sample linear step rate: `1.0 / (time_sec * sample_rate)`.
+#[inline(always)]
+pub fn calc_rate(time_sec: f32, sample_rate: f32, min_sec: f32) -> f32 {
+    let effective_time = time_sec.max(min_sec);
+    let sr = sample_rate.max(1.0);
+    1.0 / (effective_time * sr)
+}
+
+/// Converts a time in seconds to sample count clamped between `min_sec` and `max_sec`.
+#[inline(always)]
+pub fn time_to_samples(time_sec: f32, sample_rate: f32, min_sec: f32, max_sec: f32) -> u32 {
+    let clamped_time = time_sec.clamp(min_sec, max_sec);
+    (clamped_time * sample_rate.max(1.0)) as u32
+}
+
 /// Fast pseudo-random 32-bit xorshift generator producing a uniform float in [-1.0, 1.0].
 #[inline(always)]
 pub fn xorshift32_norm(seed: &mut u32) -> f32 {
@@ -142,5 +179,33 @@ mod tests {
             let n = xorshift32_norm(&mut seed);
             assert!((-1.0..=1.0).contains(&n));
         }
+    }
+
+    #[test]
+    fn test_sin_cos_phase() {
+        assert!((sin_phase(0.0) - 0.0).abs() < 1e-6);
+        assert!((sin_phase(0.25) - 1.0).abs() < 1e-6);
+        assert!((sin_phase(0.5) - 0.0).abs() < 1e-6);
+        assert!((sin_phase(0.75) - (-1.0)).abs() < 1e-6);
+        assert!((cos_phase(0.0) - 1.0).abs() < 1e-6);
+        assert!((cos_phase(0.5) - (-1.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_t60_decay_coeff() {
+        let coeff = t60_decay_coeff(1.0, 48000.0);
+        assert!(coeff > 0.9998 && coeff < 1.0);
+        // After 48000 samples, decay reaches ~0.001 (-60dB)
+        let end_val = coeff.powi(48000);
+        assert!((end_val - 0.001).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_calc_rate_and_time_to_samples() {
+        let rate = calc_rate(0.1, 48000.0, 0.001);
+        assert!((rate - (1.0 / 4800.0)).abs() < 1e-6);
+
+        let samples = time_to_samples(0.05, 48000.0, 0.01, 1.0);
+        assert_eq!(samples, 2400);
     }
 }

@@ -2,9 +2,11 @@
 //! Integrates stick tip ping definition, low bronze plate body resonance,
 //! and a 4-stage Schroeder allpass diffuser network simulating the turbulent wash of B20 bronze.
 
-use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{soft_clip, xorshift32_norm};
-use crate::synth::drums::{MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use crate::core::math::{soft_clip, xorshift32_norm};
+use crate::domain::drums::{
+    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
+};
+use crate::domain::effects::StateVariableFilter;
 use std::f32::consts::PI;
 
 /// Second-order resonant modal filter for plate vibration modes.
@@ -107,7 +109,7 @@ pub struct RideVoice {
     decay_scale: f32,
     tune_ratio: f32,
     drive: f32,
-    pub mode: u8,
+    pub mode: DrumMode,
 }
 
 impl RideVoice {
@@ -143,7 +145,7 @@ impl RideVoice {
             decay_scale: 1.0,
             tune_ratio: 1.0,
             drive: 1.15,
-            mode: 1, // Default to Natural 22" B20 acoustic ride
+            mode: DrumMode::default(),
         }
     }
 
@@ -170,7 +172,7 @@ impl RideVoice {
             self.drive = drive.clamp(0.2, 4.0);
         }
         if mode >= 0.0 {
-            self.mode = (mode.round() as u8).clamp(0, 3);
+            self.mode = DrumMode::from(mode);
         }
     }
 
@@ -207,12 +209,11 @@ impl RideVoice {
             0.0
         };
 
-        // 2. Mode characteristics
         let (mode_decay, mode_wash_gain, mode_ping_gain, mode_color) = match self.mode {
-            0 => (self.decay_scale * 0.8, 0.35, 0.8, 0.9), // Analog style
-            2 => (self.decay_scale * 0.65, 0.25, 1.1, 0.7), // Dark / Dry Jazz ride (dry ping, short wash)
-            3 => (self.decay_scale * 1.35, 0.55, 0.9, 1.25), // Bright Sizzle / Rivet ride
-            _ => (self.decay_scale, 0.40, 0.95, 1.0),       // Natural B20 22" acoustic ride
+            DrumMode::Analog => (self.decay_scale * 0.8, 0.35, 0.8, 0.9),
+            DrumMode::Idm => (self.decay_scale * 0.65, 0.25, 1.1, 0.7),
+            DrumMode::Industrial => (self.decay_scale * 1.35, 0.55, 0.9, 1.25),
+            DrumMode::Natural => (self.decay_scale, 0.40, 0.95, 1.0),
         };
 
         // 3. Ping excitation into modal filters

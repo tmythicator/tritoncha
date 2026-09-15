@@ -1,8 +1,10 @@
 //! Inharmonic metallic cymbal and percussion voice.
 
-use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{soft_clip, wrap_phase, xorshift32_norm};
-use crate::synth::drums::{MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use crate::core::math::{soft_clip, wrap_phase, xorshift32_norm};
+use crate::domain::drums::{
+    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
+};
+use crate::domain::effects::StateVariableFilter;
 use std::f32::consts::PI;
 
 /// Metallic Inharmonic Cymbal and Percussion Voice.
@@ -24,7 +26,7 @@ pub struct MetallicVoice<const N: usize> {
     drive: f32,
     noise_seed: u32,
     noise_mix: f32,
-    pub mode: u8,
+    pub mode: DrumMode,
 }
 
 impl<const N: usize> MetallicVoice<N> {
@@ -54,7 +56,7 @@ impl<const N: usize> MetallicVoice<N> {
             drive,
             noise_seed: 0x4a71b2d9,
             noise_mix,
-            mode: 0,
+            mode: DrumMode::default(),
         }
     }
 
@@ -80,7 +82,7 @@ impl<const N: usize> MetallicVoice<N> {
             self.drive = drive.clamp(0.1, 5.0);
         }
         if mode >= 0.0 {
-            self.mode = (mode.round() as u8).clamp(0, 3);
+            self.mode = DrumMode::from(mode);
         }
     }
 
@@ -116,7 +118,7 @@ impl<const N: usize> MetallicVoice<N> {
 
         let mut sum = 0.0;
         match self.mode {
-            1 => {
+            DrumMode::Natural => {
                 // Natural: Organic Inharmonic Bronze Plate + Aerodynamic Sizzle Wash.
                 // Pairwise non-linear phase-modulation creates dense Bessel sidebands.
                 let mut fm_sum = 0.0;
@@ -162,7 +164,7 @@ impl<const N: usize> MetallicVoice<N> {
                 sum = fm_sum * (1.0 - wash) + explosive_sizzle * wash;
                 sum += click;
             }
-            2 => {
+            DrumMode::Idm => {
                 // IDM: ring-modulated microtonal ping + laser chirp
                 for i in 0..N {
                     let square_val = if self.phases[i] < 0.5 { 1.0 } else { -1.0 };
@@ -180,7 +182,7 @@ impl<const N: usize> MetallicVoice<N> {
                 sum = sum * 0.7 + sizzle * 0.3 * (1.0 + impact);
                 sum += click;
             }
-            3 => {
+            DrumMode::Industrial => {
                 // Industrial: wavefolded sheet metal clang + distorted wash
                 for i in 0..N {
                     let square_val = if self.phases[i] < 0.5 { 1.0 } else { -1.0 };
@@ -196,7 +198,7 @@ impl<const N: usize> MetallicVoice<N> {
                 sum = (sum * 2.6).sin();
                 sum += click;
             }
-            _ => {
+            DrumMode::Analog => {
                 // Analog (default): Multi-oscillator inharmonic metal with XOR ring-modulation + noise
                 let mut ring = 1.0;
                 let mut pulse_sum = 0.0;

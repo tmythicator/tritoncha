@@ -217,6 +217,71 @@ impl Default for StateVariableFilter {
     }
 }
 
+/// Exponential frequency sweep interpolator for smooth filter automation.
+#[derive(Clone, Copy, Debug)]
+pub struct FrequencySweep {
+    start_hz: f32,
+    target_hz: f32,
+    total_samples: usize,
+    current_samples: usize,
+    active: bool,
+}
+
+impl FrequencySweep {
+    pub fn new(initial_hz: f32) -> Self {
+        Self {
+            start_hz: initial_hz,
+            target_hz: initial_hz,
+            total_samples: 1,
+            current_samples: 0,
+            active: false,
+        }
+    }
+
+    pub fn start(&mut self, from_hz: f32, to_hz: f32, duration_secs: f32, sample_rate: f32) {
+        let dur = duration_secs.max(0.01);
+        let total = (dur * sample_rate) as usize;
+        self.start_hz = from_hz;
+        self.target_hz = to_hz;
+        self.total_samples = total.max(1);
+        self.current_samples = 0;
+        self.active = true;
+    }
+
+    #[inline(always)]
+    pub fn advance(&mut self, num_samples: usize, min_hz: f32, max_hz: f32) -> Option<f32> {
+        if !self.active {
+            return None;
+        }
+        self.current_samples = (self.current_samples + num_samples).min(self.total_samples);
+        let progress = self.current_samples as f32 / self.total_samples as f32;
+        let ratio = self.target_hz / self.start_hz.max(1.0);
+        let cutoff = (self.start_hz * ratio.powf(progress)).clamp(min_hz, max_hz);
+        if self.current_samples >= self.total_samples {
+            self.active = false;
+            Some(self.target_hz)
+        } else {
+            Some(cutoff)
+        }
+    }
+
+    #[inline(always)]
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+
+    #[inline(always)]
+    pub fn cancel(&mut self) {
+        self.active = false;
+    }
+}
+
+impl Default for FrequencySweep {
+    fn default() -> Self {
+        Self::new(18000.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

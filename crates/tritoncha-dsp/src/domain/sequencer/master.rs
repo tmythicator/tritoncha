@@ -5,8 +5,8 @@ use super::track::{
     MAX_STEPS, MAX_TRACKS,
 };
 use super::trigger_mask::TriggerMask;
-use crate::dsp::math::midi_to_freq;
-use crate::synth::drums::{is_drum_inst, INST_DRUM_TOM};
+use crate::core::math::midi_to_freq;
+use crate::domain::drums::{is_drum_inst, INST_DRUM_TOM};
 
 pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
 pub const DEFAULT_BPM: f32 = 168.0;

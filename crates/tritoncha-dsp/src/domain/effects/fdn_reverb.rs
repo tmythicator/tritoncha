@@ -4,7 +4,7 @@
 //! delay lines, per-line one-pole high-frequency damping, and quadrature LFO read-head
 //! modulation for modal density and smooth spatial decay without metallic comb flutter.
 
-use crate::dsp::math::lerp;
+use crate::core::math::lerp;
 use std::f32::consts::PI;
 
 /// Number of parallel delay lines in the FDN topology.

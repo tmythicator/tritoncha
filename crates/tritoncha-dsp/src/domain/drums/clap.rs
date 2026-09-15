@@ -1,6 +1,6 @@
-use super::{MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
-use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{soft_clip, xorshift32_norm};
+use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use crate::core::math::{soft_clip, xorshift32_norm};
+use crate::domain::effects::StateVariableFilter;
 
 /// Hand Clap Voice with multi-burst envelope.
 #[derive(Clone)]
@@ -14,7 +14,7 @@ pub struct ClapVoice {
     resonance: f32,
     decay_coeff: f32,
     drive: f32,
-    pub mode: u8,
+    pub mode: DrumMode,
 }
 
 impl ClapVoice {
@@ -29,7 +29,7 @@ impl ClapVoice {
             resonance: 0.70,
             decay_coeff: 0.9982,
             drive: 1.0,
-            mode: 0,
+            mode: DrumMode::default(),
         }
     }
 
@@ -55,7 +55,7 @@ impl ClapVoice {
             self.drive = drive.clamp(0.2, 3.0);
         }
         if mode >= 0.0 {
-            self.mode = (mode.round() as u8).clamp(0, 3);
+            self.mode = DrumMode::from(mode);
         }
     }
 
@@ -74,10 +74,10 @@ impl ClapVoice {
 
         let noise_raw = xorshift32_norm(&mut self.noise_seed);
         let noise = match self.mode {
-            1 => noise_raw * 0.9,
-            2 => (noise_raw * 6.0).round() / 6.0,
-            3 => soft_clip(noise_raw * 2.2),
-            _ => noise_raw,
+            DrumMode::Natural => noise_raw * 0.9,
+            DrumMode::Idm => (noise_raw * 6.0).round() / 6.0,
+            DrumMode::Industrial => soft_clip(noise_raw * 2.2),
+            DrumMode::Analog => noise_raw,
         };
         let filtered = self
             .filter
