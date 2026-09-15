@@ -1,6 +1,6 @@
 //! Studio-Quality Stereo Schroeder / Freeverb Diffusion Reverb.
 
-use crate::dsp::math::lerp;
+use crate::core::math::lerp;
 
 pub const NUM_COMB_FILTERS: usize = 8;
 pub const NUM_ALLPASS_FILTERS: usize = 4;
@@ -97,7 +97,7 @@ impl AllpassFilter {
     }
 }
 
-use crate::dsp::fdn_reverb::FdnReverb;
+use super::fdn_reverb::FdnReverb;
 
 /// Reverb Engine Algorithm Mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

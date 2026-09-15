@@ -1,13 +1,12 @@
-use tritoncha_dsp::dsp::delay::StereoDelay;
-use tritoncha_dsp::dsp::effects::{BitcrusherDrive, SidechainPump, StereoChorus};
-use tritoncha_dsp::dsp::filter::StateVariableFilter;
-use tritoncha_dsp::dsp::math::{midi_to_freq, poly_blep, soft_clip};
-use tritoncha_dsp::dsp::reverb::StereoReverb;
+use tritoncha_dsp::core::math::{midi_to_freq, poly_blep, soft_clip};
+use tritoncha_dsp::domain::drums::DrumMachine;
+use tritoncha_dsp::domain::effects::{
+    BitcrusherDrive, SidechainPump, StateVariableFilter, StereoChorus, StereoDelay, StereoReverb,
+};
+use tritoncha_dsp::domain::sequencer::track::TrackPattern;
+use tritoncha_dsp::domain::synth::patch::ModularPatch;
+use tritoncha_dsp::domain::synth::voice::SynthVoice;
 use tritoncha_dsp::engine::TritonchaEngine;
-use tritoncha_dsp::sequencer::track::TrackPattern;
-use tritoncha_dsp::synth::drums::DrumMachine;
-use tritoncha_dsp::synth::patch::ModularPatch;
-use tritoncha_dsp::synth::voice::SynthVoice;
 
 #[test]
 fn test_dsp_defaults() {
@@ -29,12 +28,10 @@ fn test_dsp_math_helpers() {
     assert_eq!(midi_to_freq(69.0), 440.0);
     assert!((midi_to_freq(60.0) - 261.6256).abs() < 0.01);
 
-    // Test polynomial soft clipping curve limits
     assert!(soft_clip(0.0) == 0.0);
     assert!(soft_clip(100.0) <= 1.0);
     assert!(soft_clip(-100.0) >= -1.0);
 
-    // Test PolyBLEP anti-aliasing boundary
     assert_eq!(poly_blep(0.5, 0.01), 0.0);
     assert!(poly_blep(0.005, 0.01).abs() > 0.0);
 }
@@ -44,7 +41,6 @@ fn test_tpt_state_variable_filter_stability() {
     let mut filter = StateVariableFilter::new();
     let sample_rate = 48000.0;
 
-    // Test sweep across audio spectrum with high resonance
     for hz in [20.0, 100.0, 1000.0, 5000.0, 10000.0, 20000.0, 22000.0] {
         let out = filter.process_lp(0.8, hz, 0.95, sample_rate);
         assert!(
@@ -62,20 +58,17 @@ fn test_tpt_state_variable_filter_stability() {
 fn test_dsp_effects() {
     let sample_rate = 48000.0;
 
-    // 1. Bitcrusher & Drive
     let mut bd = BitcrusherDrive::new();
     bd.drive = 0.5;
     bd.bit_depth = 8.0;
     let (bl, br) = bd.process(0.5, -0.5);
     assert!(bl.is_finite() && br.is_finite());
 
-    // 2. Stereo Chorus
     let mut chorus = StereoChorus::new();
     chorus.mix = 0.5;
     let (cl, cr) = chorus.process(0.5, -0.5, sample_rate);
     assert!(cl.is_finite() && cr.is_finite());
 
-    // 3. Sidechain Pump
     let mut sc = SidechainPump::new();
     sc.amount = 0.8;
     sc.trigger_kick();
@@ -181,7 +174,6 @@ fn test_analog_primitives_drive_noise_pitch_snap() {
     let mut out_r = [0.0; 128];
     engine.process_block(&mut out_l, &mut out_r);
 
-    // Verify non-silent, finite, saturated output within bounds
     assert!(out_l.iter().any(|&s| s.abs() > 0.01));
     assert!(out_l
         .iter()

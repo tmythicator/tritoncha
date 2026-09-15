@@ -1,10 +1,10 @@
-pub mod dsp;
+pub mod core;
+pub mod domain;
 pub mod engine;
-pub mod sequencer;
-pub mod synth;
+pub mod services;
 
-use crate::engine::TritonchaEngine;
-use crate::synth::ModularPatch;
+use crate::domain::synth::ModularPatch;
+pub use engine::TritonchaEngine;
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
 

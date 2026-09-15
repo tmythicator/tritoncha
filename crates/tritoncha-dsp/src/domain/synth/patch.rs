@@ -103,30 +103,7 @@ pub const BUS_SPACE: u8 = 2;
 pub const BUS_LEAD: u8 = 3;
 pub const BUS_DIRECT: u8 = 4;
 
-/// Strongly typed mixer bus routing targets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[repr(u8)]
-pub enum BusTarget {
-    #[default]
-    Drums = 0,
-    Bass = 1,
-    Space = 2,
-    Lead = 3,
-    Direct = 4,
-}
-
-impl From<u8> for BusTarget {
-    #[inline(always)]
-    fn from(val: u8) -> Self {
-        match val {
-            1 => BusTarget::Bass,
-            2 => BusTarget::Space,
-            3 => BusTarget::Lead,
-            4 => BusTarget::Direct,
-            _ => BusTarget::Drums,
-        }
-    }
-}
+pub use crate::services::mixer::BusTarget;
 
 // Audio and Voice Timing Constants
 pub const MIN_FREQ_HZ: f32 = 20.0;

@@ -1,6 +1,7 @@
 //! Audio effect processors: BitcrusherDrive, StereoChorus, and SidechainPump.
 
-use crate::dsp::math::{tanh_approx, wrap_phase};
+use crate::core::adaa::AdaaDrive;
+use crate::core::math::{tanh_approx, wrap_phase};
 use std::f32::consts::PI;
 
 pub const DEFAULT_BIT_DEPTH: f32 = 16.0;
@@ -19,13 +20,11 @@ pub const MIN_DRIVE_THRESHOLD: f32 = 0.001;
 pub const CHORUS_BUFFER_SIZE: usize = 44100;
 pub const DEFAULT_CHORUS_RATE_HZ: f32 = 0.8;
 pub const DEFAULT_CHORUS_DEPTH: f32 = 0.4;
-pub const CHORUS_BASE_DELAY_SEC: f32 = 0.015; // 15ms base delay
-pub const CHORUS_MOD_DEPTH_SEC: f32 = 0.008; // 8ms modulation
-pub const CHORUS_QUADRATURE_OFFSET: f32 = 0.25; // 90 degree stereo phase offset
+pub const CHORUS_BASE_DELAY_SEC: f32 = 0.015;
+pub const CHORUS_MOD_DEPTH_SEC: f32 = 0.008;
+pub const CHORUS_QUADRATURE_OFFSET: f32 = 0.25;
 pub const CHORUS_WET_GAIN: f32 = 0.6;
 pub const CHORUS_DRY_ATTEN: f32 = 0.5;
-
-use crate::dsp::adaa::AdaaDrive;
 
 pub const SIDECHAIN_DUCK_SCALE: f32 = 0.85;
 pub const SIDECHAIN_RECOVERY_RATE: f32 = 0.0012; // exponential recovery coefficient

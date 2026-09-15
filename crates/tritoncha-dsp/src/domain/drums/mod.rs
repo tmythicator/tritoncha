@@ -16,6 +16,43 @@ pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
 pub const VELOCITY_MIN_CLAMP: f32 = 0.1;
 pub const VELOCITY_MAX_CLAMP: f32 = 1.2;
 
+/// Drum acoustic character and synthesis modeling mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u8)]
+pub enum DrumMode {
+    #[default]
+    Analog = 0,
+    Natural = 1,
+    Idm = 2,
+    Industrial = 3,
+}
+
+impl From<u8> for DrumMode {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            1 => DrumMode::Natural,
+            2 => DrumMode::Idm,
+            3 => DrumMode::Industrial,
+            _ => DrumMode::Analog,
+        }
+    }
+}
+
+impl From<f32> for DrumMode {
+    #[inline(always)]
+    fn from(val: f32) -> Self {
+        DrumMode::from(val.round() as u8)
+    }
+}
+
+impl DrumMode {
+    #[inline(always)]
+    pub fn as_u8(self) -> u8 {
+        self as u8
+    }
+}
+
 // Instrument Identifiers
 pub const DRUM_KICK: i32 = 0;
 pub const DRUM_SNARE: i32 = 1;
@@ -248,8 +285,8 @@ impl DrumMachine {
         }
     }
 
-    pub fn set_mode_all(&mut self, mode: u8) {
-        let m = mode.clamp(0, 3);
+    pub fn set_mode_all(&mut self, mode: impl Into<DrumMode>) {
+        let m = mode.into();
         self.kick.mode = m;
         self.snare.mode = m;
         self.hat.mode = m;

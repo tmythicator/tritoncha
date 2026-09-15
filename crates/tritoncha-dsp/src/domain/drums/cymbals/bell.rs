@@ -2,9 +2,11 @@
 //! Simulates non-linear strike deformation, stick tip contact transient,
 //! and five inharmonic modal plate resonances of B20 bronze.
 
-use crate::dsp::filter::StateVariableFilter;
-use crate::dsp::math::{soft_clip, xorshift32_norm};
-use crate::synth::drums::{MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use crate::core::math::{soft_clip, xorshift32_norm};
+use crate::domain::drums::{
+    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
+};
+use crate::domain::effects::StateVariableFilter;
 use std::f32::consts::PI;
 
 /// Second-order resonant modal filter for acoustic cymbal cups.
@@ -67,7 +69,7 @@ pub struct RideBellVoice {
     decay_scale: f32,
     tune_ratio: f32,
     drive: f32,
-    pub mode: u8,
+    pub mode: DrumMode,
 }
 
 impl RideBellVoice {
@@ -96,7 +98,7 @@ impl RideBellVoice {
             decay_scale: 1.0,
             tune_ratio: 1.0,
             drive: 1.2,
-            mode: 1, // Default to Natural acoustic B20 bell
+            mode: DrumMode::default(),
         }
     }
 
@@ -123,7 +125,7 @@ impl RideBellVoice {
             self.drive = drive.clamp(0.2, 4.0);
         }
         if mode >= 0.0 {
-            self.mode = (mode.round() as u8).clamp(0, 3);
+            self.mode = DrumMode::from(mode);
         }
     }
 
@@ -169,12 +171,11 @@ impl RideBellVoice {
         };
         let effective_tune = self.tune_ratio * pitch_mod;
 
-        // Mode adjustments
         let (mode_decay, mode_drive, mode_color) = match self.mode {
-            0 => (self.decay_scale * 0.85, self.drive * 1.3, 0.9), // Analog / 808 flavor
-            2 => (self.decay_scale * 0.65, self.drive * 1.0, 0.6), // Dark / Dry Jazz bell
-            3 => (self.decay_scale * 1.45, self.drive * 1.25, 1.2), // Bright Cutting Rock bell
-            _ => (self.decay_scale, self.drive, 1.0),              // Natural B20 Raw Bell
+            DrumMode::Analog => (self.decay_scale * 0.85, self.drive * 1.3, 0.9),
+            DrumMode::Idm => (self.decay_scale * 0.65, self.drive * 1.0, 0.6),
+            DrumMode::Industrial => (self.decay_scale * 1.45, self.drive * 1.25, 1.2),
+            DrumMode::Natural => (self.decay_scale, self.drive, 1.0),
         };
 
         // 3. Exciter impulse window (~2.0ms) injected into modal filters
