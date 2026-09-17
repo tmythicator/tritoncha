@@ -11,7 +11,8 @@
    {:key :bus/bass   :label "BASS"   :color "var(--bus-bass-color)"   :tag-class "bus-bass"   :default 0.0}
    {:key :bus/lead   :label "LEAD"   :color "var(--bus-lead-color)"   :tag-class "bus-lead"   :default 0.0}
    {:key :bus/space  :label "SPACE"  :color "var(--bus-space-color)"  :tag-class "bus-space"  :default 0.0}
-   {:key :bus/direct :label "DIRECT" :color "var(--bus-direct-color)" :tag-class "bus-direct" :default 0.0}])
+   {:key :bus/direct :label "DIRECT" :color "var(--bus-direct-color)" :tag-class "bus-direct" :default 0.0}
+   {:key :bus/master :label "MASTER" :color "var(--bus-master-color)" :tag-class "bus-master" :default 0.0}])
 
 (def ^:private min-db -24.0)
 (def ^:private max-db 6.0)
@@ -34,26 +35,57 @@
       (str "+" (.toFixed rounded 1) " dB")
       (str (.toFixed rounded 1) " dB"))))
 
+(defn- knob-face
+  "Renders the pure SVG dial face with background arc, active arc, and needle pointer."
+  [{:keys [norm color muted?]}]
+  (let [dash-active (* norm arc-total-len)
+        dash-arr    (str (.toFixed dash-active 2) " " (.toFixed arc-circumference 2))
+        angle-deg   (+ 135.0 (* norm 270.0))
+        angle-rad   (* angle-deg (/ (.-PI js/Math) 180.0))
+        cx          25.0
+        cy          25.0
+        p1-x        (+ cx (* 8.0 (.cos js/Math angle-rad)))
+        p1-y        (+ cy (* 8.0 (.sin js/Math angle-rad)))
+        p2-x        (+ cx (* 14.0 (.cos js/Math angle-rad)))
+        p2-y        (+ cy (* 14.0 (.sin js/Math angle-rad)))
+        stroke-col  (if muted? "var(--text-tertiary)" color)]
+    [:svg.neo-knob-svg {:viewBox "0 0 50 50"}
+     [:circle
+      {:cx cx :cy cy :r arc-radius
+       :fill "none"
+       :stroke "rgba(255, 255, 255, 0.10)"
+       :stroke-width "3.5"
+       :stroke-linecap "round"
+       :stroke-dasharray (str (.toFixed arc-total-len 2) " " (.toFixed arc-circumference 2))
+       :transform "rotate(135 25 25)"}]
+     [:circle
+      {:cx cx :cy cy :r arc-radius
+       :fill "none"
+       :stroke stroke-col
+       :stroke-width "3.5"
+       :stroke-linecap "round"
+       :stroke-dasharray dash-arr
+       :transform "rotate(135 25 25)"
+       :style {:filter (if muted? "none" (str "drop-shadow(0 0 3px " color ")"))}}]
+     [:circle
+      {:cx cx :cy cy :r "13"
+       :fill "var(--bg-surface-elevated, #161624)"
+       :stroke (if muted? "var(--border-subtle)" "rgba(255,255,255,0.22)")
+       :stroke-width "1.5"}]
+     [:line
+      {:x1 p1-x :y1 p1-y :x2 p2-x :y2 p2-y
+       :stroke stroke-col
+       :stroke-width "2.5"
+       :stroke-linecap "round"}]]))
+
 (defn- rotary-knob
   "Interactive cyberpunk rotary knob for bus volume adjustment.
   Supports pointer vertical drag, mouse wheel and double-click to reset."
   [_props]
   (let [drag-state (r/atom {:dragging? false :start-y 0 :start-val 0.0})]
     (fn [{:keys [value default-val color muted? on-change]}]
-      (let [val-clamped   (clamp value min-db max-db)
-            norm          (db->norm val-clamped)
-            dash-active   (* norm arc-total-len)
-            dash-arr      (str (.toFixed dash-active 2) " " (.toFixed arc-circumference 2))
-            angle-deg     (+ 135.0 (* norm 270.0))
-            angle-rad     (* angle-deg (/ (.-PI js/Math) 180.0))
-            cx            25.0
-            cy            25.0
-            r-inner       8.0
-            r-outer       14.0
-            p1-x          (+ cx (* r-inner (.cos js/Math angle-rad)))
-            p1-y          (+ cy (* r-inner (.sin js/Math angle-rad)))
-            p2-x          (+ cx (* r-outer (.cos js/Math angle-rad)))
-            p2-y          (+ cy (* r-outer (.sin js/Math angle-rad)))]
+      (let [val-clamped (clamp value min-db max-db)
+            norm        (db->norm val-clamped)]
         [:div.neo-knob-container
          {:on-pointer-down
           (fn [e]
@@ -100,38 +132,14 @@
           :aria-valuenow val-clamped
           :aria-valuemin min-db
           :aria-valuemax max-db}
-         [:svg.neo-knob-svg {:viewBox "0 0 50 50"}
-          ;; Background track arc
-          [:circle
-           {:cx cx :cy cy :r arc-radius
-            :fill "none"
-            :stroke "rgba(255, 255, 255, 0.10)"
-            :stroke-width "3.5"
-            :stroke-linecap "round"
-            :stroke-dasharray (str (.toFixed arc-total-len 2) " " (.toFixed arc-circumference 2))
-            :transform "rotate(135 25 25)"}]
-          ;; Active value arc
-          [:circle
-           {:cx cx :cy cy :r arc-radius
-            :fill "none"
-            :stroke (if muted? "var(--text-tertiary)" color)
-            :stroke-width "3.5"
-            :stroke-linecap "round"
-            :stroke-dasharray dash-arr
-            :transform "rotate(135 25 25)"
-            :style {:filter (if muted? "none" (str "drop-shadow(0 0 3px " color ")"))}}]
-          ;; Central dial disc
-          [:circle
-           {:cx cx :cy cy :r "13"
-            :fill "var(--bg-surface-elevated, #161624)"
-            :stroke (if muted? "var(--border-subtle)" "rgba(255,255,255,0.22)")
-            :stroke-width "1.5"}]
-          ;; Needle / pointer
-          [:line
-           {:x1 p1-x :y1 p1-y :x2 p2-x :y2 p2-y
-            :stroke (if muted? "var(--text-tertiary)" color)
-            :stroke-width "2.5"
-            :stroke-linecap "round"}]]]))))
+         [knob-face {:norm norm :color color :muted? muted?}]]))))
+
+(defn- bus-readout [val muted?]
+  [:div.neo-bus-readout
+   (if muted?
+     [:span.neo-v.v-pink "MUTE"]
+     [:span.neo-v {:class (if (pos? val) "v-pink" "v-cyan")}
+      (format-db val)])])
 
 (defn- bus-strip [{:keys [key label color tag-class default]}]
   (let [levels  (:bus-levels @audio-state)
@@ -146,11 +154,7 @@
                    :muted?      muted?
                    :on-change   (fn [new-db]
                                   (mixer/set-volume! key new-db))}]
-     [:div.neo-bus-readout
-      (if muted?
-        [:span.neo-v.v-pink "MUTE"]
-        [:span.neo-v {:class (if (pos? val) "v-pink" "v-cyan")}
-         (format-db val)])]
+     [bus-readout val muted?]
      [:button.neo-mute-btn
       {:class    (when muted? "active")
        :title    (if muted? (str "Unmute " label) (str "Mute " label))
@@ -160,7 +164,7 @@
       "M"]]))
 
 (defn bus-mixer-component
-  "Renders the 5-bus mixer strip with interactive rotary knobs and mute toggles."
+  "Renders the 6-bus mixer strip with interactive rotary knobs and mute toggles."
   []
   [:div.neo-section
    [:div.neo-section-label "$ bus_matrix [LEVELS + MUTE]"]

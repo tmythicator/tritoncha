@@ -38,6 +38,7 @@
     --rgb-pink:                255, 0, 127;
     --rgb-purple:              199, 125, 255;
     --rgb-amber:               255, 170, 0;
+    --rgb-lime:                74, 222, 128;
 
     /* Semantic status colors */
     --color-primary:           var(--palette-cyan);
@@ -74,6 +75,7 @@
 
     --text-brand:              var(--color-primary);
     --text-success:            var(--color-success);
+    --text-warning:            var(--color-warning);
     --text-danger:             var(--color-danger);
     --text-accent:             var(--color-accent);
     --text-secondary-accent:   var(--color-secondary);
@@ -108,13 +110,13 @@
     --bus-lead-bg:             rgba(var(--rgb-sky), 0.2);
     --bus-lead-border:         rgba(var(--rgb-sky), 0.4);
 
-    --bus-direct-color:        var(--color-warning);
-    --bus-direct-bg:           rgba(var(--rgb-amber), 0.2);
-    --bus-direct-border:       rgba(var(--rgb-amber), 0.4);
+    --bus-direct-color:        var(--palette-lime);
+    --bus-direct-bg:           rgba(var(--rgb-lime), 0.18);
+    --bus-direct-border:       rgba(var(--rgb-lime), 0.4);
 
-    --bus-master-color:        var(--text-secondary);
-    --bus-master-bg:           rgba(var(--rgb-white), 0.1);
-    --bus-master-border:       var(--border-subtle);
+    --bus-master-color:        var(--color-warning);
+    --bus-master-bg:           rgba(var(--rgb-amber), 0.18);
+    --bus-master-border:       rgba(var(--rgb-amber), 0.4);
 
     /* Code editor syntax */
     --editor-bg:               var(--palette-midnight);
