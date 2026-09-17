@@ -35,3 +35,23 @@
     (is (true? (:drums-muted? @audio-state)))
     (is (= :redrummed (mixer/toggle-drums!)))
     (is (false? (:drums-muted? @audio-state)))))
+
+(deftest master-bus-volume-and-mute-test
+  (testing "Sets master bus volume and toggles mute state"
+    (mixer/set-volume! :bus/master -4.5)
+    (is (= -4.5 (get-in @audio-state [:bus-levels :bus/master])))
+
+    (mixer/set-volume! :master 2.0)
+    (is (= 2.0 (get-in @audio-state [:bus-levels :bus/master])))
+
+    (mixer/mute-bus! :bus/master)
+    (is (true? (get-in @audio-state [:bus-mutes :bus/master])))
+
+    (mixer/unmute-bus! :bus/master)
+    (is (false? (get-in @audio-state [:bus-mutes :bus/master])))
+
+    (mixer/toggle-bus! :bus/master)
+    (is (true? (get-in @audio-state [:bus-mutes :bus/master])))
+
+    (mixer/toggle-bus! :bus/master)
+    (is (false? (get-in @audio-state [:bus-mutes :bus/master])))))

@@ -17,14 +17,25 @@
    :bus/bass    0.0
    :bus/space   0.0
    :bus/lead    0.0
-   :bus/direct  0.0})
+   :bus/direct  0.0
+   :bus/master  0.0})
 
 (defn- sync-bus-to-worklet! [b-key]
   (let [db     (get-in @audio-state [:bus-levels b-key] (get default-bus-levels b-key 0.0))
         muted? (get-in @audio-state [:bus-mutes b-key] false)
         del    (get-in @audio-state [:bus-sends b-key :delay] (get-in default-bus-sends [b-key :delay] 0.15))
         rev    (get-in @audio-state [:bus-sends b-key :reverb] (get-in default-bus-sends [b-key :reverb] 0.20))]
-    (worklet/set-bus-params! b-key db muted? del rev)))
+    (if (= b-key :bus/master)
+      (worklet/set-worklet-master-volume! (if muted? -60.0 db))
+      (worklet/set-bus-params! b-key db muted? del rev))))
+
+(defn sync-all-busses!
+  "Synchronizes all bus volumes, mutes, and sends into the Rust WASM DSP engine."
+  []
+  (doseq [b-key (keys default-bus-levels)]
+    (sync-bus-to-worklet! b-key)))
+
+(worklet/on-worklet-ready! sync-all-busses!)
 
 (defn set-volume!
   "Sets the gain volume of a specific audio bus in decibels.
