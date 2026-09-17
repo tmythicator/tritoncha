@@ -17,15 +17,14 @@
    :compressor {:enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 0.0}})
 
 (defn normalize-routes
-  "Normalizes route specifications (map format or legacy vector-of-chains) into a standard map:
+  "Normalizes route specifications into a standard map:
   {bus-key {:inserts [fx ...] :target (:bus/master or :out)}}.
   Examples:
     (normalize-routes {:bus/drums [] :bus/direct :out})
     -> {:bus/drums {:inserts [] :target :bus/master}
         :bus/direct {:inserts [] :target :out}}"
   [routes]
-  (cond
-    (map? routes)
+  (if (map? routes)
     (into {}
           (map (fn [[bus val]]
                  (let [master? (= bus :bus/master)]
@@ -49,26 +48,6 @@
                      :else
                      [bus {:inserts [] :target (if master? :out :bus/master)}]))))
           routes)
-
-    (vector? routes)
-    (into {}
-          (map (fn [chain]
-                 (let [src        (first chain)
-                       master?    (= src :bus/master)
-                       rest-chain (vec (rest chain))
-                       last-node  (last rest-chain)
-                       target     (cond
-                                    (= last-node :out)        :out
-                                    (= last-node :bus/master) :bus/master
-                                    master?                   :out
-                                    :else                     :bus/master)
-                       inserts    (if (or (= last-node :out) (= last-node :bus/master))
-                                    (vec (butlast rest-chain))
-                                    rest-chain)]
-                   [src {:inserts inserts :target target}])))
-          routes)
-
-    :else
     {}))
 
 

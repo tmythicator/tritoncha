@@ -3,7 +3,7 @@
   (:require [app.config :as config]))
 
 (defonce ^:private worklet-state
-  (atom {:ctx nil :node nil :wasm-module nil :ready? false}))
+  (atom {:ctx nil :node nil :ready? false}))
 
 (defonce ^:private pending-messages
   (atom []))

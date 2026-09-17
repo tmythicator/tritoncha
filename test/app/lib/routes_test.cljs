@@ -82,16 +82,14 @@
       (is (= {:inserts [] :target :out} (:bus/direct norm)))
       (is (= {:inserts [:filter :limiter] :target :out} (:bus/master norm)))))
 
-  (testing "normalize-routes handles vector chains with :out"
-    (let [chains [[:bus/drums :bus/master]
-                  [:bus/space :delay :reverb :bus/master]
-                  [:bus/direct :out]
-                  [:bus/master :filter :limiter :out]]
-          norm   (routing/normalize-routes chains)]
-      (is (= {:inserts [] :target :bus/master} (:bus/drums norm)))
-      (is (= {:inserts [:delay :reverb] :target :bus/master} (:bus/space norm)))
-      (is (= {:inserts [] :target :out} (:bus/direct norm)))
-      (is (= {:inserts [:filter :limiter] :target :out} (:bus/master norm))))))
+  (testing "normalize-routes handles custom target overrides in map DSL"
+    (let [spec {:bus/drums  :out
+                :bus/bass   [:distort :out]
+                :bus/space  [:delay :bus/master]}
+          norm (routing/normalize-routes spec)]
+      (is (= {:inserts [] :target :out} (:bus/drums norm)))
+      (is (= {:inserts [:distort] :target :out} (:bus/bass norm)))
+      (is (= {:inserts [:delay] :target :bus/master} (:bus/space norm))))))
 
 (deftest set-routing-switch-test
   (testing "set-routing! switches active routing and updates audio-state"
