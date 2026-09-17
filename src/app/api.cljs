@@ -149,6 +149,11 @@
 (def set-drive-mode! fx/set-drive-mode!)
 (def reverb-mode! fx/set-reverb-mode!)
 (def set-reverb-mode! fx/set-reverb-mode!)
+(def comp! fx/set-compressor!)
+(def compressor! fx/set-compressor!)
+(def set-compressor! fx/set-compressor!)
+(def comp-state fx/get-compressor-state)
+(def compressor-state fx/get-compressor-state)
 
 ;; SFX Drops + Dub One-Shots
 (def s! fx/trigger-dub-siren!)
