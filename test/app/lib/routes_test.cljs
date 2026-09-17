@@ -30,7 +30,8 @@
         (is (contains? busses :bus/drums) "Must contain :bus/drums")
         (is (contains? busses :bus/bass) "Must contain :bus/bass")
         (is (contains? busses :bus/space) "Must contain :bus/space")
-        (is (contains? busses :bus/direct) "Must contain :bus/direct"))
+        (is (contains? busses :bus/direct) "Must contain :bus/direct")
+        (is (contains? busses :bus/master) "Must contain :bus/master"))
 
       (testing "All routes reference declared busses, processors or :destination"
         (doseq [chain routes]
@@ -107,9 +108,11 @@
 
   (testing "custom dynamic routing registration and switching"
     (routing/register-routing! :custom-matrix
-                               {:busses {:bus/direct {:type :volume :volume 0}}
+                               {:busses {:bus/direct {:type :volume :volume 0}
+                                         :bus/master {:type :volume :volume 0}}
                                 :processors {}
-                                :routes [[:bus/direct :destination]]})
+                                :routes [[:bus/direct :destination]
+                                         [:bus/master :destination]]})
     (is (contains? (routing/all-routings) :custom-matrix) "Dynamic custom matrix must be present")
     (is (= :custom-matrix (routing/set-routing! :custom-matrix)))
     (is (= :custom-matrix (:current-routing @audio-state))))
@@ -121,3 +124,26 @@
         (is (= rk (:current-routing @audio-state)) (str "Audio state must store " rk))
         (is (map? (:busses spec)) (str "Routing " rk " must define :busses"))
         (is (vector? (:routes spec)) (str "Routing " rk " must define :routes"))))))
+
+(deftest bus-master-routing-topology-test
+  (testing "All built-in and user custom topologies route standard busses to destination via :bus/master or direct"
+    (let [all (routing/all-routings)]
+      (doseq [[rk spec] all]
+        (let [busses (:busses spec)
+              routes (:routes spec)
+              edges (reduce (fn [acc chain]
+                              (reduce (fn [m [src dst]] (assoc m src dst))
+                                      acc
+                                      (partition 2 1 chain)))
+                            {}
+                            routes)]
+          (is (contains? busses :bus/master) (str "Routing " rk " must declare :bus/master"))
+          (doseq [b (keys busses)]
+            (let [terminates? (loop [curr b visited #{} depth 0]
+                                (cond
+                                  (= curr :destination) true
+                                  (visited curr) false
+                                  (>= depth 12) false
+                                  (nil? curr) false
+                                  :else (recur (get edges curr) (conj visited curr) (inc depth))))]
+              (is (true? terminates?) (str "In routing " rk ", bus " b " must terminate at :destination")))))))))

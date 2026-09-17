@@ -71,20 +71,21 @@
 
 (defn proc-label
   "Format processor keyword to human readable title.
-  Examples: (proc-label :master-filter) -> \"Master Filter\"."
+  Examples: (proc-label :filter) -> \"Filter\"."
   [proc-key]
   (case proc-key
-    :delay         "Delay"
-    :reverb        "Reverb"
-    :freeverb      "Freeverb"
-    :distort       "Drive"
-    :distortion    "Distortion"
-    :chorus        "Chorus"
-    :crusher       "Bitcrush"
-    :bitcrusher    "Bitcrush"
-    :master-filter "Master Filter"
-    :filter        "Filter"
-    :limiter       "Limiter"
+    :bus/master "Master"
+    :delay      "Delay"
+    :reverb     "Reverb"
+    :freeverb   "Freeverb"
+    :distort    "Drive"
+    :distortion "Distortion"
+    :chorus     "Chorus"
+    :crusher    "Bitcrush"
+    :bitcrusher "Bitcrush"
+    :filter     "Filter"
+    :compressor "Compressor"
+    :limiter    "Limiter"
     (-> (name proc-key) str/capitalize (str/replace #"-" " "))))
 
 (defn active-routing-spec
@@ -108,7 +109,7 @@
             chain   (resolve-bus-chain target-bus routes 8)
             fx-only (into []
                           (comp
-                           (remove #{target-bus :destination :master-filter})
+                           (remove #{target-bus :destination :filter :bus/master})
                            (map proc-label))
                           chain)]
         (if (seq fx-only)

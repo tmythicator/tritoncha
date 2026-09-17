@@ -121,6 +121,13 @@
                               :sendDelay (float (or send-delay 0.0))
                               :sendReverb (float (or send-reverb 0.0))})))
 
+(defn set-worklet-master-volume!
+  "Adjusts master output volume in decibels (-60.0 dB to +6.0 dB) in Rust WASM.
+  Examples: (set-worklet-master-volume! 0.0), (set-worklet-master-volume! -3.0)."
+  [^number gain-db]
+  (transport/send-msg! #js {:type "setVolume"
+                            :gainDb (float (or gain-db 0.0))}))
+
 (defn set-worklet-voice-patch!
   "Compiles and transmits a declarative synth patch into Rust WASM modular DSP.
   Examples: (set-worklet-voice-patch! 4 {:osc {:type :saw} :filter {:cutoff 2000}})."
@@ -160,20 +167,20 @@
                                :velocity v
                                :dur d}))))
 
-;; Master DSP Effects and Automations
-(defn set-worklet-master-filter!
-  "Sets cutoff frequency and resonance on the master TPT state-variable filter.
-  Examples: (set-worklet-master-filter! 4200.0 0.70)."
+;; DSP Effects and Automations
+(defn set-worklet-filter!
+  "Sets cutoff frequency and resonance on the TPT state-variable filter.
+  Examples: (set-worklet-filter! 4200.0 0.70)."
   [^number cutoff-hz ^number resonance]
-  (transport/send-msg! #js {:type "setMasterFilter"
+  (transport/send-msg! #js {:type "setFilter"
                             :cutoffHz cutoff-hz
                             :resonance resonance}))
 
-(defn sweep-worklet-master-filter!
-  "Initiates an automated master filter frequency sweep over a time window.
-  Examples: (sweep-worklet-master-filter! 400.0 6000.0 4.0)."
+(defn sweep-worklet-filter!
+  "Initiates an automated filter frequency sweep over a time window.
+  Examples: (sweep-worklet-filter! 400.0 6000.0 4.0)."
   [^number from-hz ^number to-hz ^number duration-secs]
-  (transport/send-msg! #js {:type "sweepMasterFilter"
+  (transport/send-msg! #js {:type "sweepFilter"
                             :fromHz from-hz
                             :toHz to-hz
                             :durationSecs duration-secs}))
@@ -237,3 +244,18 @@
         mode-id (if (= norm :freeverb) 0 1)]
     (transport/send-msg! #js {:type "setReverbMode" :mode mode-id})
     norm))
+
+(defn set-worklet-compressor!
+  "Configures stereo bus glue compressor parameters.
+  Examples: (set-worklet-compressor! true -12.0 4.0 0.010 0.100 2.5 1.0)."
+  ([enabled?]
+   (set-worklet-compressor! enabled? -12.0 4.0 0.010 0.100 2.5 1.0))
+  ([enabled? threshold-db ratio attack-s release-s makeup-db mix]
+   (transport/send-msg! #js {:type "setCompressor"
+                             :enabled (boolean enabled?)
+                             :thresholdDb (float (or threshold-db -12.0))
+                             :ratio (float (or ratio 4.0))
+                             :attackS (float (or attack-s 0.010))
+                             :releaseS (float (or release-s 0.100))
+                             :makeupDb (float (or makeup-db 2.5))
+                             :mix (float (or mix 1.0))})))

@@ -17,6 +17,9 @@
 (defonce ^:private reverb-state
   (atom {:room-size 0.70 :wet 0.35}))
 
+(defonce ^:private compressor-state
+  (atom {:enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 1.0}))
+
 (defn get-filter-state
   "Returns the current master filter state map {:cutoff hz :resonance q}."
   []
@@ -31,7 +34,7 @@
     (swap! filter-state assoc :cutoff clamped-hz)
     (when (= (:current-routing @audio-state :default) :default)
       (swap! audio-state assoc :track-cutoff clamped-hz))
-    (worklet/set-worklet-master-filter! clamped-hz (:resonance @filter-state))))
+    (worklet/set-worklet-filter! clamped-hz (:resonance @filter-state))))
 
 (defn set-filter-q!
   "Sets filter resonance (0.0 to 0.95).
@@ -40,7 +43,7 @@
   (let [res (if (<= q 1.0) q (/ q 10.0))
         clamped-res (clamp res 0.0 0.95)]
     (swap! filter-state assoc :resonance clamped-res)
-    (worklet/set-worklet-master-filter! (:cutoff @filter-state) clamped-res)))
+    (worklet/set-worklet-filter! (:cutoff @filter-state) clamped-res)))
 
 (defn sweep-filter!
   "Smoothly sweeps master filter cutoff from `from-hz` to `to-hz` over `duration-secs` via Rust WASM DSP.
@@ -52,7 +55,7 @@
          t-hz (clamp (if (<= to-hz 1.0) (* to-hz 18000.0) to-hz) 50.0 18000.0)
          dur  (or duration-secs 4.0)]
      (swap! filter-state assoc :cutoff t-hz)
-     (worklet/sweep-worklet-master-filter! f-hz t-hz dur))))
+     (worklet/sweep-worklet-filter! f-hz t-hz dur))))
 
 (defn set-distortion!
   "Sets overdrive/distortion amount (0.0 to 1.0) preserving bitcrusher settings.
@@ -167,6 +170,55 @@
     (swap! audio-state assoc :reverb-mode m)
     (worklet/set-worklet-reverb-mode! m)
     m))
+
+(defn get-compressor-state
+  "Returns the current master bus compressor state map."
+  []
+  @compressor-state)
+
+(defn- normalize-compressor-spec
+  "Normalizes compressor parameters from heterogeneous map representations."
+  [base spec]
+  (let [m (merge base spec)]
+    {:enabled   (if (contains? spec :enabled) (boolean (:enabled spec)) (:enabled m))
+     :threshold (float (or (:threshold spec) (:threshold-db spec) (:threshold m) -12.0))
+     :ratio     (float (or (:ratio spec) (:ratio m) 4.0))
+     :attack    (float (or (:attack spec) (:attack-sec spec) (:attack-s spec) (:attack m) 0.010))
+     :release   (float (or (:release spec) (:release-sec spec) (:release-s spec) (:release m) 0.100))
+     :makeup    (float (or (:makeup spec) (:makeup-db spec) (:makeup-gain-db spec) (:makeup m) 2.5))
+     :mix       (float (or (:mix spec) (:mix m) 1.0))}))
+
+(defn set-compressor!
+  "Configures master bus glue compressor parameters.
+  Can be called with boolean to enable/disable, or with a configuration map.
+  Examples:
+    (set-compressor! true)
+    (set-compressor! {:threshold -14.0 :ratio 4.0 :makeup 3.0})
+    (set-compressor! {:enabled false})."
+  ([enabled-or-spec]
+   (if (map? enabled-or-spec)
+     (let [merged (swap! compressor-state #(normalize-compressor-spec % enabled-or-spec))]
+       (worklet/set-worklet-compressor!
+        (:enabled merged)
+        (:threshold merged)
+        (:ratio merged)
+        (:attack merged)
+        (:release merged)
+        (:makeup merged)
+        (:mix merged))
+       merged)
+     (do
+       (swap! compressor-state assoc :enabled (boolean enabled-or-spec))
+       (let [s @compressor-state]
+         (worklet/set-worklet-compressor!
+          (boolean enabled-or-spec)
+          (:threshold s)
+          (:ratio s)
+          (:attack s)
+          (:release s)
+          (:makeup s)
+          (:mix s))
+         s)))))
 
 (defn trigger-dub-siren!
   "Triggers a classic one-shot dub laser siren FX."
