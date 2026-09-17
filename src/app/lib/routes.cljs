@@ -29,7 +29,7 @@
      - :chorus     Dual-quadrature stereo chorus and flanger.
      - :limiter    Analog-style soft-clipping master output stage.")
 
-;; Default Studio Graph (Simple, Clean Studio Routing Without Insert Coloring)
+;; Default Studio Graph
 (def default-graph
   "Clean studio default routing with uncolored busses and natural track filter cutoff."
   {:title "DEFAULT"
@@ -43,18 +43,18 @@
 
    :processors
    {:filter     {:type :filter :filter-type "lowpass"}
-    :compressor {:type :compressor :enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 0.0}
+    :compressor {:type :compressor :enabled true :threshold -14.0 :ratio 3.0 :attack 0.012 :release 0.100 :makeup 2.0 :mix 1.0}
     :delay      {:type :delay :time "8n." :feedback 0.35 :wet 0.25}
     :reverb     {:type :reverb :algorithm :fdn :roomSize 0.75 :wet 0.35}
     :limiter    {:type :limiter :threshold -1.0}}
 
    :routes
-   [[:bus/drums :bus/master]
-    [:bus/bass :bus/master]
-    [:bus/lead :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :compressor :limiter :destination]]})
+   {:bus/drums  []
+    :bus/bass   []
+    :bus/lead   [:delay]
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :compressor :limiter]}})
 
 ;; Studio Master (Punchy VCA Glue Bus Compressor + Crisp Lowpass + FDN Reverb)
 (def studio-master
@@ -76,12 +76,12 @@
     :limiter    {:type :limiter :threshold -1.0}}
 
    :routes
-   [[:bus/drums :bus/master]
-    [:bus/bass :bus/master]
-    [:bus/lead :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :compressor :limiter :destination]]})
+   {:bus/drums  []
+    :bus/bass   []
+    :bus/lead   []
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :compressor :limiter]}})
 
 ;; Liminal Prison (Infinite Subterranean FDN Diffusion + Cross-Fed Ping-Pong Hallways)
 (def liminal-prison
@@ -103,12 +103,12 @@
     :limiter {:type :limiter :threshold -1.2}}
 
    :routes
-   [[:bus/drums :delay :reverb :bus/master]
-    [:bus/bass :bus/master]
-    [:bus/lead :chorus :delay :reverb :bus/master]
-    [:bus/space :chorus :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :limiter :destination]]})
+   {:bus/drums  [:delay :reverb]
+    :bus/bass   []
+    :bus/lead   [:chorus :delay :reverb]
+    :bus/space  [:chorus :delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :limiter]}})
 
 ;; Heavy Dub Echo Chamber (Cathedral FDN Reverb + Warm ADAA Tape Saturation)
 (def dub-echo-chamber
@@ -132,12 +132,12 @@
     :limiter    {:type :limiter :threshold -1.5}}
 
    :routes
-   [[:bus/drums :bus/master]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :chorus :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :compressor :limiter :destination]]})
+   {:bus/drums  []
+    :bus/bass   [:distort]
+    :bus/lead   [:chorus]
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :compressor :limiter]}})
 
 ;; Tape Lo-Fi Cassette (Analog Tape Hiss, Quantization Grain and Wow Flutter)
 (def tape-lofi
@@ -161,12 +161,12 @@
     :limiter {:type :limiter :threshold -1.0}}
 
    :routes
-   [[:bus/drums :crusher :distort :bus/master]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :chorus :distort :bus/master]
-    [:bus/space :crusher :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :limiter :destination]]})
+   {:bus/drums  [:crusher :distort]
+    :bus/bass   [:distort]
+    :bus/lead   [:chorus :distort]
+    :bus/space  [:crusher :delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :limiter]}})
 
 ;; Crematorium (Searing Incineration Matrix with Overdriven Bass and Resonant Scorch Filter)
 (def crematorium
@@ -188,12 +188,12 @@
     :limiter {:type :limiter :threshold -1.5}}
 
    :routes
-   [[:bus/drums :destination]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :delay :bus/master]
-    [:bus/space :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :limiter :destination]]})
+   {:bus/drums  :out
+    :bus/bass   [:distort]
+    :bus/lead   [:delay]
+    :bus/space  [:reverb]
+    :bus/direct :out
+    :bus/master [:filter :limiter]}})
 
 ;; Ambient Prism (Crystalline Spatial Diffusion + 8-Channel Cathedral FDN)
 (def ambient-prism
@@ -215,12 +215,12 @@
     :limiter {:type :limiter :threshold -0.8}}
 
    :routes
-   [[:bus/drums :bus/master]
-    [:bus/bass :bus/master]
-    [:bus/lead :chorus :delay :reverb :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :limiter :destination]]})
+   {:bus/drums  []
+    :bus/bass   []
+    :bus/lead   [:chorus :delay :reverb]
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :limiter]}})
 
 ;; Industrial Crush (Cyberpunk EBM + Classic Pade Tanh Clipping Overdrive)
 (def industrial-crush
@@ -244,12 +244,12 @@
     :limiter    {:type :limiter :threshold -2.0}}
 
    :routes
-   [[:bus/drums :crusher :bus/master]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :distort :delay :bus/master]
-    [:bus/space :crusher :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :compressor :limiter :destination]]})
+   {:bus/drums  [:crusher]
+    :bus/bass   [:distort]
+    :bus/lead   [:distort :delay]
+    :bus/space  [:crusher :reverb]
+    :bus/direct :out
+    :bus/master [:filter :compressor :limiter]}})
 
 ;; Cyber Glitch Industrial Graph (Aggressive Crusher + ADAA Drive)
 (def cyber-glitch
@@ -274,12 +274,12 @@
     :limiter    {:type :limiter :threshold -2.0}}
 
    :routes
-   [[:bus/drums :crusher :bus/master]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :chorus :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :compressor :limiter :destination]]})
+   {:bus/drums  [:crusher]
+    :bus/bass   [:distort]
+    :bus/lead   [:chorus]
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :compressor :limiter]}})
 
 ;; Vintage Schroeder Graph (Classic 90s Freeverb + Classic Pade Tanh Drive)
 (def vintage-schroeder
@@ -302,12 +302,12 @@
     :limiter {:type :limiter :threshold -1.0}}
 
    :routes
-   [[:bus/drums :bus/master]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :chorus :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :limiter :destination]]})
+   {:bus/drums  []
+    :bus/bass   [:distort]
+    :bus/lead   [:chorus]
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :limiter]}})
 
 ;; Catalog of Core Routing Topologies
 (def core-routes

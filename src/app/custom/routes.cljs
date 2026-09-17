@@ -5,7 +5,7 @@
 ;;
 ;; Busses:     :bus/drums, :bus/bass, :bus/lead, :bus/space, :bus/direct, :bus/master
 ;; Processors: :filter, :distort, :delay, :reverb, :limiter, :volume, :crusher, :chorus, :compressor
-;; Routes:     Vector of signal connection chains [[:src :fx1 :fx2 :dst] ...]
+;; Routes:     Map of bus routes {:bus/drums [] :bus/direct :out ...}
 
 (def void-chamber
   "Deep cosmic void routing with vast modulated FDN diffusion and stereo chorus wash."
@@ -27,12 +27,12 @@
     :limiter {:type :limiter :threshold -1.2}}
 
    :routes
-   [[:bus/drums :bus/master]
-    [:bus/bass :distort :bus/master]
-    [:bus/lead :chorus :delay :reverb :bus/master]
-    [:bus/space :delay :reverb :bus/master]
-    [:bus/direct :destination]
-    [:bus/master :filter :limiter :destination]]})
+   {:bus/drums  []
+    :bus/bass   [:distort]
+    :bus/lead   [:chorus :delay :reverb]
+    :bus/space  [:delay :reverb]
+    :bus/direct :out
+    :bus/master [:filter :limiter]}})
 
 (def user-routes
   {:void-chamber  void-chamber})

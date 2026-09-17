@@ -22,7 +22,7 @@
       "SESSION"])])
 
 (defn- card-routing-and-poly-badges
-  "Render bus destination tag.
+  "Render bus routing tag.
   Examples: [card-routing-and-poly-badges spec]."
   [spec]
   [:div.inst-card-badges

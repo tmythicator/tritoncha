@@ -51,23 +51,25 @@
     "bus-direct"))
 
 (defn resolve-bus-chain
-  "Trace audio processing sequence starting from bus-key to destination.
-  Examples: (resolve-bus-chain :bus/space routes 10) -> [:bus/space :delay :reverb :destination]."
-  [bus-key routes-list max-depth]
-  (let [adj (reduce (fn [acc chain]
-                      (reduce (fn [m [src dst]] (assoc m src dst))
-                              acc
-                              (partition 2 1 chain)))
-                    {}
-                    routes-list)
-        step (fn step [curr visited depth]
-               (cond
-                 (or (nil? curr) (= curr :destination) (visited curr) (>= depth max-depth))
-                 (when curr [curr])
-
-                 :else
-                 (cons curr (step (get adj curr) (conj visited curr) (inc depth)))))]
-    (vec (step bus-key #{} 0))))
+  "Trace audio processing sequence starting from bus-key to :out.
+  Examples: (resolve-bus-chain :bus/space routes 10) -> [:bus/space :delay :reverb :bus/master :filter :limiter :out]."
+  [bus-key routes-spec max-depth]
+  (let [normalized (routing/normalize-routes routes-spec)]
+    (loop [curr    bus-key
+           result  [bus-key]
+           visited #{bus-key}
+           depth   0]
+      (if (or (>= depth max-depth) (= curr :out))
+        result
+        (if-let [{:keys [inserts target]} (get normalized curr)]
+          (let [next-nodes (concat inserts (when target [target]))
+                new-result (into result next-nodes)]
+            (if (or (= target :out) (nil? target) (visited target))
+              new-result
+              (recur target new-result (conj visited target) (inc depth))))
+          (if (not= curr :out)
+            (conj result :out)
+            result))))))
 
 (defn proc-label
   "Format processor keyword to human readable title.
@@ -90,7 +92,7 @@
 
 (defn active-routing-spec
   "Retrieve active routing graph specification.
-  Examples: (active-routing-spec) -> {:routes [...]}."
+  Examples: (active-routing-spec) -> {:routes {...}}."
   []
   (let [routings    (routing/all-routings)
         cur-route-k (:current-routing @audio-state :default)]
@@ -99,7 +101,7 @@
 
 (defn bus-fx-summary
   "Dynamically resolve FX chain for a bus by traversing current routing graph.
-  Examples: (bus-fx-summary :bus/space) -> \"Stereo Ping-Pong Delay + Freeverb Reverb\"."
+  Examples: (bus-fx-summary :bus/space) -> \"Delay + Reverb\"."
   [bus-key]
   (let [target-bus (or bus-key :bus/direct)]
     (if (= target-bus :bus/direct)
@@ -109,7 +111,7 @@
             chain   (resolve-bus-chain target-bus routes 8)
             fx-only (into []
                           (comp
-                           (remove #{target-bus :destination :filter :bus/master})
+                           (remove #{target-bus :out :filter :bus/master})
                            (map proc-label))
                           chain)]
         (if (seq fx-only)

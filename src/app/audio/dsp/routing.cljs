@@ -16,6 +16,62 @@
    :reverb     {:room-size 0.75 :wet 0.35 :algorithm :fdn}
    :compressor {:enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 0.0}})
 
+(defn normalize-routes
+  "Normalizes route specifications (map format or legacy vector-of-chains) into a standard map:
+  {bus-key {:inserts [fx ...] :target (:bus/master or :out)}}.
+  Examples:
+    (normalize-routes {:bus/drums [] :bus/direct :out})
+    -> {:bus/drums {:inserts [] :target :bus/master}
+        :bus/direct {:inserts [] :target :out}}"
+  [routes]
+  (cond
+    (map? routes)
+    (into {}
+          (map (fn [[bus val]]
+                 (let [master? (= bus :bus/master)]
+                   (cond
+                     (= val :out)
+                     [bus {:inserts [] :target :out}]
+
+                     (vector? val)
+                     (let [last-item   (last val)
+                           target-out? (= last-item :out)
+                           target      (cond
+                                         target-out?               :out
+                                         master?                   :out
+                                         (= last-item :bus/master) :bus/master
+                                         :else                     :bus/master)
+                           inserts     (if (or target-out? (= last-item :bus/master))
+                                         (vec (butlast val))
+                                         val)]
+                       [bus {:inserts inserts :target target}])
+
+                     :else
+                     [bus {:inserts [] :target (if master? :out :bus/master)}]))))
+          routes)
+
+    (vector? routes)
+    (into {}
+          (map (fn [chain]
+                 (let [src        (first chain)
+                       master?    (= src :bus/master)
+                       rest-chain (vec (rest chain))
+                       last-node  (last rest-chain)
+                       target     (cond
+                                    (= last-node :out)        :out
+                                    (= last-node :bus/master) :bus/master
+                                    master?                   :out
+                                    :else                     :bus/master)
+                       inserts    (if (or (= last-node :out) (= last-node :bus/master))
+                                    (vec (butlast rest-chain))
+                                    rest-chain)]
+                   [src {:inserts inserts :target target}])))
+          routes)
+
+    :else
+    {}))
+
+
 (defn- resolve-filter-frequency
   "Resolves the cutoff frequency in Hz: declared topology frequency, active track cutoff, or 18000 Hz."
   [spec]

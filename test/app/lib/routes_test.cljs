@@ -8,10 +8,10 @@
    [cljs.test :refer [deftest is testing]]))
 
 (defn- all-test-routings []
-  (merge core-routes user-routes (:routes @repl-registry)))
+  (merge core-routes user-routes (:routings @repl-registry)))
 
 (defn- register-test-routing! [graph-key spec]
-  (swap! repl-registry assoc-in [:routes graph-key] spec)
+  (swap! repl-registry assoc-in [:routings graph-key] spec)
   graph-key)
 
 (deftest default-routing-graph-structure-test
@@ -19,12 +19,12 @@
     (is (map? default-graph) "Default graph must be a map")
     (is (map? (:busses default-graph)) "Default graph must have :busses map")
     (is (map? (:processors default-graph)) "Default graph must have :processors map")
-    (is (vector? (:routes default-graph)) "Default graph must have :routes vector")
+    (is (map? (:routes default-graph)) "Default graph must have :routes map")
 
-    (let [busses (:busses default-graph)
+    (let [busses     (:busses default-graph)
           processors (:processors default-graph)
-          routes (:routes default-graph)
-          all-nodes (into #{:destination} (concat (keys busses) (keys processors)))]
+          routes     (:routes default-graph)
+          norm       (routing/normalize-routes routes)]
 
       (testing "All standard busses exist"
         (is (contains? busses :bus/drums) "Must contain :bus/drums")
@@ -33,37 +33,33 @@
         (is (contains? busses :bus/direct) "Must contain :bus/direct")
         (is (contains? busses :bus/master) "Must contain :bus/master"))
 
-      (testing "All routes reference declared busses, processors or :destination"
-        (doseq [chain routes]
-          (is (vector? chain) "Each route chain must be a vector")
-          (doseq [node chain]
-            (is (contains? all-nodes node)
-                (str "Node " node " in route chain " chain " must be a declared bus, processor, or :destination")))))
+      (testing "All routes reference declared busses, processors or :out"
+        (doseq [[bus {:keys [inserts target]}] norm]
+          (is (contains? busses bus) (str "Bus " bus " must be a declared bus"))
+          (is (contains? #{:out :bus/master} target) (str "Target " target " must be :out or :bus/master"))
+          (doseq [proc inserts]
+            (is (contains? processors proc)
+                (str "Insert processor " proc " on bus " bus " must be a declared processor")))))
 
-      (testing "Every bus has a path towards :destination"
-        (let [edges (reduce (fn [acc chain]
-                              (reduce (fn [m [src dst]] (assoc m src dst))
-                                      acc
-                                      (partition 2 1 chain)))
-                            {}
-                            routes)]
-          (doseq [b (keys busses)]
-            (let [terminates? (loop [curr b visited #{} depth 0]
-                                (cond
-                                  (= curr :destination) true
-                                  (visited curr) false
-                                  (>= depth 10) false
-                                  (nil? curr) false
-                                  :else (recur (get edges curr) (conj visited curr) (inc depth))))]
-              (is (true? terminates?) (str "Bus " b " must terminate at :destination")))))))))
+      (testing "Every bus has a path towards :out"
+        (doseq [b (keys busses)]
+          (let [terminates? (loop [curr b visited #{} depth 0]
+                              (cond
+                                (= curr :out) true
+                                (visited curr) false
+                                (>= depth 10) false
+                                (nil? curr) false
+                                :else (recur (:target (get norm curr)) (conj visited curr) (inc depth))))]
+            (is (true? terminates?) (str "Bus " b " must terminate at :out"))))))))
 
 (deftest dynamic-routing-registry-test
   (testing "Dynamic routing graph registration and lookup"
-    (let [custom-key :test-ambient-routing
-          custom-spec {:busses {:bus/pad {:type :volume :volume 0}}
+    (let [custom-key  :test-ambient-routing
+          custom-spec {:busses     {:bus/pad    {:type :volume :volume 0}
+                                    :bus/master {:type :volume :volume 0}}
                        :processors {:shimmer {:type :reverb :wet 0.8}}
-                       :routes [[:bus/pad :shimmer]
-                                [:shimmer :destination]]}]
+                       :routes     {:bus/pad    [:shimmer :bus/master]
+                                    :bus/master :out}}]
 
       (register-test-routing! custom-key custom-spec)
       (let [all (all-test-routings)]
@@ -73,6 +69,29 @@
       (testing "audio-state stores current-routing"
         (swap! audio-state assoc :current-routing custom-key)
         (is (= custom-key (:current-routing @audio-state)) "audio-state must reflect loaded routing key")))))
+
+(deftest normalize-routes-test
+  (testing "normalize-routes handles map syntax with :out"
+    (let [spec {:bus/drums  []
+                :bus/lead   [:chorus :delay :reverb]
+                :bus/direct :out
+                :bus/master [:filter :limiter]}
+          norm (routing/normalize-routes spec)]
+      (is (= {:inserts [] :target :bus/master} (:bus/drums norm)))
+      (is (= {:inserts [:chorus :delay :reverb] :target :bus/master} (:bus/lead norm)))
+      (is (= {:inserts [] :target :out} (:bus/direct norm)))
+      (is (= {:inserts [:filter :limiter] :target :out} (:bus/master norm)))))
+
+  (testing "normalize-routes handles vector chains with :out"
+    (let [chains [[:bus/drums :bus/master]
+                  [:bus/space :delay :reverb :bus/master]
+                  [:bus/direct :out]
+                  [:bus/master :filter :limiter :out]]
+          norm   (routing/normalize-routes chains)]
+      (is (= {:inserts [] :target :bus/master} (:bus/drums norm)))
+      (is (= {:inserts [:delay :reverb] :target :bus/master} (:bus/space norm)))
+      (is (= {:inserts [] :target :out} (:bus/direct norm)))
+      (is (= {:inserts [:filter :limiter] :target :out} (:bus/master norm))))))
 
 (deftest set-routing-switch-test
   (testing "set-routing! switches active routing and updates audio-state"
@@ -108,11 +127,11 @@
 
   (testing "custom dynamic routing registration and switching"
     (routing/register-routing! :custom-matrix
-                               {:busses {:bus/direct {:type :volume :volume 0}
-                                         :bus/master {:type :volume :volume 0}}
+                               {:busses     {:bus/direct {:type :volume :volume 0}
+                                             :bus/master {:type :volume :volume 0}}
                                 :processors {}
-                                :routes [[:bus/direct :destination]
-                                         [:bus/master :destination]]})
+                                :routes     {:bus/direct :out
+                                             :bus/master :out}})
     (is (contains? (routing/all-routings) :custom-matrix) "Dynamic custom matrix must be present")
     (is (= :custom-matrix (routing/set-routing! :custom-matrix)))
     (is (= :custom-matrix (:current-routing @audio-state))))
@@ -123,27 +142,21 @@
         (is (= rk (routing/set-routing! rk)) (str "Routing " rk " must switch successfully"))
         (is (= rk (:current-routing @audio-state)) (str "Audio state must store " rk))
         (is (map? (:busses spec)) (str "Routing " rk " must define :busses"))
-        (is (vector? (:routes spec)) (str "Routing " rk " must define :routes"))))))
+        (is (map? (:routes spec)) (str "Routing " rk " must define :routes map"))))))
 
 (deftest bus-master-routing-topology-test
-  (testing "All built-in and user custom topologies route standard busses to destination via :bus/master or direct"
+  (testing "All built-in and user custom topologies route standard busses to :out via :bus/master or direct"
     (let [all (routing/all-routings)]
       (doseq [[rk spec] all]
         (let [busses (:busses spec)
-              routes (:routes spec)
-              edges (reduce (fn [acc chain]
-                              (reduce (fn [m [src dst]] (assoc m src dst))
-                                      acc
-                                      (partition 2 1 chain)))
-                            {}
-                            routes)]
+              norm   (routing/normalize-routes (:routes spec))]
           (is (contains? busses :bus/master) (str "Routing " rk " must declare :bus/master"))
           (doseq [b (keys busses)]
             (let [terminates? (loop [curr b visited #{} depth 0]
                                 (cond
-                                  (= curr :destination) true
+                                  (= curr :out) true
                                   (visited curr) false
                                   (>= depth 12) false
                                   (nil? curr) false
-                                  :else (recur (get edges curr) (conj visited curr) (inc depth))))]
-              (is (true? terminates?) (str "In routing " rk ", bus " b " must terminate at :destination")))))))))
+                                  :else (recur (:target (get norm curr)) (conj visited curr) (inc depth))))]
+              (is (true? terminates?) (str "In routing " rk ", bus " b " must terminate at :out")))))))))
