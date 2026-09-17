@@ -37,7 +37,7 @@
 
 (defn- format-node-label [node-key processors live-ctx]
   (case node-key
-    :destination "OUT"
+    :out         "OUT"
     :bus/master  "MASTER"
     :direct      "DIRECT"
     (let [{:keys [type frequency cutoff ratio enabled time]} (get processors node-key)]
@@ -68,22 +68,11 @@
         :volume     "VOLUME"
         (-> (name node-key) (str/replace #"-" " ") str/upper-case)))))
 
-(defn- bus-chain-map [routes]
-  (into {} (map (fn [chain] [(first chain) (vec (rest chain))])) routes))
-
-(defn- display-nodes [raw-nodes master?]
-  (cond
-    (empty? raw-nodes)
-    [:direct (if master? :destination :bus/master)]
-
-    (and (not master?) (= raw-nodes [:bus/master]))
-    [:direct :bus/master]
-
-    (and (not master?) (= raw-nodes [:destination]))
-    [:direct :destination]
-
-    :else
-    raw-nodes))
+(defn- display-nodes [route-entry]
+  (let [{:keys [inserts target]} route-entry]
+    (if (empty? inserts)
+      [:direct (or target :bus/master)]
+      (conj (vec inserts) (or target :bus/master)))))
 
 (defn- node-view [node-key processors live-ctx terminal?]
   (let [lbl (format-node-label node-key processors live-ctx)]
@@ -93,16 +82,16 @@
        [:span.neo-node lbl]
        [:span.neo-arrow " > "]])))
 
-(defn- route-row [bus-key nodes processors live-ctx]
+(defn- route-row [bus-key route-entry processors live-ctx]
   (let [{:keys [label class]} (bus-badge-info bus-key)
         master?               (= bus-key :bus/master)
-        chain                 (display-nodes nodes master?)]
+        chain                 (display-nodes route-entry)]
     [:div.neo-route-row {:class (when master? "master-row")}
      [:span.neo-bus-tag {:class class} label]
      [:div.neo-route-chain
       (map-indexed
        (fn [idx k]
-         (let [terminal? (or (= k :destination)
+         (let [terminal? (or (= k :out)
                              (and (not master?) (= k :bus/master)))]
            ^{:key (str "n-" idx)}
            [node-view k processors live-ctx terminal?]))
@@ -128,7 +117,7 @@
         active-spec (or (get routings cur-route-k)
                         (get routings :default)
                         default-graph)
-        chain-map   (bus-chain-map (:routes active-spec))
+        routes-map  (routing/normalize-routes (:routes active-spec))
         bus-order   (sort-busses (keys (:busses active-spec)))
         processors  (:processors active-spec)
         live-ctx    (:tone @engine-ctx)]
@@ -139,4 +128,4 @@
      [:div.neo-routing-box
       (for [bk bus-order]
         ^{:key (str bk)}
-        [route-row bk (get chain-map bk) processors live-ctx])]]))
+        [route-row bk (get routes-map bk) processors live-ctx])]]))
