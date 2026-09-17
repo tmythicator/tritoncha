@@ -95,6 +95,7 @@ pub const FILTER_LOWPASS: u8 = 0;
 pub const FILTER_HIGHPASS: u8 = 1;
 pub const FILTER_BANDPASS: u8 = 2;
 pub const FILTER_NOTCH: u8 = 3;
+pub const FILTER_LADDER_24DB: u8 = 4;
 
 // Bus IDs
 pub const BUS_DRUMS: u8 = 0;

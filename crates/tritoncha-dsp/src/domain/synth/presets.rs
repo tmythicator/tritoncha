@@ -36,7 +36,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
         osc_type: OSC_SAW,
         sub_level: 0.2,
         pulse_width: 0.5,
-        filter_type: FILTER_LOWPASS,
+        filter_type: FILTER_LADDER_24DB,
         cutoff_base: 450.0,
         cutoff_env_amt: 4800.0,
         cutoff_key_track: 1.2,
