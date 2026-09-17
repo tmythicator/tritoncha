@@ -374,3 +374,61 @@ fn test_sequencer_track_trigger_mask() {
         }
     }
 }
+
+#[test]
+fn test_ladder_24db_filter_in_synth_voice() {
+    let mut voice = SynthVoice::new();
+    let mut patch = ModularPatch::default_lead();
+    patch.filter_type = tritoncha_dsp::domain::synth::patch::FILTER_LADDER_24DB;
+    patch.resonance = 0.85;
+    patch.cutoff_base = 600.0;
+    let sr = 48000.0;
+
+    voice.trigger(220.0, 0.9, 5, &patch, sr, 0.2);
+
+    let mut samples = Vec::new();
+    for _ in 0..1000 {
+        let s = voice.process_sample(&patch, sr);
+        assert!(!s.is_nan());
+        assert!(!s.is_infinite());
+        samples.push(s);
+    }
+
+    assert!(samples.iter().any(|&s| s.abs() > 0.05));
+}
+
+#[test]
+fn test_free_running_supersaw_voice() {
+    let mut voice = SynthVoice::new();
+    let mut patch = ModularPatch::default();
+    patch.osc_type = tritoncha_dsp::domain::synth::patch::OSC_SUPERSAW;
+    let sr = 48000.0;
+
+    voice.trigger(440.0, 0.95, 12, &patch, sr, 0.3);
+
+    for _ in 0..500 {
+        let s = voice.process_sample(&patch, sr);
+        assert!(!s.is_nan());
+        assert!(!s.is_infinite());
+    }
+}
+
+#[test]
+fn test_master_bus_compressor_in_engine() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    engine.set_master_compressor(-15.0, 4.0, 0.005, 0.050, 2.0);
+
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+
+    // Trigger loud synth note
+    engine.trigger_note(4, 110.0, 1.0, 0.5);
+    engine.process_block(&mut out_l, &mut out_r);
+
+    for i in 0..128 {
+        assert!(!out_l[i].is_nan());
+        assert!(!out_r[i].is_nan());
+        assert!(out_l[i].abs() <= 1.0);
+        assert!(out_r[i].abs() <= 1.0);
+    }
+}
