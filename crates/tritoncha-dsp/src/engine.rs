@@ -305,45 +305,49 @@ impl TritonchaEngine {
                 frame.reverb_send + wet_dr * DELAY_TO_REVERB_CROSSFEED,
             );
 
-            let mut combined_l = frame.direct + wet_dl + wet_rl;
-            let mut combined_r = frame.direct + wet_dr + wet_rr;
+            let mut master_l = frame.master_bus + wet_dl + wet_rl;
+            let mut master_r = frame.master_bus + wet_dr + wet_rr;
 
             let (chorus_l, chorus_r) =
                 self.chorus
-                    .process(combined_l, combined_r, self.sample_rate);
-            combined_l = chorus_l;
-            combined_r = chorus_r;
+                    .process(master_l, master_r, self.sample_rate);
+            master_l = chorus_l;
+            master_r = chorus_r;
 
-            let (drive_l, drive_r) = self.bitcrush_drive.process(combined_l, combined_r);
-            combined_l = drive_l;
-            combined_r = drive_r;
+            let (drive_l, drive_r) = self.bitcrush_drive.process(master_l, master_r);
+            master_l = drive_l;
+            master_r = drive_r;
 
             let (filtered_l, filtered_r) = if self.master_cutoff_hz < MASTER_FILTER_BYPASS_CUTOFF_HZ
                 || self.master_resonance > MIN_AUDIBLE_RESONANCE
             {
                 (
                     self.master_filter.process_lp(
-                        combined_l,
+                        master_l,
                         self.master_cutoff_hz,
                         self.master_resonance,
                         self.sample_rate,
                     ),
                     self.master_filter.process_lp(
-                        combined_r,
+                        master_r,
                         self.master_cutoff_hz,
                         self.master_resonance,
                         self.sample_rate,
                     ),
                 )
             } else {
-                (combined_l, combined_r)
+                (master_l, master_r)
             };
 
             let (comp_l, comp_r) = self.compressor.process(filtered_l, filtered_r);
-            let out_gain = MASTER_HEADROOM_GAIN * self.master_gain;
+            let master_out_l = comp_l * self.master_gain;
+            let master_out_r = comp_r * self.master_gain;
 
-            out_l[i] = soft_clip(comp_l * out_gain);
-            out_r[i] = soft_clip(comp_r * out_gain);
+            let final_l = (master_out_l + frame.direct_bypass) * MASTER_HEADROOM_GAIN;
+            let final_r = (master_out_r + frame.direct_bypass) * MASTER_HEADROOM_GAIN;
+
+            out_l[i] = soft_clip(final_l);
+            out_r[i] = soft_clip(final_r);
         }
     }
 }

@@ -453,3 +453,20 @@ fn test_master_volume_control() {
     engine.set_master_volume(0.0);
     assert!((engine.master_gain - 1.0).abs() < 1e-4);
 }
+
+#[test]
+fn test_direct_bus_bypasses_master_gain() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    // Silence master bus completely
+    engine.set_master_volume(-60.0);
+
+    // Trigger metronome click which is mapped to BUS_DIRECT (PATCH_CLICK = 11)
+    engine.trigger_note(11, 1000.0, 1.0, 0.05);
+
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+    engine.process_block(&mut out_l, &mut out_r);
+
+    let max_amp = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+    assert!(max_amp > 0.05, "Direct bus signal must pass through even when master volume is silent");
+}
