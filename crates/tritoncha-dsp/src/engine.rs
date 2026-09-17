@@ -3,8 +3,8 @@
 use crate::core::math::soft_clip;
 use crate::domain::drums::{DrumMachine, DrumMode};
 use crate::domain::effects::{
-    BitcrusherDrive, BusCompressor, DriveMode, FrequencySweep, ReverbMode, StateVariableFilter,
-    StereoChorus, StereoDelay, StereoReverb, MAX_SAMPLE_HOLD,
+    BitcrusherDrive, BusCompressor, CompressorConfig, DriveMode, FrequencySweep, ReverbMode,
+    StateVariableFilter, StereoChorus, StereoDelay, StereoReverb, MAX_SAMPLE_HOLD,
 };
 use crate::domain::sequencer::{MasterSequencer, DEFAULT_SAMPLE_RATE, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
@@ -56,6 +56,7 @@ pub struct TritonchaEngine {
     pub bitcrush_drive: BitcrusherDrive,
     pub chorus: StereoChorus,
     pub compressor: BusCompressor,
+    pub master_gain: f32,
 
     delay: StereoDelay,
     reverb: StereoReverb,
@@ -84,6 +85,7 @@ impl TritonchaEngine {
             bitcrush_drive: BitcrusherDrive::new(),
             chorus: StereoChorus::new(),
             compressor: BusCompressor::new(sr),
+            master_gain: 1.0,
             delay: StereoDelay::new(),
             reverb: StereoReverb::with_sample_rate(sr),
         }
@@ -254,16 +256,12 @@ impl TritonchaEngine {
         self.reverb.set_mode(m);
     }
 
-    pub fn set_master_compressor(
-        &mut self,
-        threshold_db: f32,
-        ratio: f32,
-        attack_s: f32,
-        release_s: f32,
-        makeup_db: f32,
-    ) {
-        self.compressor
-            .set_params(threshold_db, ratio, attack_s, release_s, makeup_db);
+    pub fn set_master_compressor(&mut self, config: CompressorConfig) {
+        self.compressor.set_config(config);
+    }
+
+    pub fn set_master_volume(&mut self, gain_db: f32) {
+        self.master_gain = crate::core::math::db_to_gain(gain_db.clamp(-60.0, 6.0));
     }
 
     #[inline(always)]
@@ -342,9 +340,10 @@ impl TritonchaEngine {
             };
 
             let (comp_l, comp_r) = self.compressor.process(filtered_l, filtered_r);
+            let out_gain = MASTER_HEADROOM_GAIN * self.master_gain;
 
-            out_l[i] = soft_clip(comp_l * MASTER_HEADROOM_GAIN);
-            out_r[i] = soft_clip(comp_r * MASTER_HEADROOM_GAIN);
+            out_l[i] = soft_clip(comp_l * out_gain);
+            out_r[i] = soft_clip(comp_r * out_gain);
         }
     }
 }

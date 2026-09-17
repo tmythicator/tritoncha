@@ -416,7 +416,15 @@ fn test_free_running_supersaw_voice() {
 #[test]
 fn test_master_bus_compressor_in_engine() {
     let mut engine = TritonchaEngine::new(48000.0);
-    engine.set_master_compressor(-15.0, 4.0, 0.005, 0.050, 2.0);
+    engine.set_master_compressor(tritoncha_dsp::domain::effects::CompressorConfig {
+        enabled: true,
+        threshold_db: -15.0,
+        ratio: 4.0,
+        attack_sec: 0.005,
+        release_sec: 0.050,
+        makeup_gain_db: 2.0,
+        mix: 1.0,
+    });
 
     let mut out_l = [0.0; 128];
     let mut out_r = [0.0; 128];
@@ -431,4 +439,17 @@ fn test_master_bus_compressor_in_engine() {
         assert!(out_l[i].abs() <= 1.0);
         assert!(out_r[i].abs() <= 1.0);
     }
+}
+
+#[test]
+fn test_master_volume_control() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    assert!((engine.master_gain - 1.0).abs() < 1e-4);
+
+    engine.set_master_volume(-6.0);
+    assert!(engine.master_gain < 0.6);
+    assert!(engine.master_gain > 0.45);
+
+    engine.set_master_volume(0.0);
+    assert!((engine.master_gain - 1.0).abs() < 1e-4);
 }

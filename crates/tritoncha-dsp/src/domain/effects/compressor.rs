@@ -23,9 +23,36 @@ pub const MAX_MAKEUP_DB: f32 = 24.0;
 pub const MIN_COMP_MIX: f32 = 0.001;
 pub const MIN_SAMPLE_RATE: f32 = 1000.0;
 
+/// Configuration parameters for stereo bus compressor (DDD Value Object).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CompressorConfig {
+    pub enabled: bool,
+    pub threshold_db: f32,
+    pub ratio: f32,
+    pub attack_sec: f32,
+    pub release_sec: f32,
+    pub makeup_gain_db: f32,
+    pub mix: f32,
+}
+
+impl Default for CompressorConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            threshold_db: DEFAULT_COMP_THRESHOLD_DB,
+            ratio: DEFAULT_COMP_RATIO,
+            attack_sec: DEFAULT_COMP_ATTACK_SEC,
+            release_sec: DEFAULT_COMP_RELEASE_SEC,
+            makeup_gain_db: DEFAULT_COMP_MAKEUP_DB,
+            mix: 1.0,
+        }
+    }
+}
+
 /// Stereo-linked VCA studio bus compressor.
 #[derive(Debug, Clone)]
 pub struct BusCompressor {
+    pub enabled: bool,
     pub threshold_db: f32,
     pub ratio: f32,
     pub attack_sec: f32,
@@ -50,6 +77,7 @@ impl BusCompressor {
             DEFAULT_SAMPLE_RATE
         };
         let mut comp = Self {
+            enabled: false,
             threshold_db: DEFAULT_COMP_THRESHOLD_DB,
             ratio: DEFAULT_COMP_RATIO,
             attack_sec: DEFAULT_COMP_ATTACK_SEC,
@@ -67,20 +95,17 @@ impl BusCompressor {
         comp
     }
 
-    /// Sets compressor parameters with safety bounds.
-    pub fn set_params(
-        &mut self,
-        threshold_db: f32,
-        ratio: f32,
-        attack_sec: f32,
-        release_sec: f32,
-        makeup_gain_db: f32,
-    ) {
-        self.threshold_db = threshold_db.clamp(MIN_THRESHOLD_DB, MAX_THRESHOLD_DB);
-        self.ratio = ratio.clamp(MIN_RATIO, MAX_RATIO);
-        self.attack_sec = attack_sec.clamp(MIN_ATTACK_SEC, MAX_ATTACK_SEC);
-        self.release_sec = release_sec.clamp(MIN_RELEASE_SEC, MAX_RELEASE_SEC);
-        self.makeup_gain_db = makeup_gain_db.clamp(MIN_MAKEUP_DB, MAX_MAKEUP_DB);
+    /// Sets compressor parameters from a configuration Value Object.
+    pub fn set_config(&mut self, config: CompressorConfig) {
+        self.enabled = config.enabled;
+        self.threshold_db = config
+            .threshold_db
+            .clamp(MIN_THRESHOLD_DB, MAX_THRESHOLD_DB);
+        self.ratio = config.ratio.clamp(MIN_RATIO, MAX_RATIO);
+        self.attack_sec = config.attack_sec.clamp(MIN_ATTACK_SEC, MAX_ATTACK_SEC);
+        self.release_sec = config.release_sec.clamp(MIN_RELEASE_SEC, MAX_RELEASE_SEC);
+        self.makeup_gain_db = config.makeup_gain_db.clamp(MIN_MAKEUP_DB, MAX_MAKEUP_DB);
+        self.mix = config.mix.clamp(0.0, 1.0);
         self.update_coefficients();
     }
 
@@ -125,7 +150,7 @@ impl BusCompressor {
     /// Processes a single stereo frame through the compressor.
     #[inline(always)]
     pub fn process(&mut self, in_l: f32, in_r: f32) -> (f32, f32) {
-        if self.mix <= MIN_COMP_MIX {
+        if !self.enabled || self.mix <= MIN_COMP_MIX {
             return (in_l, in_r);
         }
 
@@ -167,9 +192,35 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_compressor_bypass_when_disabled() {
+        let mut comp = BusCompressor::new(48000.0);
+        comp.set_config(CompressorConfig {
+            enabled: false,
+            threshold_db: -20.0,
+            ratio: 8.0,
+            attack_sec: 0.0005,
+            release_sec: 0.050,
+            makeup_gain_db: 6.0,
+            mix: 1.0,
+        });
+
+        let (out_l, out_r) = comp.process(1.0, 1.0);
+        assert_eq!(out_l, 1.0);
+        assert_eq!(out_r, 1.0);
+    }
+
+    #[test]
     fn test_compressor_unity_gain_below_threshold() {
         let mut comp = BusCompressor::new(48000.0);
-        comp.set_params(-10.0, 4.0, 0.001, 0.050, 0.0);
+        comp.set_config(CompressorConfig {
+            enabled: true,
+            threshold_db: -10.0,
+            ratio: 4.0,
+            attack_sec: 0.001,
+            release_sec: 0.050,
+            makeup_gain_db: 0.0,
+            mix: 1.0,
+        });
 
         // Quiet signal at -30 dB (peak ~0.0316)
         let (out_l, out_r) = comp.process(0.01, 0.01);
@@ -180,7 +231,15 @@ mod tests {
     #[test]
     fn test_compressor_gain_reduction_above_threshold() {
         let mut comp = BusCompressor::new(48000.0);
-        comp.set_params(-10.0, 4.0, 0.0005, 0.050, 0.0);
+        comp.set_config(CompressorConfig {
+            enabled: true,
+            threshold_db: -10.0,
+            ratio: 4.0,
+            attack_sec: 0.0005,
+            release_sec: 0.050,
+            makeup_gain_db: 0.0,
+            mix: 1.0,
+        });
 
         // Loud signal at 0 dB (amplitude 1.0)
         let mut last_l = 0.0;

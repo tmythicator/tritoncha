@@ -7,7 +7,7 @@ pub mod filter;
 pub mod processors;
 pub mod reverb;
 
-pub use compressor::BusCompressor;
+pub use compressor::{BusCompressor, CompressorConfig};
 pub use delay::StereoDelay;
 pub use fdn_reverb::FdnReverb;
 pub use filter::{FilterMode, FrequencySweep, LadderFilter, StateVariableFilter};
