@@ -321,6 +321,24 @@ pub unsafe extern "C" fn tritoncha_dsp_set_reverb_mode(ptr: *mut TritonchaEngine
     }
 }
 
+/// Configures master bus glue compressor parameters.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_master_compressor(
+    ptr: *mut TritonchaEngine,
+    threshold_db: f32,
+    ratio: f32,
+    attack_s: f32,
+    release_s: f32,
+    makeup_db: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_master_compressor(threshold_db, ratio, attack_s, release_s, makeup_db);
+    }
+}
+
 /// Updates parameters for a modular voice patch.
 ///
 /// # Safety

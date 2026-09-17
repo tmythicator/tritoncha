@@ -218,6 +218,19 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
           }
           break;
 
+        case 'setMasterCompressor':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_master_compressor) {
+            this.wasmExports.tritoncha_dsp_set_master_compressor(
+              this.wasmEnginePtr,
+              data.thresholdDb !== undefined ? data.thresholdDb : -12.0,
+              data.ratio !== undefined ? data.ratio : 4.0,
+              data.attackS !== undefined ? data.attackS : 0.010,
+              data.releaseS !== undefined ? data.releaseS : 0.100,
+              data.makeupDb !== undefined ? data.makeupDb : 2.5
+            );
+          }
+          break;
+
         case 'setVoicePatch':
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
             this.wasmExports.tritoncha_dsp_set_voice_patch(
