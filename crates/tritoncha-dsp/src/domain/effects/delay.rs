@@ -116,11 +116,12 @@ impl Default for StereoDelay {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_delay_passthrough_when_dry() {
         let mut delay = StereoDelay::new();
-        delay.set_params(0.2, 0.5, 0.0, 48000.0);
+        delay.set_params(0.2, 0.5, 0.0, DEFAULT_SAMPLE_RATE);
         let (out_l, out_r) = delay.process(0.75, -0.75);
         assert_eq!(out_l, 0.75);
         assert_eq!(out_r, -0.75);
@@ -130,7 +131,7 @@ mod tests {
     fn test_delay_echoes_after_delay_length() {
         let mut delay = StereoDelay::new();
         let delay_s = 0.02; // 20ms = 960 samples @ 48kHz (> MIN_DELAY_SAMPLES of 500)
-        let sample_rate = 48000.0;
+        let sample_rate = DEFAULT_SAMPLE_RATE;
         delay.set_params(delay_s, 0.0, 1.0, sample_rate); // 100% wet, no feedback
 
         // Send an impulse

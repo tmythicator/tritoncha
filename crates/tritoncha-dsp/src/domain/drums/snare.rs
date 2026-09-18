@@ -123,6 +123,31 @@ pub struct SnareVoice {
     pub mode: DrumMode,
 }
 
+/// Snare drum synthesis parameters.
+#[derive(Clone, Copy, Debug)]
+pub struct SnareParams {
+    pub base_freq: f32,
+    pub tone_decay: f32,
+    pub noise_decay: f32,
+    pub cutoff_hz: f32,
+    pub snappy: f32,
+    pub mode: f32,
+}
+
+impl From<[f32; 7]> for SnareParams {
+    #[inline(always)]
+    fn from(p: [f32; 7]) -> Self {
+        Self {
+            base_freq: p[0],
+            tone_decay: p[1],
+            noise_decay: p[2],
+            cutoff_hz: p[3],
+            snappy: p[4],
+            mode: p[6],
+        }
+    }
+}
+
 impl SnareVoice {
     pub fn new() -> Self {
         Self {
@@ -144,32 +169,25 @@ impl SnareVoice {
         }
     }
 
-    pub fn set_params(
-        &mut self,
-        base_freq: f32,
-        tone_decay: f32,
-        noise_decay: f32,
-        cutoff_hz: f32,
-        snappy: f32,
-        mode: f32,
-    ) {
-        if base_freq > 0.0 {
-            self.base_freq = base_freq.clamp(80.0, 500.0);
+    pub fn set_params(&mut self, params: impl Into<SnareParams>) {
+        let p = params.into();
+        if p.base_freq > 0.0 {
+            self.base_freq = p.base_freq.clamp(80.0, 500.0);
         }
-        if tone_decay > 0.0 {
-            self.tone_decay = tone_decay.clamp(0.990, 0.9999);
+        if p.tone_decay > 0.0 {
+            self.tone_decay = p.tone_decay.clamp(0.990, 0.9999);
         }
-        if noise_decay > 0.0 {
-            self.noise_decay = noise_decay.clamp(0.990, 0.9999);
+        if p.noise_decay > 0.0 {
+            self.noise_decay = p.noise_decay.clamp(0.990, 0.9999);
         }
-        if cutoff_hz > 0.0 {
-            self.cutoff_hz = cutoff_hz.clamp(800.0, 12000.0);
+        if p.cutoff_hz > 0.0 {
+            self.cutoff_hz = p.cutoff_hz.clamp(800.0, 12000.0);
         }
-        if snappy >= 0.0 {
-            self.noise_gain = snappy.clamp(0.0, 2.5);
+        if p.snappy >= 0.0 {
+            self.noise_gain = p.snappy.clamp(0.0, 2.5);
         }
-        if mode >= 0.0 {
-            self.mode = DrumMode::from(mode);
+        if p.mode >= 0.0 {
+            self.mode = DrumMode::from(p.mode);
         }
     }
 

@@ -30,7 +30,7 @@
     :type     :mono
     :bus      :bus/bass
     :osc      {:type :saw :sub-level 0.3}
-    :filter   {:type :ladder :cutoff 400 :q 0.88 :drive 0.38 :env-amount 5500 :key-track 1.5}
+    :filter   {:type :ladder :cutoff 2240 :q 0.74 :drive 0.80 :env-amount 2500 :key-track 1.2}
     :amp-env  {:attack 0.003 :decay 0.15 :sustain 0.0 :release 0.1}
     :mod-env  {:attack 0.003 :decay 0.15}
     :glide    0.04}

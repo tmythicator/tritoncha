@@ -2,6 +2,7 @@
 
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
 use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase};
+use crate::engine::DEFAULT_SAMPLE_RATE;
 
 // Default Tuning and Acoustic Physical Modeling Constants
 pub const DEFAULT_KICK_PITCH_HZ: f32 = 48.0; // Deep sub fundamental
@@ -149,8 +150,8 @@ impl KickVoice {
             self.pitch_decay_coeff = p.pitch_decay.clamp(0.005, 0.20);
         }
         if p.decay_s > 0.0 {
-            self.body_decay =
-                t60_decay_coeff(p.decay_s.clamp(0.05, 1.5), 48000.0).clamp(0.990, 0.99995);
+            self.body_decay = t60_decay_coeff(p.decay_s.clamp(0.05, 1.5), DEFAULT_SAMPLE_RATE)
+                .clamp(0.990, 0.99995);
         }
         if p.click_level >= 0.0 {
             self.click_level = p.click_level.clamp(0.0, 2.0);
@@ -163,7 +164,7 @@ impl KickVoice {
         }
     }
 
-    pub fn trigger(&mut self, vel: f32, sample_rate: f32) {
+    pub fn trigger(&mut self, vel: f32) {
         let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
         self.active = true;
         // Start oscillator slightly offset from zero for instant pressure wave
@@ -174,7 +175,6 @@ impl KickVoice {
         self.env_body = 1.0;
         self.env_click = 1.0;
         self.vel = v;
-        let _ = sample_rate;
     }
 
     #[inline(always)]

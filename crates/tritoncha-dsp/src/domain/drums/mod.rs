@@ -77,30 +77,6 @@ pub const DRUM_SPLASH: i32 = 71;
 pub const DRUM_CHINA: i32 = 72;
 pub const DRUM_COWBELL: i32 = 73;
 
-// Canonical engine instrument aliases
-pub const INST_DRUM_KICK: i32 = DRUM_KICK;
-pub const INST_DRUM_SNARE: i32 = DRUM_SNARE;
-pub const INST_DRUM_HH_CLOSED: i32 = DRUM_HH_CLOSED;
-pub const INST_DRUM_HH_OPEN: i32 = DRUM_HH_OPEN;
-pub const INST_DRUM_CLAP: i32 = DRUM_CLAP;
-pub const INST_DRUM_RIDE: i32 = DRUM_RIDE;
-pub const INST_DRUM_TOM: i32 = DRUM_TOM;
-pub const INST_DRUM_SNARE_CRACK: i32 = DRUM_SNARE_CRACK;
-pub const INST_DRUM_SNARE_WIRE: i32 = DRUM_SNARE_WIRE;
-pub const INST_DRUM_SNARE_BODY: i32 = DRUM_SNARE_BODY;
-pub const INST_DRUM_SNARE_GHOST: i32 = DRUM_SNARE_GHOST;
-pub const INST_DRUM_SNARE_RIM: i32 = DRUM_SNARE_RIM;
-pub const INST_DRUM_RIDE_BELL: i32 = DRUM_RIDE_BELL;
-pub const INST_DRUM_TOM_HIGH: i32 = DRUM_TOM_HIGH;
-pub const INST_DRUM_TOM_MID: i32 = DRUM_TOM_MID;
-pub const INST_DRUM_TOM_LOW: i32 = DRUM_TOM_LOW;
-pub const INST_DRUM_CRASH_16: i32 = DRUM_CRASH_16;
-pub const INST_DRUM_CRASH_17: i32 = DRUM_CRASH_17;
-pub const INST_DRUM_CRASH_18: i32 = DRUM_CRASH_18;
-pub const INST_DRUM_SPLASH: i32 = DRUM_SPLASH;
-pub const INST_DRUM_CHINA: i32 = DRUM_CHINA;
-pub const INST_DRUM_COWBELL: i32 = DRUM_COWBELL;
-
 /// Strongly-typed drum instrument identifier.
 #[repr(i32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -130,6 +106,31 @@ pub enum DrumId {
 }
 
 impl DrumId {
+    pub const ALL: [DrumId; 22] = [
+        DrumId::Kick,
+        DrumId::Snare,
+        DrumId::HhClosed,
+        DrumId::HhOpen,
+        DrumId::Clap,
+        DrumId::Ride,
+        DrumId::Tom,
+        DrumId::SnareCrack,
+        DrumId::SnareWire,
+        DrumId::SnareBody,
+        DrumId::SnareGhost,
+        DrumId::SnareRim,
+        DrumId::RideBell,
+        DrumId::TomHigh,
+        DrumId::TomMid,
+        DrumId::TomLow,
+        DrumId::Crash16,
+        DrumId::Crash17,
+        DrumId::Crash18,
+        DrumId::Splash,
+        DrumId::China,
+        DrumId::Cowbell,
+    ];
+
     #[inline(always)]
     pub const fn as_i32(self) -> i32 {
         self as i32
@@ -269,85 +270,12 @@ impl DrumMachine {
             tom_low: MembraneVoice::new(TOM_LOW_START_HZ, TOM_LOW_MIN_HZ, 0.014, 0.9990, 1.15),
             ride: RideVoice::new(),
             ride_bell: RideBellVoice::new(),
-            crash_16: MetallicVoice::new(
-                CRASH_16_FREQS,
-                CRASH_16_CUTOFF_HZ,
-                0.20,
-                0.99987,
-                false,
-                1.05,
-                0.74,
-            ),
-            crash_17: MetallicVoice::new(
-                CRASH_17_FREQS,
-                CRASH_17_CUTOFF_HZ,
-                0.20,
-                0.99989,
-                false,
-                1.05,
-                0.76,
-            ),
-            crash_18: MetallicVoice::new(
-                CRASH_18_FREQS,
-                CRASH_18_CUTOFF_HZ,
-                0.20,
-                0.99991,
-                false,
-                1.05,
-                0.78,
-            ),
-            splash: MetallicVoice::new(
-                SPLASH_FREQS,
-                SPLASH_CUTOFF_HZ,
-                0.25,
-                0.99940,
-                false,
-                0.95,
-                0.82,
-            ),
-            china: MetallicVoice::new(
-                CHINA_FREQS,
-                CHINA_CUTOFF_HZ,
-                0.45,
-                0.99984,
-                false,
-                1.35,
-                0.80,
-            ),
-            cowbell: MetallicVoice::new(
-                COWBELL_FREQS,
-                COWBELL_BANDPASS_HZ,
-                0.85,
-                0.9985,
-                true,
-                1.4,
-                0.0,
-            ),
-        }
-    }
-
-    pub fn trigger(&mut self, inst_id: i32, vel: f32, sample_rate: f32) {
-        match inst_id {
-            DRUM_KICK => self.kick.trigger(vel, sample_rate),
-            DRUM_SNARE => self.snare.trigger_styled(vel, DRUM_SNARE),
-            DRUM_SNARE_CRACK | DRUM_SNARE_WIRE | DRUM_SNARE_BODY | DRUM_SNARE_GHOST
-            | DRUM_SNARE_RIM => self.snare.trigger_styled(vel, inst_id),
-            DRUM_HH_CLOSED => self.hat.trigger(vel, false),
-            DRUM_HH_OPEN => self.hat.trigger(vel, true),
-            DRUM_CLAP => self.clap.trigger(vel),
-            DRUM_TOM => self.tom.trigger(vel, sample_rate),
-            DRUM_TOM_HIGH => self.tom_high.trigger(vel, sample_rate),
-            DRUM_TOM_MID => self.tom_mid.trigger(vel, sample_rate),
-            DRUM_TOM_LOW => self.tom_low.trigger(vel, sample_rate),
-            DRUM_RIDE => self.ride.trigger(vel),
-            DRUM_RIDE_BELL => self.ride_bell.trigger(vel),
-            DRUM_CRASH_16 => self.crash_16.trigger(vel),
-            DRUM_CRASH_17 => self.crash_17.trigger(vel),
-            DRUM_CRASH_18 => self.crash_18.trigger(vel),
-            DRUM_SPLASH => self.splash.trigger(vel),
-            DRUM_CHINA => self.china.trigger(vel),
-            DRUM_COWBELL => self.cowbell.trigger(vel),
-            _ => {}
+            crash_16: new_crash_16(),
+            crash_17: new_crash_17(),
+            crash_18: new_crash_18(),
+            splash: new_splash(),
+            china: new_china(),
+            cowbell: new_cowbell(),
         }
     }
 
@@ -355,54 +283,21 @@ impl DrumMachine {
         match drum_id {
             DRUM_KICK => self.kick.set_params(params),
             DRUM_SNARE | DRUM_SNARE_CRACK | DRUM_SNARE_BODY | DRUM_SNARE_WIRE
-            | DRUM_SNARE_GHOST => {
-                self.snare.set_params(
-                    params[0], params[1], params[2], params[3], params[4], params[6],
-                );
-            }
-            DRUM_HH_CLOSED | DRUM_HH_OPEN => {
-                self.hat
-                    .set_params(params[0], params[1], params[2], params[6]);
-            }
-            DRUM_TOM => self.tom.set_params(
-                params[0], params[1], params[2], params[3], params[4], params[6],
-            ),
-            DRUM_TOM_HIGH => self.tom_high.set_params(
-                params[0], params[1], params[2], params[3], params[4], params[6],
-            ),
-            DRUM_TOM_MID => self.tom_mid.set_params(
-                params[0], params[1], params[2], params[3], params[4], params[6],
-            ),
-            DRUM_TOM_LOW => self.tom_low.set_params(
-                params[0], params[1], params[2], params[3], params[4], params[6],
-            ),
-            DRUM_RIDE => self
-                .ride
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_RIDE_BELL => self
-                .ride_bell
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_CRASH_16 => self
-                .crash_16
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_CRASH_17 => self
-                .crash_17
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_CRASH_18 => self
-                .crash_18
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_SPLASH => self
-                .splash
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_CHINA => self
-                .china
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_COWBELL => self
-                .cowbell
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
-            DRUM_CLAP => self
-                .clap
-                .set_params(params[0], params[1], params[2], params[3], params[6]),
+            | DRUM_SNARE_GHOST => self.snare.set_params(params),
+            DRUM_HH_CLOSED | DRUM_HH_OPEN => self.hat.set_params(params),
+            DRUM_TOM => self.tom.set_params(params),
+            DRUM_TOM_HIGH => self.tom_high.set_params(params),
+            DRUM_TOM_MID => self.tom_mid.set_params(params),
+            DRUM_TOM_LOW => self.tom_low.set_params(params),
+            DRUM_RIDE => self.ride.set_params(params),
+            DRUM_RIDE_BELL => self.ride_bell.set_params(params),
+            DRUM_CRASH_16 => self.crash_16.set_params(params),
+            DRUM_CRASH_17 => self.crash_17.set_params(params),
+            DRUM_CRASH_18 => self.crash_18.set_params(params),
+            DRUM_SPLASH => self.splash.set_params(params),
+            DRUM_CHINA => self.china.set_params(params),
+            DRUM_COWBELL => self.cowbell.set_params(params),
+            DRUM_CLAP => self.clap.set_params(params),
             _ => {}
         }
     }
@@ -427,131 +322,32 @@ impl DrumMachine {
         self.cowbell.set_mode(m);
     }
 
-    #[inline(always)]
-    pub fn trigger_kick(&mut self, vel: f32) {
-        self.kick.trigger(vel, 48000.0);
-    }
-
-    #[inline(always)]
-    pub fn trigger_snare(&mut self, vel: f32) {
-        self.snare.trigger_styled(vel, DRUM_SNARE);
-    }
-
-    #[inline(always)]
-    pub fn trigger_snare_crack(&mut self, vel: f32) {
-        self.snare.trigger_styled(vel, DRUM_SNARE_CRACK);
-    }
-
-    #[inline(always)]
-    pub fn trigger_snare_wire(&mut self, vel: f32) {
-        self.snare.trigger_styled(vel, DRUM_SNARE_WIRE);
-    }
-
-    #[inline(always)]
-    pub fn trigger_snare_body(&mut self, vel: f32) {
-        self.snare.trigger_styled(vel, DRUM_SNARE_BODY);
-    }
-
-    #[inline(always)]
-    pub fn trigger_snare_ghost(&mut self, vel: f32) {
-        self.snare.trigger_styled(vel, DRUM_SNARE_GHOST);
-    }
-
-    #[inline(always)]
-    pub fn trigger_hh(&mut self, vel: f32, open: bool) {
-        self.hat.trigger(vel, open);
-    }
-
-    #[inline(always)]
-    pub fn trigger_clap(&mut self, vel: f32) {
-        self.clap.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_ride(&mut self, vel: f32) {
-        self.ride.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_ride_bell(&mut self, vel: f32) {
-        self.ride_bell.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_crash_16(&mut self, vel: f32) {
-        self.crash_16.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_crash_17(&mut self, vel: f32) {
-        self.crash_17.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_crash_18(&mut self, vel: f32) {
-        self.crash_18.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_splash(&mut self, vel: f32) {
-        self.splash.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_china(&mut self, vel: f32) {
-        self.china.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_cowbell(&mut self, vel: f32) {
-        self.cowbell.trigger(vel);
-    }
-
-    #[inline(always)]
-    pub fn trigger_tom(&mut self, vel: f32, freq: f32) {
-        self.tom.trigger_freq(vel, freq, 48000.0);
-    }
-
-    #[inline(always)]
-    pub fn trigger_tom_high(&mut self, vel: f32) {
-        self.tom_high.trigger(vel, 48000.0);
-    }
-
-    #[inline(always)]
-    pub fn trigger_tom_mid(&mut self, vel: f32) {
-        self.tom_mid.trigger(vel, 48000.0);
-    }
-
-    #[inline(always)]
-    pub fn trigger_tom_low(&mut self, vel: f32) {
-        self.tom_low.trigger(vel, 48000.0);
-    }
-
     /// Dispatches a trigger to the corresponding drum voice by strongly-typed DrumId.
     #[inline(always)]
     pub fn trigger_drum(&mut self, drum: DrumId, vel: f32, freq: f32) {
         match drum {
-            DrumId::Kick => self.trigger_kick(vel),
-            DrumId::Snare => self.trigger_snare(vel),
-            DrumId::HhClosed => self.trigger_hh(vel, false),
-            DrumId::HhOpen => self.trigger_hh(vel, true),
-            DrumId::Clap => self.trigger_clap(vel),
-            DrumId::Ride => self.trigger_ride(vel),
-            DrumId::Tom => self.trigger_tom(vel, freq),
-            DrumId::SnareCrack | DrumId::SnareRim => self.trigger_snare_crack(vel),
-            DrumId::SnareWire => self.trigger_snare_wire(vel),
-            DrumId::SnareBody => self.trigger_snare_body(vel),
-            DrumId::SnareGhost => self.trigger_snare_ghost(vel),
-            DrumId::RideBell => self.trigger_ride_bell(vel),
-            DrumId::TomHigh => self.trigger_tom_high(vel),
-            DrumId::TomMid => self.trigger_tom_mid(vel),
-            DrumId::TomLow => self.trigger_tom_low(vel),
-            DrumId::Crash16 => self.trigger_crash_16(vel),
-            DrumId::Crash17 => self.trigger_crash_17(vel),
-            DrumId::Crash18 => self.trigger_crash_18(vel),
-            DrumId::Splash => self.trigger_splash(vel),
-            DrumId::China => self.trigger_china(vel),
-            DrumId::Cowbell => self.trigger_cowbell(vel),
+            DrumId::Kick => self.kick.trigger(vel),
+            DrumId::Snare => self.snare.trigger_styled(vel, DRUM_SNARE),
+            DrumId::HhClosed => self.hat.trigger(vel, false),
+            DrumId::HhOpen => self.hat.trigger(vel, true),
+            DrumId::Clap => self.clap.trigger(vel),
+            DrumId::Ride => self.ride.trigger(vel),
+            DrumId::Tom => self.tom.trigger_freq(vel, freq),
+            DrumId::SnareCrack => self.snare.trigger_styled(vel, DRUM_SNARE_CRACK),
+            DrumId::SnareWire => self.snare.trigger_styled(vel, DRUM_SNARE_WIRE),
+            DrumId::SnareBody => self.snare.trigger_styled(vel, DRUM_SNARE_BODY),
+            DrumId::SnareGhost => self.snare.trigger_styled(vel, DRUM_SNARE_GHOST),
+            DrumId::SnareRim => self.snare.trigger_styled(vel, DRUM_SNARE_RIM),
+            DrumId::RideBell => self.ride_bell.trigger(vel),
+            DrumId::TomHigh => self.tom_high.trigger(vel),
+            DrumId::TomMid => self.tom_mid.trigger(vel),
+            DrumId::TomLow => self.tom_low.trigger(vel),
+            DrumId::Crash16 => self.crash_16.trigger(vel),
+            DrumId::Crash17 => self.crash_17.trigger(vel),
+            DrumId::Crash18 => self.crash_18.trigger(vel),
+            DrumId::Splash => self.splash.trigger(vel),
+            DrumId::China => self.china.trigger(vel),
+            DrumId::Cowbell => self.cowbell.trigger(vel),
         }
     }
 
@@ -621,20 +417,21 @@ impl Default for DrumMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_membrane_drum_sweep_and_decay() {
         let mut kick = MembraneVoice::new(140.0, 48.0, 0.05, 0.99, 1.0);
         assert!(!kick.active);
 
-        kick.trigger(1.0, 48000.0);
+        kick.trigger(1.0);
         assert!(kick.active);
 
-        let initial_sample = kick.process(48000.0);
+        let initial_sample = kick.process(DEFAULT_SAMPLE_RATE);
         assert!(initial_sample.abs() < 2.0);
 
         for _ in 0..5000 {
-            kick.process(48000.0);
+            kick.process(DEFAULT_SAMPLE_RATE);
         }
         assert!(!kick.active);
     }
@@ -643,12 +440,12 @@ mod tests {
     fn test_kick_voice_punch_and_decay() {
         let mut kick = KickVoice::new();
         assert!(!kick.active);
-        kick.trigger(1.0, 48000.0);
+        kick.trigger(1.0);
         assert!(kick.active);
-        let s0 = kick.process(48000.0);
+        let s0 = kick.process(DEFAULT_SAMPLE_RATE);
         assert!(s0.abs() > 0.05, "Immediate punch presence on sample 0");
         for _ in 0..20000 {
-            kick.process(48000.0);
+            kick.process(DEFAULT_SAMPLE_RATE);
         }
         assert!(!kick.active, "Kick must decay cleanly to silence");
     }
@@ -658,33 +455,16 @@ mod tests {
         let mut snare = SnareVoice::new();
         snare.trigger_styled(1.0, DRUM_SNARE_CRACK);
         assert!(snare.active);
-        let s = snare.process(48000.0);
+        let s = snare.process(DEFAULT_SAMPLE_RATE);
         assert!(!s.is_nan());
     }
 
     #[test]
     fn test_drum_machine_full_dispatch() {
         let mut dm = DrumMachine::new();
-        let drum_ids = [
-            DRUM_KICK,
-            DRUM_SNARE,
-            DRUM_HH_CLOSED,
-            DRUM_HH_OPEN,
-            DRUM_CLAP,
-            DRUM_TOM_HIGH,
-            DRUM_TOM_MID,
-            DRUM_TOM_LOW,
-            DRUM_RIDE,
-            DRUM_RIDE_BELL,
-            DRUM_CRASH_16,
-            DRUM_SPLASH,
-            DRUM_CHINA,
-            DRUM_COWBELL,
-        ];
-
-        for &id in &drum_ids {
-            dm.trigger(id, 0.9, 48000.0);
-            let sample = dm.process(48000.0);
+        for &drum in &DrumId::ALL {
+            dm.trigger_drum(drum, 0.9, 440.0);
+            let sample = dm.process(DEFAULT_SAMPLE_RATE);
             assert!(!sample.is_nan());
         }
     }
@@ -704,8 +484,8 @@ mod tests {
         assert!(bell.active);
 
         for _ in 0..1000 {
-            let s_ride = ride.process(48000.0);
-            let s_bell = bell.process(48000.0);
+            let s_ride = ride.process(DEFAULT_SAMPLE_RATE);
+            let s_bell = bell.process(DEFAULT_SAMPLE_RATE);
             assert!(!s_ride.is_nan());
             assert!(!s_bell.is_nan());
             assert!(s_ride.abs() < 4.0);

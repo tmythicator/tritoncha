@@ -4,7 +4,7 @@ pub mod engine;
 pub mod services;
 
 use crate::domain::synth::ModularPatch;
-pub use engine::TritonchaEngine;
+pub use engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
 

@@ -6,7 +6,7 @@ use tritoncha_dsp::domain::effects::{
 use tritoncha_dsp::domain::sequencer::track::TrackPattern;
 use tritoncha_dsp::domain::synth::patch::ModularPatch;
 use tritoncha_dsp::domain::synth::voice::SynthVoice;
-use tritoncha_dsp::engine::TritonchaEngine;
+use tritoncha_dsp::engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 #[test]
 fn test_dsp_defaults() {
@@ -39,7 +39,7 @@ fn test_dsp_math_helpers() {
 #[test]
 fn test_tpt_state_variable_filter_stability() {
     let mut filter = StateVariableFilter::new();
-    let sample_rate = 48000.0;
+    let sample_rate = DEFAULT_SAMPLE_RATE;
 
     for hz in [20.0, 100.0, 1000.0, 5000.0, 10000.0, 20000.0, 22000.0] {
         let out = filter.process_lp(0.8, hz, 0.95, sample_rate);
@@ -56,7 +56,7 @@ fn test_tpt_state_variable_filter_stability() {
 
 #[test]
 fn test_dsp_effects() {
-    let sample_rate = 48000.0;
+    let sample_rate = DEFAULT_SAMPLE_RATE;
 
     let mut bd = BitcrusherDrive::new();
     bd.drive = 0.5;
@@ -78,7 +78,7 @@ fn test_dsp_effects() {
 
 #[test]
 fn test_synth_voices_trigger_and_decay() {
-    let sample_rate = 48000.0;
+    let sample_rate = DEFAULT_SAMPLE_RATE;
 
     for patch_id in [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19] {
         let patch = ModularPatch::default_for(patch_id);
@@ -102,7 +102,7 @@ fn test_synth_voices_trigger_and_decay() {
 
 #[test]
 fn test_custom_voice_patch_reconfiguration() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Configure patch 20 as custom resonant square lead
     let patch20 = ModularPatch {
         osc_type: 1, // osc_type = pulse
@@ -141,7 +141,7 @@ fn test_custom_voice_patch_reconfiguration() {
 
 #[test]
 fn test_analog_primitives_drive_noise_pitch_snap() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Configure patch 21 with heavy drive, noise and pitch snap
     let patch21 = ModularPatch {
         osc_type: 0, // osc_type = saw
@@ -182,7 +182,7 @@ fn test_analog_primitives_drive_noise_pitch_snap() {
 
 #[test]
 fn test_monophonic_glide_and_stealing() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Acid bass (patch 5) is mono with 0.04s glide
     engine.trigger_note(5, 110.0, 0.9, 0.2);
     let mut out_l = [0.0; 128];
@@ -206,56 +206,29 @@ fn test_monophonic_glide_and_stealing() {
 
 #[test]
 fn test_drum_machine_triggers() {
-    let mut drums = DrumMachine::new();
-    let sample_rate = 48000.0;
+    use tritoncha_dsp::domain::drums::DrumId;
 
-    drums.trigger_kick(0.9);
-    drums.trigger_snare(0.8);
-    drums.trigger_hh(0.7, false);
-    drums.trigger_clap(0.85);
-    drums.trigger_ride(0.75);
-    drums.trigger_tom(0.8, 120.0);
-    drums.trigger_snare_crack(0.95);
-    drums.trigger_ride_bell(0.9);
-    drums.trigger_tom_high(0.85);
-    drums.trigger_tom_mid(0.8);
-    drums.trigger_tom_low(0.9);
-    drums.trigger_crash_16(0.95);
-    drums.trigger_crash_17(0.9);
-    drums.trigger_crash_18(0.85);
-    drums.trigger_splash(0.9);
-    drums.trigger_china(0.95);
-    drums.trigger_cowbell(0.8);
+    let mut drums = DrumMachine::new();
+    let sample_rate = DEFAULT_SAMPLE_RATE;
+
+    for &drum in &DrumId::ALL {
+        drums.trigger_drum(drum, 0.9, 120.0);
+    }
 
     for _ in 0..1024 {
-        let sample = drums.process_sample(sample_rate);
+        let sample = drums.process(sample_rate);
         assert!(sample.is_finite());
     }
 }
 
 #[test]
 fn test_engine_expanded_drum_dispatch() {
-    use tritoncha_dsp::engine::{
-        is_drum_inst, INST_DRUM_CHINA, INST_DRUM_COWBELL, INST_DRUM_CRASH_16, INST_DRUM_CRASH_17,
-        INST_DRUM_CRASH_18, INST_DRUM_RIDE_BELL, INST_DRUM_SPLASH, INST_DRUM_TOM_HIGH,
-        INST_DRUM_TOM_LOW, INST_DRUM_TOM_MID,
-    };
+    use tritoncha_dsp::engine::{is_drum_inst, DrumId};
 
-    let mut engine = TritonchaEngine::new(48000.0);
-    let drum_ids = [
-        INST_DRUM_RIDE_BELL,
-        INST_DRUM_TOM_HIGH,
-        INST_DRUM_TOM_MID,
-        INST_DRUM_TOM_LOW,
-        INST_DRUM_CRASH_16,
-        INST_DRUM_CRASH_17,
-        INST_DRUM_CRASH_18,
-        INST_DRUM_SPLASH,
-        INST_DRUM_CHINA,
-        INST_DRUM_COWBELL,
-    ];
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
 
-    for &id in &drum_ids {
+    for &drum in &DrumId::ALL {
+        let id = drum.as_i32();
         assert!(is_drum_inst(id), "ID {id} should be identified as drum");
         engine.trigger_note(id, 440.0, 0.9, 0.2);
     }
@@ -270,7 +243,7 @@ fn test_engine_expanded_drum_dispatch() {
 
 #[test]
 fn test_tritoncha_engine_rendering_and_sequencer() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     engine.set_bpm(174.0);
     engine.set_playing(true);
 
@@ -290,7 +263,7 @@ fn test_tritoncha_engine_rendering_and_sequencer() {
 
 #[test]
 fn test_master_filter_sweep() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     engine.sweep_master_filter(400.0, 8000.0, 0.1); // 0.1s = 4800 samples
     assert_eq!(engine.master_cutoff_hz(), 400.0);
 
@@ -315,7 +288,7 @@ fn test_master_filter_sweep() {
 
 #[test]
 fn test_engine_hi_fi_modes_switching() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     let mut out_l = [0.0; 128];
     let mut out_r = [0.0; 128];
 
@@ -342,7 +315,7 @@ fn test_engine_hi_fi_modes_switching() {
 
 #[test]
 fn test_sequencer_track_trigger_mask() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     engine.set_playing(true);
 
     // Track 0 has a kick on step 0, Track 2 has a snare on step 0
@@ -382,7 +355,7 @@ fn test_ladder_24db_filter_in_synth_voice() {
     patch.filter_type = tritoncha_dsp::domain::synth::patch::FILTER_LADDER_24DB;
     patch.resonance = 0.85;
     patch.cutoff_base = 600.0;
-    let sr = 48000.0;
+    let sr = DEFAULT_SAMPLE_RATE;
 
     voice.trigger(220.0, 0.9, 5, &patch, sr, 0.2);
 
@@ -402,7 +375,7 @@ fn test_free_running_supersaw_voice() {
     let mut voice = SynthVoice::new();
     let mut patch = ModularPatch::default();
     patch.osc_type = tritoncha_dsp::domain::synth::patch::OSC_SUPERSAW;
-    let sr = 48000.0;
+    let sr = DEFAULT_SAMPLE_RATE;
 
     voice.trigger(440.0, 0.95, 12, &patch, sr, 0.3);
 
@@ -415,7 +388,7 @@ fn test_free_running_supersaw_voice() {
 
 #[test]
 fn test_master_bus_compressor_in_engine() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     engine.set_master_compressor(tritoncha_dsp::domain::effects::CompressorConfig {
         enabled: true,
         threshold_db: -15.0,
@@ -443,7 +416,7 @@ fn test_master_bus_compressor_in_engine() {
 
 #[test]
 fn test_master_volume_control() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     assert!((engine.master_gain - 1.0).abs() < 1e-4);
 
     engine.set_master_volume(-6.0);
@@ -456,7 +429,7 @@ fn test_master_volume_control() {
 
 #[test]
 fn test_direct_bus_bypasses_master_gain() {
-    let mut engine = TritonchaEngine::new(48000.0);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Silence master bus completely
     engine.set_master_volume(-60.0);
 

@@ -1,7 +1,7 @@
 //! Stereo VCA-style studio bus compressor with soft-knee dynamic gain reduction.
 
 use crate::core::math::{db_to_gain, gain_to_db, lerp};
-use crate::domain::sequencer::DEFAULT_SAMPLE_RATE;
+use crate::engine::DEFAULT_SAMPLE_RATE;
 
 pub const DEFAULT_COMP_THRESHOLD_DB: f32 = -12.0;
 pub const DEFAULT_COMP_RATIO: f32 = 4.0;
@@ -183,7 +183,7 @@ impl BusCompressor {
 
 impl Default for BusCompressor {
     fn default() -> Self {
-        Self::new(48000.0)
+        Self::new(DEFAULT_SAMPLE_RATE)
     }
 }
 
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_compressor_bypass_when_disabled() {
-        let mut comp = BusCompressor::new(48000.0);
+        let mut comp = BusCompressor::new(DEFAULT_SAMPLE_RATE);
         comp.set_config(CompressorConfig {
             enabled: false,
             threshold_db: -20.0,
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_compressor_unity_gain_below_threshold() {
-        let mut comp = BusCompressor::new(48000.0);
+        let mut comp = BusCompressor::new(DEFAULT_SAMPLE_RATE);
         comp.set_config(CompressorConfig {
             enabled: true,
             threshold_db: -10.0,
@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn test_compressor_gain_reduction_above_threshold() {
-        let mut comp = BusCompressor::new(48000.0);
+        let mut comp = BusCompressor::new(DEFAULT_SAMPLE_RATE);
         comp.set_config(CompressorConfig {
             enabled: true,
             threshold_db: -10.0,

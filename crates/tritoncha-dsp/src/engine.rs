@@ -6,16 +6,15 @@ use crate::domain::effects::{
     BitcrusherDrive, BusCompressor, CompressorConfig, DriveMode, FrequencySweep, ReverbMode,
     StateVariableFilter, StereoChorus, StereoDelay, StereoReverb, MAX_SAMPLE_HOLD,
 };
-use crate::domain::sequencer::{MasterSequencer, DEFAULT_SAMPLE_RATE, MAX_TRACKS};
+use crate::domain::sequencer::{MasterSequencer, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
 pub use crate::domain::drums::{
-    is_drum_inst, INST_DRUM_CHINA, INST_DRUM_CLAP, INST_DRUM_COWBELL, INST_DRUM_CRASH_16,
-    INST_DRUM_CRASH_17, INST_DRUM_CRASH_18, INST_DRUM_HH_CLOSED, INST_DRUM_HH_OPEN, INST_DRUM_KICK,
-    INST_DRUM_RIDE, INST_DRUM_RIDE_BELL, INST_DRUM_SNARE, INST_DRUM_SNARE_BODY,
-    INST_DRUM_SNARE_CRACK, INST_DRUM_SNARE_GHOST, INST_DRUM_SNARE_RIM, INST_DRUM_SNARE_WIRE,
-    INST_DRUM_SPLASH, INST_DRUM_TOM, INST_DRUM_TOM_HIGH, INST_DRUM_TOM_LOW, INST_DRUM_TOM_MID,
+    is_drum_inst, DrumId, DRUM_CHINA, DRUM_CLAP, DRUM_COWBELL, DRUM_CRASH_16, DRUM_CRASH_17,
+    DRUM_CRASH_18, DRUM_HH_CLOSED, DRUM_HH_OPEN, DRUM_KICK, DRUM_RIDE, DRUM_RIDE_BELL, DRUM_SNARE,
+    DRUM_SNARE_BODY, DRUM_SNARE_CRACK, DRUM_SNARE_GHOST, DRUM_SNARE_RIM, DRUM_SNARE_WIRE,
+    DRUM_SPLASH, DRUM_TOM, DRUM_TOM_HIGH, DRUM_TOM_LOW, DRUM_TOM_MID,
 };
 pub use crate::domain::sequencer::{
     DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, INST_CLICK, MIN_AUDIBLE_VELOCITY,
@@ -23,6 +22,7 @@ pub use crate::domain::sequencer::{
 };
 pub use crate::services::mixer::*;
 
+pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
 pub const NUM_VOICES: usize = 32;
 
 // Master Filter Cutoff and Resonance Boundaries
@@ -173,7 +173,7 @@ impl TritonchaEngine {
     }
 
     pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
-        if inst_id == INST_DRUM_KICK {
+        if inst_id == DRUM_KICK {
             self.mixer.trigger_sidechain_kick();
         }
         if self.drums.trigger_by_id(inst_id, vel, freq) {
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_engine_initial_state() {
-        let engine = TritonchaEngine::new(48000.0);
+        let engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
         assert_eq!(engine.sequencer.bpm, DEFAULT_BPM);
         assert!(!engine.sequencer.playing);
         assert_eq!(engine.voices.len(), NUM_VOICES);
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_engine_bpm_and_timing() {
-        let mut engine = TritonchaEngine::new(48000.0);
+        let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
         engine.set_bpm(174.0);
         assert_eq!(engine.sequencer.bpm, 174.0);
 
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_engine_bus_parameters() {
-        let mut engine = TritonchaEngine::new(48000.0);
+        let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
         engine.set_bus_params(BUS_DRUMS, -6.0, true, 0.1, 0.2);
         assert!(engine.mixer.busses[BUS_DRUMS].muted);
         assert!((engine.mixer.busses[BUS_DRUMS].gain - db_to_gain(-6.0)).abs() < 0.01);
@@ -385,8 +385,8 @@ mod tests {
 
     #[test]
     fn test_engine_trigger_drum_and_synth() {
-        let mut engine = TritonchaEngine::new(48000.0);
-        engine.trigger_note(INST_DRUM_KICK, 60.0, 0.9, 0.1);
+        let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
+        engine.trigger_note(DRUM_KICK, 60.0, 0.9, 0.1);
         assert!(engine.drums.kick.active);
 
         engine.trigger_note(PATCH_SAW_BASS as i32, 55.0, 0.85, 0.2);
@@ -395,14 +395,14 @@ mod tests {
 
     #[test]
     fn test_engine_process_block_silence_and_sound() {
-        let mut engine = TritonchaEngine::new(48000.0);
+        let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
         let mut out_l = [0.0; 128];
         let mut out_r = [0.0; 128];
 
         engine.process_block(&mut out_l, &mut out_r);
         assert!(out_l.iter().all(|&s| s == 0.0));
 
-        engine.trigger_note(INST_DRUM_KICK, 60.0, 1.0, 0.1);
+        engine.trigger_note(DRUM_KICK, 60.0, 1.0, 0.1);
         engine.process_block(&mut out_l, &mut out_r);
 
         let max_amp = out_l.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn test_engine_master_filter_sweep() {
-        let mut engine = TritonchaEngine::new(48000.0);
+        let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
         engine.sweep_master_filter(400.0, 4000.0, 0.05);
         assert!(engine.sweep.is_active());
 

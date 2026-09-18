@@ -135,6 +135,7 @@ pub fn xorshift32_norm(seed: &mut u32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_lerp() {
@@ -193,19 +194,18 @@ mod tests {
 
     #[test]
     fn test_t60_decay_coeff() {
-        let coeff = t60_decay_coeff(1.0, 48000.0);
+        let coeff = t60_decay_coeff(1.0, DEFAULT_SAMPLE_RATE);
         assert!(coeff > 0.9998 && coeff < 1.0);
-        // After 48000 samples, decay reaches ~0.001 (-60dB)
-        let end_val = coeff.powi(48000);
+        let end_val = coeff.powi(DEFAULT_SAMPLE_RATE as i32);
         assert!((end_val - 0.001).abs() < 0.0001);
     }
 
     #[test]
     fn test_calc_rate_and_time_to_samples() {
-        let rate = calc_rate(0.1, 48000.0, 0.001);
-        assert!((rate - (1.0 / 4800.0)).abs() < 1e-6);
+        let rate = calc_rate(0.1, DEFAULT_SAMPLE_RATE, 0.001);
+        assert!((rate - (1.0 / (0.1 * DEFAULT_SAMPLE_RATE))).abs() < 1e-6);
 
-        let samples = time_to_samples(0.05, 48000.0, 0.01, 1.0);
+        let samples = time_to_samples(0.05, DEFAULT_SAMPLE_RATE, 0.01, 1.0);
         assert_eq!(samples, 2400);
     }
 }

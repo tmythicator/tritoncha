@@ -170,7 +170,8 @@ mod tests {
 
     #[test]
     fn test_render_waveforms_bounded() {
-        let dt = 440.0 / 48000.0;
+        use crate::engine::DEFAULT_SAMPLE_RATE;
+        let dt = 440.0 / DEFAULT_SAMPLE_RATE;
         let phase = 0.25;
 
         assert!((-1.2..=1.2).contains(&render_saw(phase, dt)));

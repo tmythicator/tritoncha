@@ -273,8 +273,9 @@ impl LadderFilter {
         let drive_mult = 1.0 + drive.max(0.0) * LADDER_DRIVE_GAIN;
         let driven_in = input * drive_mult;
 
-        // Instantaneous feedback linear predictor
-        let s_total = big_g3 * self.s1 + big_g2 * self.s2 + big_g * self.s3 + self.s4;
+        // Instantaneous feedback linear predictor (TPT 4-stage accumulated state)
+        let s_total =
+            (1.0 - big_g) * (big_g3 * self.s1 + big_g2 * self.s2 + big_g * self.s3 + self.s4);
         let y4_predicted = (big_g4 * driven_in + s_total) / (1.0 + k * big_g4);
 
         // Saturate feedback loop modeling transistor differential pair
@@ -379,6 +380,7 @@ impl Default for FrequencySweep {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_filter_mode_conversion() {
@@ -386,13 +388,14 @@ mod tests {
         assert_eq!(FilterMode::from(1), FilterMode::Highpass);
         assert_eq!(FilterMode::from(2), FilterMode::Bandpass);
         assert_eq!(FilterMode::from(3), FilterMode::Notch);
+        assert_eq!(FilterMode::from(4), FilterMode::Ladder24);
         assert_eq!(FilterMode::from(99), FilterMode::Lowpass);
     }
 
     #[test]
     fn test_svf_lowpass_attenuation() {
         let mut filter = StateVariableFilter::new();
-        let sample_rate = 48000.0;
+        let sample_rate = DEFAULT_SAMPLE_RATE;
         let cutoff = 1000.0;
 
         // Process a DC step to establish steady state
@@ -406,7 +409,7 @@ mod tests {
     #[test]
     fn test_svf_stability_under_extreme_drive() {
         let mut filter = StateVariableFilter::new();
-        let sample_rate = 48000.0;
+        let sample_rate = DEFAULT_SAMPLE_RATE;
 
         for _ in 0..1000 {
             let out = filter.process_lp_with_drive(10.0, 100.0, MAX_RESONANCE, sample_rate, 1.0);
@@ -418,7 +421,7 @@ mod tests {
     #[test]
     fn test_ladder_filter_stability_and_resonance() {
         let mut ladder = LadderFilter::new();
-        let sample_rate = 48000.0;
+        let sample_rate = DEFAULT_SAMPLE_RATE;
 
         for cutoff in [40.0, 200.0, 1000.0, 5000.0, 15000.0] {
             ladder.reset();

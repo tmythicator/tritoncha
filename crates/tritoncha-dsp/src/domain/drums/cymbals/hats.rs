@@ -1,10 +1,32 @@
 //! Hi-hat voice modeling closed, open, and pedal hi-hats.
 
-use crate::core::math::{soft_clip, xorshift32_norm};
+use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
 use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
 use crate::domain::effects::StateVariableFilter;
+use crate::engine::DEFAULT_SAMPLE_RATE;
+
+/// Hi-hat synthesis parameters.
+#[derive(Clone, Copy, Debug)]
+pub struct HatParams {
+    pub cutoff_hz: f32,
+    pub decay_closed_s: f32,
+    pub decay_open_s: f32,
+    pub mode: f32,
+}
+
+impl From<[f32; 7]> for HatParams {
+    #[inline(always)]
+    fn from(p: [f32; 7]) -> Self {
+        Self {
+            cutoff_hz: p[0],
+            decay_closed_s: p[1],
+            decay_open_s: p[2],
+            mode: p[6],
+        }
+    }
+}
 
 /// Noise Hi-Hat Voice (Closed and Open).
 #[derive(Clone)]
@@ -39,26 +61,22 @@ impl NoiseHatVoice {
         }
     }
 
-    pub fn set_params(
-        &mut self,
-        cutoff_hz: f32,
-        decay_closed_s: f32,
-        decay_open_s: f32,
-        mode: f32,
-    ) {
-        if cutoff_hz > 0.0 {
-            self.cutoff_hz = cutoff_hz.clamp(3000.0, 14000.0);
+    pub fn set_params(&mut self, params: impl Into<HatParams>) {
+        let p = params.into();
+        if p.cutoff_hz > 0.0 {
+            self.cutoff_hz = p.cutoff_hz.clamp(3000.0, 14000.0);
         }
-        if decay_closed_s > 0.0 {
-            let samples = (decay_closed_s.clamp(0.01, 0.5) * 48000.0).max(10.0);
-            self.decay_closed = (-6.90775 / samples).exp().clamp(0.980, 0.999);
+        if p.decay_closed_s > 0.0 {
+            self.decay_closed =
+                t60_decay_coeff(p.decay_closed_s.clamp(0.01, 0.5), DEFAULT_SAMPLE_RATE)
+                    .clamp(0.980, 0.999);
         }
-        if decay_open_s > 0.0 {
-            let samples = (decay_open_s.clamp(0.05, 1.5) * 48000.0).max(50.0);
-            self.decay_open = (-6.90775 / samples).exp().clamp(0.990, 0.9999);
+        if p.decay_open_s > 0.0 {
+            self.decay_open = t60_decay_coeff(p.decay_open_s.clamp(0.05, 1.5), DEFAULT_SAMPLE_RATE)
+                .clamp(0.990, 0.9999);
         }
-        if mode >= 0.0 {
-            self.mode = DrumMode::from(mode);
+        if p.mode >= 0.0 {
+            self.mode = DrumMode::from(p.mode);
         }
     }
 
