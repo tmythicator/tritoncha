@@ -81,7 +81,7 @@ pub fn poly_blep(t: f32, dt: f32) -> f32 {
 #[inline(always)]
 pub fn midi_to_freq(midi_pitch: f32) -> f32 {
     let exponent = (midi_pitch - MIDI_NOTE_A4) / SEMITONES_PER_OCTAVE;
-    STANDARD_TUNING_A4_HZ * 2.0_f32.powf(exponent)
+    STANDARD_TUNING_A4_HZ * exponent.exp2()
 }
 
 pub const TAU: f32 = std::f32::consts::TAU;

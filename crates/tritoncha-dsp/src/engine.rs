@@ -48,7 +48,7 @@ pub struct TritonchaEngine {
 
     pub mixer: Mixer,
 
-    master_filter: StateVariableFilter,
+    master_filters: [StateVariableFilter; 2],
     master_cutoff_hz: f32,
     master_resonance: f32,
     pub sweep: FrequencySweep,
@@ -78,7 +78,7 @@ impl TritonchaEngine {
             patches: std::array::from_fn(ModularPatch::default_for),
             drums: DrumMachine::new(),
             mixer: Mixer::new(),
-            master_filter: StateVariableFilter::new(),
+            master_filters: [StateVariableFilter::new(), StateVariableFilter::new()],
             master_cutoff_hz: DEFAULT_MASTER_CUTOFF_HZ,
             master_resonance: 0.0,
             sweep: FrequencySweep::new(DEFAULT_MASTER_CUTOFF_HZ),
@@ -320,13 +320,13 @@ impl TritonchaEngine {
                 || self.master_resonance > MIN_AUDIBLE_RESONANCE
             {
                 (
-                    self.master_filter.process_lp(
+                    self.master_filters[0].process_lp(
                         master_l,
                         self.master_cutoff_hz,
                         self.master_resonance,
                         self.sample_rate,
                     ),
-                    self.master_filter.process_lp(
+                    self.master_filters[1].process_lp(
                         master_r,
                         self.master_cutoff_hz,
                         self.master_resonance,

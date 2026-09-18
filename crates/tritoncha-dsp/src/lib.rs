@@ -326,7 +326,6 @@ pub unsafe extern "C" fn tritoncha_dsp_set_reverb_mode(ptr: *mut TritonchaEngine
 /// # Safety
 /// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn tritoncha_dsp_set_master_compressor(
     ptr: *mut TritonchaEngine,
     enabled: i32,
@@ -426,7 +425,6 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch(
 /// # Safety
 /// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn tritoncha_dsp_set_drum_patch(
     ptr: *mut TritonchaEngine,
     drum_id: i32,

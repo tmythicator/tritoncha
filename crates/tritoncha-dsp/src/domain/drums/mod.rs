@@ -101,15 +101,139 @@ pub const INST_DRUM_SPLASH: i32 = DRUM_SPLASH;
 pub const INST_DRUM_CHINA: i32 = DRUM_CHINA;
 pub const INST_DRUM_COWBELL: i32 = DRUM_COWBELL;
 
+/// Strongly-typed drum instrument identifier.
+#[repr(i32)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum DrumId {
+    Kick = DRUM_KICK,
+    Snare = DRUM_SNARE,
+    HhClosed = DRUM_HH_CLOSED,
+    HhOpen = DRUM_HH_OPEN,
+    Clap = DRUM_CLAP,
+    Ride = DRUM_RIDE,
+    Tom = DRUM_TOM,
+    SnareCrack = DRUM_SNARE_CRACK,
+    SnareWire = DRUM_SNARE_WIRE,
+    SnareBody = DRUM_SNARE_BODY,
+    SnareGhost = DRUM_SNARE_GHOST,
+    SnareRim = DRUM_SNARE_RIM,
+    RideBell = DRUM_RIDE_BELL,
+    TomHigh = DRUM_TOM_HIGH,
+    TomMid = DRUM_TOM_MID,
+    TomLow = DRUM_TOM_LOW,
+    Crash16 = DRUM_CRASH_16,
+    Crash17 = DRUM_CRASH_17,
+    Crash18 = DRUM_CRASH_18,
+    Splash = DRUM_SPLASH,
+    China = DRUM_CHINA,
+    Cowbell = DRUM_COWBELL,
+}
+
+impl DrumId {
+    #[inline(always)]
+    pub const fn as_i32(self) -> i32 {
+        self as i32
+    }
+}
+
+impl TryFrom<i32> for DrumId {
+    type Error = ();
+
+    #[inline(always)]
+    fn try_from(val: i32) -> Result<Self, Self::Error> {
+        match val {
+            DRUM_KICK => Ok(Self::Kick),
+            DRUM_SNARE => Ok(Self::Snare),
+            DRUM_HH_CLOSED => Ok(Self::HhClosed),
+            DRUM_HH_OPEN => Ok(Self::HhOpen),
+            DRUM_CLAP => Ok(Self::Clap),
+            DRUM_RIDE => Ok(Self::Ride),
+            DRUM_TOM => Ok(Self::Tom),
+            DRUM_SNARE_CRACK => Ok(Self::SnareCrack),
+            DRUM_SNARE_WIRE => Ok(Self::SnareWire),
+            DRUM_SNARE_BODY => Ok(Self::SnareBody),
+            DRUM_SNARE_GHOST => Ok(Self::SnareGhost),
+            DRUM_SNARE_RIM => Ok(Self::SnareRim),
+            DRUM_RIDE_BELL => Ok(Self::RideBell),
+            DRUM_TOM_HIGH => Ok(Self::TomHigh),
+            DRUM_TOM_MID => Ok(Self::TomMid),
+            DRUM_TOM_LOW => Ok(Self::TomLow),
+            DRUM_CRASH_16 => Ok(Self::Crash16),
+            DRUM_CRASH_17 => Ok(Self::Crash17),
+            DRUM_CRASH_18 => Ok(Self::Crash18),
+            DRUM_SPLASH => Ok(Self::Splash),
+            DRUM_CHINA => Ok(Self::China),
+            DRUM_COWBELL => Ok(Self::Cowbell),
+            _ => Err(()),
+        }
+    }
+}
+
 #[inline(always)]
 pub fn is_drum_inst(inst_id: i32) -> bool {
-    matches!(
-        inst_id,
-        DRUM_KICK..=DRUM_HH_OPEN
-            | DRUM_CLAP
-            | DRUM_RIDE..=DRUM_SNARE_RIM
-            | DRUM_RIDE_BELL..=DRUM_COWBELL
-    )
+    DrumId::try_from(inst_id).is_ok()
+}
+
+/// Common trait for all modular drum voices.
+pub trait DrumVoice {
+    fn is_active(&self) -> bool;
+    fn process(&mut self, sample_rate: f32) -> f32;
+    fn set_mode(&mut self, mode: DrumMode);
+}
+
+macro_rules! impl_drum_voice {
+    ($($t:ident),* $(,)?) => {
+        $(
+            impl DrumVoice for $t {
+                #[inline(always)]
+                fn is_active(&self) -> bool {
+                    self.active
+                }
+                #[inline(always)]
+                fn process(&mut self, sample_rate: f32) -> f32 {
+                    self.process(sample_rate)
+                }
+                #[inline(always)]
+                fn set_mode(&mut self, mode: DrumMode) {
+                    self.mode = mode;
+                }
+            }
+        )*
+    };
+}
+
+impl_drum_voice!(
+    KickVoice,
+    SnareVoice,
+    NoiseHatVoice,
+    ClapVoice,
+    MembraneVoice,
+    RideVoice,
+    RideBellVoice,
+);
+
+impl<const N: usize> DrumVoice for MetallicVoice<N> {
+    #[inline(always)]
+    fn is_active(&self) -> bool {
+        self.active
+    }
+    #[inline(always)]
+    fn process(&mut self, sample_rate: f32) -> f32 {
+        self.process(sample_rate)
+    }
+    #[inline(always)]
+    fn set_mode(&mut self, mode: DrumMode) {
+        self.mode = mode;
+    }
+}
+
+#[inline(always)]
+fn render_voice<V: DrumVoice>(voice: &mut V, sample_rate: f32) -> f32 {
+    if voice.is_active() {
+        voice.process(sample_rate)
+    } else {
+        0.0
+    }
 }
 
 /// Drum machine managing all drum voices.
@@ -229,9 +353,7 @@ impl DrumMachine {
 
     pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
         match drum_id {
-            DRUM_KICK => self.kick.set_params(
-                params[0], params[1], params[2], params[3], params[4], params[5], params[6],
-            ),
+            DRUM_KICK => self.kick.set_params(params),
             DRUM_SNARE | DRUM_SNARE_CRACK | DRUM_SNARE_BODY | DRUM_SNARE_WIRE
             | DRUM_SNARE_GHOST => {
                 self.snare.set_params(
@@ -287,22 +409,22 @@ impl DrumMachine {
 
     pub fn set_mode_all(&mut self, mode: impl Into<DrumMode>) {
         let m = mode.into();
-        self.kick.mode = m;
-        self.snare.mode = m;
-        self.hat.mode = m;
-        self.clap.mode = m;
-        self.tom.mode = m;
-        self.tom_high.mode = m;
-        self.tom_mid.mode = m;
-        self.tom_low.mode = m;
-        self.ride.mode = m;
-        self.ride_bell.mode = m;
-        self.crash_16.mode = m;
-        self.crash_17.mode = m;
-        self.crash_18.mode = m;
-        self.splash.mode = m;
-        self.china.mode = m;
-        self.cowbell.mode = m;
+        self.kick.set_mode(m);
+        self.snare.set_mode(m);
+        self.hat.set_mode(m);
+        self.clap.set_mode(m);
+        self.tom.set_mode(m);
+        self.tom_high.set_mode(m);
+        self.tom_mid.set_mode(m);
+        self.tom_low.set_mode(m);
+        self.ride.set_mode(m);
+        self.ride_bell.set_mode(m);
+        self.crash_16.set_mode(m);
+        self.crash_17.set_mode(m);
+        self.crash_18.set_mode(m);
+        self.splash.set_mode(m);
+        self.china.set_mode(m);
+        self.cowbell.set_mode(m);
     }
 
     #[inline(always)]
@@ -405,35 +527,44 @@ impl DrumMachine {
         self.tom_low.trigger(vel, 48000.0);
     }
 
+    /// Dispatches a trigger to the corresponding drum voice by strongly-typed DrumId.
+    #[inline(always)]
+    pub fn trigger_drum(&mut self, drum: DrumId, vel: f32, freq: f32) {
+        match drum {
+            DrumId::Kick => self.trigger_kick(vel),
+            DrumId::Snare => self.trigger_snare(vel),
+            DrumId::HhClosed => self.trigger_hh(vel, false),
+            DrumId::HhOpen => self.trigger_hh(vel, true),
+            DrumId::Clap => self.trigger_clap(vel),
+            DrumId::Ride => self.trigger_ride(vel),
+            DrumId::Tom => self.trigger_tom(vel, freq),
+            DrumId::SnareCrack | DrumId::SnareRim => self.trigger_snare_crack(vel),
+            DrumId::SnareWire => self.trigger_snare_wire(vel),
+            DrumId::SnareBody => self.trigger_snare_body(vel),
+            DrumId::SnareGhost => self.trigger_snare_ghost(vel),
+            DrumId::RideBell => self.trigger_ride_bell(vel),
+            DrumId::TomHigh => self.trigger_tom_high(vel),
+            DrumId::TomMid => self.trigger_tom_mid(vel),
+            DrumId::TomLow => self.trigger_tom_low(vel),
+            DrumId::Crash16 => self.trigger_crash_16(vel),
+            DrumId::Crash17 => self.trigger_crash_17(vel),
+            DrumId::Crash18 => self.trigger_crash_18(vel),
+            DrumId::Splash => self.trigger_splash(vel),
+            DrumId::China => self.trigger_china(vel),
+            DrumId::Cowbell => self.trigger_cowbell(vel),
+        }
+    }
+
     /// Dispatches a trigger to the corresponding drum voice by instrument ID.
     /// Returns true if the ID matched a drum voice, false otherwise.
     #[inline(always)]
     pub fn trigger_by_id(&mut self, inst_id: i32, vel: f32, freq: f32) -> bool {
-        match inst_id {
-            DRUM_KICK => self.trigger_kick(vel),
-            DRUM_SNARE => self.trigger_snare(vel),
-            DRUM_HH_CLOSED => self.trigger_hh(vel, false),
-            DRUM_HH_OPEN => self.trigger_hh(vel, true),
-            DRUM_CLAP => self.trigger_clap(vel),
-            DRUM_RIDE => self.trigger_ride(vel),
-            DRUM_TOM => self.trigger_tom(vel, freq),
-            DRUM_SNARE_CRACK | DRUM_SNARE_RIM => self.trigger_snare_crack(vel),
-            DRUM_SNARE_WIRE => self.trigger_snare_wire(vel),
-            DRUM_SNARE_BODY => self.trigger_snare_body(vel),
-            DRUM_SNARE_GHOST => self.trigger_snare_ghost(vel),
-            DRUM_RIDE_BELL => self.trigger_ride_bell(vel),
-            DRUM_TOM_HIGH => self.trigger_tom_high(vel),
-            DRUM_TOM_MID => self.trigger_tom_mid(vel),
-            DRUM_TOM_LOW => self.trigger_tom_low(vel),
-            DRUM_CRASH_16 => self.trigger_crash_16(vel),
-            DRUM_CRASH_17 => self.trigger_crash_17(vel),
-            DRUM_CRASH_18 => self.trigger_crash_18(vel),
-            DRUM_SPLASH => self.trigger_splash(vel),
-            DRUM_CHINA => self.trigger_china(vel),
-            DRUM_COWBELL => self.trigger_cowbell(vel),
-            _ => return false,
+        if let Ok(drum) = DrumId::try_from(inst_id) {
+            self.trigger_drum(drum, vel, freq);
+            true
+        } else {
+            false
         }
-        true
     }
 
     #[inline(always)]
@@ -443,56 +574,22 @@ impl DrumMachine {
 
     #[inline(always)]
     pub fn process(&mut self, sample_rate: f32) -> f32 {
-        let mut out = 0.0;
-        if self.kick.active {
-            out += self.kick.process(sample_rate);
-        }
-        if self.snare.active {
-            out += self.snare.process(sample_rate);
-        }
-        if self.hat.active {
-            out += self.hat.process(sample_rate);
-        }
-        if self.clap.active {
-            out += self.clap.process(sample_rate);
-        }
-        if self.tom.active {
-            out += self.tom.process(sample_rate);
-        }
-        if self.tom_high.active {
-            out += self.tom_high.process(sample_rate);
-        }
-        if self.tom_mid.active {
-            out += self.tom_mid.process(sample_rate);
-        }
-        if self.tom_low.active {
-            out += self.tom_low.process(sample_rate);
-        }
-        if self.ride.active {
-            out += self.ride.process(sample_rate);
-        }
-        if self.ride_bell.active {
-            out += self.ride_bell.process(sample_rate);
-        }
-        if self.crash_16.active {
-            out += self.crash_16.process(sample_rate);
-        }
-        if self.crash_17.active {
-            out += self.crash_17.process(sample_rate);
-        }
-        if self.crash_18.active {
-            out += self.crash_18.process(sample_rate);
-        }
-        if self.splash.active {
-            out += self.splash.process(sample_rate);
-        }
-        if self.china.active {
-            out += self.china.process(sample_rate);
-        }
-        if self.cowbell.active {
-            out += self.cowbell.process(sample_rate);
-        }
-        out
+        render_voice(&mut self.kick, sample_rate)
+            + render_voice(&mut self.snare, sample_rate)
+            + render_voice(&mut self.hat, sample_rate)
+            + render_voice(&mut self.clap, sample_rate)
+            + render_voice(&mut self.tom, sample_rate)
+            + render_voice(&mut self.tom_high, sample_rate)
+            + render_voice(&mut self.tom_mid, sample_rate)
+            + render_voice(&mut self.tom_low, sample_rate)
+            + render_voice(&mut self.ride, sample_rate)
+            + render_voice(&mut self.ride_bell, sample_rate)
+            + render_voice(&mut self.crash_16, sample_rate)
+            + render_voice(&mut self.crash_17, sample_rate)
+            + render_voice(&mut self.crash_18, sample_rate)
+            + render_voice(&mut self.splash, sample_rate)
+            + render_voice(&mut self.china, sample_rate)
+            + render_voice(&mut self.cowbell, sample_rate)
     }
 
     pub fn reset(&mut self) {

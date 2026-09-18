@@ -245,7 +245,7 @@ impl SynthVoice {
 
         let total_mod_st = pitch_snap_st + drift_st;
         let eff_freq = if total_mod_st.abs() > PITCH_MOD_ACTIVE_THRESHOLD {
-            self.freq * (2.0f32).powf(total_mod_st / SEMITONES_PER_OCTAVE)
+            self.freq * (total_mod_st / SEMITONES_PER_OCTAVE).exp2()
         } else {
             self.freq
         };
