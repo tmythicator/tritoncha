@@ -49,12 +49,15 @@
                      :vel 0.85})
 
       :bass
-      (looper/loop! :inst-audition
-                    {:inst inst-key
-                     :notes ["E1" nil "E1" "G1" nil "A1" "Bb1" "B1"]
-                     :step "16n"
-                     :dur "16n"
-                     :vel 0.9})
+      (let [sub? (busses/sub? inst-key)]
+        (looper/loop! :inst-audition
+                      {:inst inst-key
+                       :notes (if sub?
+                                ["E1" nil "E1" nil "D1" nil "G1" "E1"]
+                                ["E1" nil "E1" "G1" nil "A1" "Bb1" "B1"])
+                       :step "16n"
+                       :dur (if sub? "8n" "16n")
+                       :vel 0.9}))
 
       :pads
       (looper/loop! :inst-audition
@@ -133,11 +136,14 @@
            (* idx 70))))
 
       :bass
-      (let [notes ["E1" "G1" "A1" "Bb1" "B1"]]
+      (let [sub? (busses/sub? inst-key)
+            notes (if sub?
+                    ["E1" "G1" "E1" "D1" "E1"]
+                    ["E1" "G1" "A1" "Bb1" "B1"])]
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "16n" 0.92))
+             (instruments/trigger-note! inst-key n (if sub? "8n" "16n") 0.92))
            (* idx 110))))
 
       :pads
@@ -180,12 +186,15 @@
            (* idx 80))))
 
       :bass
-      (let [notes ["E1" "G1" "A1" "Bb1" "B1" "D2" "B1" "E1"]]
+      (let [sub? (busses/sub? inst-key)
+            notes (if sub?
+                    ["E1" "E1" "D1" "E1" "G1" "E1" "D1" "E1"]
+                    ["E1" "G1" "A1" "Bb1" "B1" "D2" "B1" "E1"])]
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
              (instruments/trigger-note! inst-key n "16n" 0.92))
-           (* idx 85))))
+           (* idx (if sub? 110 85)))))
 
       :pads
       (let [notes ["E3" "G3" "B3" "D4" "E4" "D4" "B3" "G3"]]
