@@ -72,3 +72,15 @@
     (is (= :classic (worklet/set-worklet-drive-mode! :classic)))
     (is (= :fdn (worklet/set-worklet-reverb-mode! :fdn)))
     (is (= :freeverb (worklet/set-worklet-reverb-mode! :freeverb)))))
+
+(deftest test-filter-type-mapping
+  (testing "Filter type keyword mapping to numeric IDs including 24dB Moog Ladder"
+    (is (= 0 (worklet/filter-type->id :lowpass)))
+    (is (= 0 (worklet/filter-type->id :lp)))
+    (is (= 1 (worklet/filter-type->id :highpass)))
+    (is (= 2 (worklet/filter-type->id :bandpass)))
+    (is (= 3 (worklet/filter-type->id :notch)))
+    (is (= 4 (worklet/filter-type->id :ladder)))
+    (is (= 4 (worklet/filter-type->id :moog)))
+    (is (= 4 (worklet/filter-type->id :ladder-24db)))))
+

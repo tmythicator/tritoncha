@@ -7,7 +7,7 @@
 ;;   :osc       - {:type :saw|:pulse|:tri|:sine|:supersaw|:karplus|:organ|:chiptune|:fm|:reese|:blade|:hoover
 ;;                 :sub-level 0.0..1.0 :pulse-width 0.05..0.95
 ;;                 :noise 0.0..1.0 :drift 0.0..1.0}
-;;   :filter    - {:type :lowpass|:highpass|:bandpass|:notch :cutoff 20..20000 :q 0.0..0.98
+;;   :filter    - {:type :lowpass|:highpass|:bandpass|:notch|:ladder :cutoff 20..20000 :q 0.0..0.98
 ;;                 :drive 0.0..1.0 :env-amount -10000..10000 :key-track 0.0..4.0}
 ;;   :amp-env   - {:attack 0.001..2.0 :decay 0.005..4.0 :sustain 0.0..1.0 :release 0.005..4.0}
 ;;   :mod-env   - {:attack 0.001..2.0 :decay 0.005..4.0}
@@ -33,7 +33,7 @@
     :type     :mono
     :bus      :bus/bass
     :osc      {:type :saw :sub-level 0.3}
-    :filter   {:type :lowpass :cutoff 400 :q 0.82 :drive 0.38 :env-amount 5500 :key-track 1.5}
+    :filter   {:type :ladder :cutoff 400 :q 0.88 :drive 0.38 :env-amount 5500 :key-track 1.5}
     :amp-env  {:attack 0.003 :decay 0.15 :sustain 0.0 :release 0.1}
     :mod-env  {:attack 0.003 :decay 0.15}
     :glide    0.04}

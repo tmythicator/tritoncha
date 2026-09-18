@@ -124,14 +124,16 @@
     0))
 
 (defn filter-type->id
-  "Maps filter type keyword to numeric identifier for the TPT state-variable filter.
-  Examples: (filter-type->id :lowpass) -> 0, (filter-type->id :highpass) -> 1."
+  "Maps filter type keyword to numeric identifier for voice filters (SVF and 4-Pole Moog Ladder).
+  Supported types: :lp (:lowpass), :hp (:highpass), :bp (:bandpass), :notch, :ladder (:moog, :ladder-24db).
+  Examples: (filter-type->id :lowpass) -> 0, (filter-type->id :ladder) -> 4."
   [ft]
   (case (keyword ft)
     (:lp :lowpass) 0
     (:hp :highpass) 1
     (:bp :bandpass) 2
     (:notch) 3
+    (:ladder :moog :ladder-24db :ladder24) 4
     0))
 
 (defn drum-mod->id
