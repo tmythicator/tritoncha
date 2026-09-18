@@ -23,7 +23,7 @@ pub const MAX_MAKEUP_DB: f32 = 24.0;
 pub const MIN_COMP_MIX: f32 = 0.001;
 pub const MIN_SAMPLE_RATE: f32 = 1000.0;
 
-/// Configuration parameters for stereo bus compressor (DDD Value Object).
+/// Configuration parameters for stereo bus compressor.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CompressorConfig {
     pub enabled: bool,
@@ -95,7 +95,7 @@ impl BusCompressor {
         comp
     }
 
-    /// Sets compressor parameters from a configuration Value Object.
+    /// Updates compressor parameters from config.
     pub fn set_config(&mut self, config: CompressorConfig) {
         self.enabled = config.enabled;
         self.threshold_db = config

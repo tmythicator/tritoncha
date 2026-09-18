@@ -105,7 +105,7 @@ pub struct MixerFrame {
     pub direct_bypass: f32,
 }
 
-/// Domain service managing multi-bus routing, sidechain ducking, and effects send matrix.
+/// Manages multi-bus routing, sidechain ducking, and effects send matrix.
 pub struct Mixer {
     pub busses: [AudioBus; NUM_BUSSES],
     pub sidechain: SidechainPump,

@@ -1,4 +1,4 @@
-//! Curated factory default presets and modular synthesizer sound design catalog.
+//! Default presets for modular synth patches.
 
 use super::patch::*;
 

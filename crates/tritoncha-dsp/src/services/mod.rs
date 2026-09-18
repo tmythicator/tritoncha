@@ -1,4 +1,4 @@
-//! Domain services: voice allocation and audio bus mixing.
+//! Voice allocation and audio bus mixing.
 
 pub mod mixer;
 pub mod voice_allocator;

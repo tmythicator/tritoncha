@@ -50,7 +50,6 @@
           routes)
     {}))
 
-
 (defn- resolve-filter-frequency
   "Resolves the cutoff frequency in Hz: declared topology frequency, active track cutoff, or 18000 Hz."
   [spec]

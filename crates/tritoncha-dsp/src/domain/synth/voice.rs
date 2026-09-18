@@ -35,7 +35,7 @@ pub const KARPLUS_OUTPUT_GAIN: f32 = 1.5;
 pub const DEFAULT_INITIAL_NOISE_SEED: u32 = 0x9e3779b9;
 pub const NOISE_SEED_PRIME: u32 = 2654435761;
 
-/// Polyphonic Synthesizer Voice Aggregate.
+/// Polyphonic synthesizer voice.
 pub struct SynthVoice {
     pub active: bool,
     pub patch_id: usize,

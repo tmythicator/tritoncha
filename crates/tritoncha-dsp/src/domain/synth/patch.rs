@@ -1,4 +1,4 @@
-//! Declarative modular synthesizer voice patch specifications and sound design presets.
+//! Modular synthesizer voice patch definitions and presets.
 
 pub const MAX_PATCHES: usize = 64;
 
@@ -124,7 +124,7 @@ pub const MAX_PITCH_SNAP_DECAY_SEC: f32 = 0.150;
 pub const DEFAULT_PITCH_SNAP_DECAY_SEC: f32 = 0.015;
 pub const MAX_ANALOG_DRIFT_SEMITONES: f32 = 0.15;
 
-/// Modular sound design patch specification.
+/// Modular sound design patch parameters.
 #[derive(Clone, Copy)]
 pub struct ModularPatch {
     pub osc_type: u8,          // OSC_* constants / OscillatorType
@@ -211,7 +211,7 @@ impl ModularPatch {
         }
     }
 
-    /// Retrieves the curated factory default patch for a given patch index.
+    /// Returns default patch for a given patch index.
     pub fn default_for(patch_id: usize) -> Self {
         let all = init_default_patches();
         if patch_id < MAX_PATCHES {

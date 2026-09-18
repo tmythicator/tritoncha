@@ -308,9 +308,7 @@ impl TritonchaEngine {
             let mut master_l = frame.master_bus + wet_dl + wet_rl;
             let mut master_r = frame.master_bus + wet_dr + wet_rr;
 
-            let (chorus_l, chorus_r) =
-                self.chorus
-                    .process(master_l, master_r, self.sample_rate);
+            let (chorus_l, chorus_r) = self.chorus.process(master_l, master_r, self.sample_rate);
             master_l = chorus_l;
             master_r = chorus_r;
 

@@ -468,5 +468,8 @@ fn test_direct_bus_bypasses_master_gain() {
     engine.process_block(&mut out_l, &mut out_r);
 
     let max_amp = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
-    assert!(max_amp > 0.05, "Direct bus signal must pass through even when master volume is silent");
+    assert!(
+        max_amp > 0.05,
+        "Direct bus signal must pass through even when master volume is silent"
+    );
 }
