@@ -1,5 +1,9 @@
 (ns app.audio.dsp.worklet-test
   (:require [app.audio.dsp.worklet :as worklet]
+            [app.audio.dsp.worklet.protocol :as protocol]
+            [app.lib.drums :as drums]
+            [app.lib.instruments :as insts]
+            [clojure.set :as set]
             [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest test-worklet-parse-freq
@@ -72,3 +76,38 @@
     (is (= :classic (worklet/set-worklet-drive-mode! :classic)))
     (is (= :fdn (worklet/set-worklet-reverb-mode! :fdn)))
     (is (= :freeverb (worklet/set-worklet-reverb-mode! :freeverb)))))
+
+(deftest test-filter-type-mapping
+  (testing "Filter type keyword mapping to numeric IDs including 24dB Ladder"
+    (is (= 0 (worklet/filter-type->id :lowpass)))
+    (is (= 0 (worklet/filter-type->id :lp)))
+    (is (= 1 (worklet/filter-type->id :highpass)))
+    (is (= 2 (worklet/filter-type->id :bandpass)))
+    (is (= 3 (worklet/filter-type->id :notch)))
+    (is (= 4 (worklet/filter-type->id :ladder)))
+    (is (= 4 (worklet/filter-type->id :ladder24)))))
+
+(deftest test-sound-registration-no-id-collisions
+  (testing "Zero ID collisions between drum voices and synthesizer voice patches"
+    (let [drum-ids #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73}
+          synth-keys (disj (set (keys insts/primary-instruments)) :click)
+          synth-ids (set (map protocol/inst-keyword->id synth-keys))]
+      ;; Ensure drums and synths have empty intersection
+      (is (empty? (set/intersection drum-ids synth-ids)))
+      ;; Moog instruments must have dedicated IDs without colliding with ride (20) or tom (21)
+      (is (= 42 (protocol/canonical-inst-ids :sub-moog)))
+      (is (= 43 (protocol/canonical-inst-ids :bass-moog)))
+      (is (= 42 (protocol/canonical-inst-ids :moog-sub)))
+      (is (= 43 (protocol/canonical-inst-ids :moog-bass)))
+      (is (= 20 (protocol/canonical-inst-ids :ride)))
+      (is (= 21 (protocol/canonical-inst-ids :tom)))
+      ;; Verify all drum keywords in the catalog resolve to valid drum IDs (or click)
+      (doseq [dk (disj drums/drum-keywords :click :util-click)]
+        (when-let [id (protocol/canonical-inst-ids dk)]
+          (is (contains? drum-ids id))))
+      ;; Custom dynamic synth allocator must stay within the safe range 44..63
+      (let [custom-id (protocol/register-custom-patch-id! :test-user-synth)]
+        (is (<= 44 custom-id 63))
+        (is (not (contains? drum-ids custom-id)))
+        (is (not (contains? synth-ids custom-id)))))))
+

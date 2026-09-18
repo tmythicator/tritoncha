@@ -96,15 +96,16 @@ impl AudioBus {
     }
 }
 
-/// Frame output from mixer bus summation containing direct dry audio and wet send levels.
+/// Frame output from mixer bus summation separating master bus sum from direct bypass.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct MixerFrame {
-    pub direct: f32,
+    pub master_bus: f32,
     pub delay_send: f32,
     pub reverb_send: f32,
+    pub direct_bypass: f32,
 }
 
-/// Domain service managing multi-bus routing, sidechain ducking, and effects send matrix.
+/// Manages multi-bus routing, sidechain ducking, and effects send matrix.
 pub struct Mixer {
     pub busses: [AudioBus; NUM_BUSSES],
     pub sidechain: SidechainPump,
@@ -118,7 +119,7 @@ impl Mixer {
                 AudioBus::new(1.0, 0.0, 0.0),   // BUS_BASS: neutral 0.0 dB
                 AudioBus::new(1.0, 0.20, 0.35), // BUS_SPACE: neutral 0.0 dB
                 AudioBus::new(1.0, 0.15, 0.10), // BUS_LEAD: neutral 0.0 dB
-                AudioBus::new(1.0, 0.0, 0.0),   // BUS_DIRECT: metronome / click
+                AudioBus::new(1.0, 0.0, 0.0),   // BUS_DIRECT: metronome / click / cue bypass
             ],
             sidechain: SidechainPump::new(),
         }
@@ -152,30 +153,36 @@ impl Mixer {
     }
 
     /// Sums accumulated bus signals, applies sidechain pump to musical tracks,
-    /// and dispatches to master direct bus and auxiliary effects sends.
+    /// and dispatches to master mix bus, auxiliary effects sends, and direct output bypass.
     #[inline(always)]
     pub fn process_frame(&mut self, bus_accum: &[f32; NUM_BUSSES]) -> MixerFrame {
-        let mut direct = 0.0;
+        let mut master_bus = 0.0;
         let mut delay_send = 0.0;
         let mut reverb_send = 0.0;
+        let mut direct_bypass = 0.0;
 
         for (b, (bus, &accum)) in self.busses.iter().zip(bus_accum.iter()).enumerate() {
             if !bus.muted {
                 let mut bus_val = accum * bus.gain;
-                // Sidechain ducking is applied to bass and space/lead layers
-                if matches!(b, BUS_BASS..=BUS_LEAD) {
-                    bus_val = self.sidechain.process(bus_val);
+                if b == BUS_DIRECT {
+                    direct_bypass += bus_val;
+                } else {
+                    // Sidechain ducking is applied to bass and space/lead layers
+                    if matches!(b, BUS_BASS..=BUS_LEAD) {
+                        bus_val = self.sidechain.process(bus_val);
+                    }
+                    master_bus += bus_val;
+                    delay_send += bus_val * bus.send_delay;
+                    reverb_send += bus_val * bus.send_reverb;
                 }
-                direct += bus_val;
-                delay_send += bus_val * bus.send_delay;
-                reverb_send += bus_val * bus.send_reverb;
             }
         }
 
         MixerFrame {
-            direct,
+            master_bus,
             delay_send,
             reverb_send,
+            direct_bypass,
         }
     }
 }
@@ -216,9 +223,11 @@ mod tests {
         let mut accum = [0.0; NUM_BUSSES];
         accum[BUS_DRUMS] = 0.5;
         accum[BUS_BASS] = 0.3;
+        accum[BUS_DIRECT] = 0.2;
 
         let frame = mixer.process_frame(&accum);
-        assert!(frame.direct > 0.0);
+        assert!(frame.master_bus > 0.0);
+        assert!(frame.direct_bypass > 0.0);
         assert!(frame.delay_send >= 0.0);
         assert!(frame.reverb_send >= 0.0);
     }

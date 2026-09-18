@@ -1,30 +1,11 @@
 (ns app.custom.instruments
   "User custom synthesizers, drum models, and sound design presets.")
 
-;; Sound Design in ClojureScript:
-;; Instruments are declared as pure, neutral maps.
-;; Rust WASM DSP provides pure, uncolored building blocks:
-;;   :osc       - {:type :saw|:pulse|:tri|:sine|:supersaw|:karplus|:organ|:chiptune|:fm|:reese|:blade|:hoover
-;;                 :sub-level 0.0..1.0
-;;                 :pulse-width 0.05..0.95
-;;                 :noise 0.0..1.0 (white noise injection)
-;;                 :drift 0.0..1.0 (organic VCO pitch drift)}
-;;   :filter    - {:type :lowpass|:highpass|:bandpass|:notch
-;;                 :cutoff 20..20000
-;;                 :q 0.0..0.98
-;;                 :drive 0.0..1.0 (analog saturation in SVF integrator feedback)
-;;                 :env-amount -10000..10000
-;;                 :key-track 0.0..4.0}
-;;   :amp-env   - {:attack 0.001..2.0 :decay 0.005..4.0 :sustain 0.0..1.0 :release 0.005..4.0}
-;;   :mod-env   - {:attack 0.001..2.0 :decay 0.005..4.0}
-;;   :pitch-env - {:amount 0..48 (semitones transient punch) :decay 0.005..0.100 (seconds)}
-;;   :bus       - :bus/bass, :bus/space, :bus/lead, :bus/drums, :bus/direct
-;;   :type      - :mono or :poly
-;;   :glide     - portamento glide in seconds (e.g. 0.04)
+;; Custom Instruments Catalog (Same format as app.lib.instruments)
+;; For complete parameter schema and baseline DSP voice patches, see: app.lib.instruments
 
 (def user-instruments
-  {;; Cyberpunk FM Lead with fast punchy pitch transient
-   :tokyo-drift
+  {:tokyo-drift
    {:category  :leads
     :type      :poly
     :osc       {:type :fm :noise 0.015}
@@ -34,18 +15,6 @@
     :mod-env   {:attack 0.003 :decay 0.22}
     :bus       :bus/lead}
 
-   ;; Classic Minimoog analog mono bass: warm saw + deep sub + filter drive
-   :moog-sub
-   {:category  :bass
-    :type      :mono
-    :osc       {:type :saw :sub-level 0.50 :drift 0.18}
-    :pitch-env {:amount 7 :decay 0.010}
-    :filter    {:type :lowpass :cutoff 750 :q 0.50 :drive 0.30 :env-amount 3800 :key-track 2.0}
-    :amp-env   {:attack 0.004 :decay 0.20 :sustain 0.2 :release 0.15}
-    :mod-env   {:attack 0.004 :decay 0.20}
-    :bus       :bus/bass}
-
-   ;; Searing 303 acid bass: extreme resonance + saturation + portamento glide
    :acid-beast
    {:category :bass
     :type     :mono
@@ -56,7 +25,6 @@
     :glide    0.045
     :bus      :bus/bass}
 
-   ;; Vintage Roland Juno-106 analog pad: supersaw + organic VCO drift + tape air
    :juno-chorus
    {:category      :pads
     :type          :poly
@@ -67,7 +35,6 @@
     :mod-env       {:attack 0.08 :decay 0.45}
     :bus           :bus/space}
 
-   ;; Liquid Drum and Bass Reese: detuned saws + sub foundation + filter saturation
    :liquid-reese
    {:category :bass
     :type     :mono
@@ -78,7 +45,6 @@
     :glide    0.025
     :bus      :bus/bass}
 
-   ;; Crystalline mallet / bell pluck with fast acoustic strike
    :glass-mallet
    {:category      :leads
     :type          :poly
@@ -90,7 +56,6 @@
     :mod-env       {:attack 0.002 :decay 0.28}
     :bus           :bus/space}
 
-   ;; Vangelis CS-80 cinematic brass lead with slow opening and rich drift
    :blade-runner
    {:category      :pads
     :type          :poly
@@ -101,7 +66,6 @@
     :mod-env       {:attack 0.07 :decay 0.60}
     :bus           :bus/space}
 
-   ;; Memphis Phonk cowbell / lead with aggressive harmonic bite
    :phonk-bell
    {:category      :leads
     :type          :poly
@@ -113,7 +77,6 @@
     :mod-env       {:attack 0.002 :decay 0.20}
     :bus           :bus/lead}
 
-   ;; Alpha Juno rave mentasm hoover with sub rumble and crunchy drive
    :rave-hoover
    {:category      :leads
     :type          :poly

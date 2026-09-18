@@ -218,7 +218,7 @@
 
 .neo-bus-mixer-strip {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: var(--space-xs);
     background: var(--bg-surface-subtle);
     border: 1px solid var(--border-subtle);
@@ -337,6 +337,13 @@
 .neo-node  { color: var(--text-secondary); }
 .neo-arrow { color: var(--text-brand); font-size: var(--font-size-2xs); }
 .neo-dest  { color: var(--text-success); font-weight: 600; }
+.neo-master-dest { color: var(--bus-master-color, var(--color-warning)); font-weight: 700; }
+
+.neo-route-row.master-row {
+    border-top: 1px dashed var(--border-subtle);
+    margin-top: 4px;
+    padding-top: 6px;
+}
 
 .neo-empty {
     font-size: var(--font-size-xs);

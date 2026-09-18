@@ -1,11 +1,13 @@
 //! Anti-aliased bandlimited and physical oscillator waveform generators.
 
-use crate::core::math::{poly_blep, sin_phase};
+use crate::core::math::{poly_blep, sin_phase, wrap_phase};
 
 pub const MIN_PULSE_WIDTH: f32 = 0.05;
 pub const MAX_PULSE_WIDTH: f32 = 0.95;
 
-pub const SUPERSAW_DETUNE_OFFSETS: [f32; 7] = [-0.012, -0.007, -0.003, 0.0, 0.003, 0.007, 0.012];
+pub const NUM_SUPERSAW_VOICES: usize = 7;
+pub const SUPERSAW_DETUNE_OFFSETS: [f32; NUM_SUPERSAW_VOICES] =
+    [-0.012, -0.007, -0.003, 0.0, 0.003, 0.007, 0.012];
 pub const SUPERSAW_NORMALIZATION: f32 = 0.25;
 
 pub const ORGAN_H1_GAIN: f32 = 1.0;
@@ -69,12 +71,20 @@ pub fn render_sine(phase: f32) -> f32 {
     sin_phase(phase)
 }
 
-/// Generates a 7-voice detuned supersaw waveform.
+/// Advances the phase of all supersaw voice accumulators.
 #[inline(always)]
-pub fn render_supersaw(phase: f32, dt: f32) -> f32 {
+pub fn advance_supersaw_phases(phases: &mut [f32; NUM_SUPERSAW_VOICES], dt: f32) {
+    for (i, &d) in SUPERSAW_DETUNE_OFFSETS.iter().enumerate() {
+        phases[i] = wrap_phase(phases[i] + dt * (1.0 + d));
+    }
+}
+
+/// Generates a 7-voice detuned supersaw waveform from independent free-running phase accumulators.
+#[inline(always)]
+pub fn render_supersaw(phases: &[f32; NUM_SUPERSAW_VOICES], dt: f32) -> f32 {
     let mut sum = 0.0;
-    for &d in &SUPERSAW_DETUNE_OFFSETS {
-        let p = (phase * (1.0 + d)).fract();
+    for (i, &d) in SUPERSAW_DETUNE_OFFSETS.iter().enumerate() {
+        let p = phases[i];
         sum += 2.0 * p - 1.0 - poly_blep(p, dt * (1.0 + d));
     }
     sum * SUPERSAW_NORMALIZATION
@@ -167,7 +177,7 @@ mod tests {
         assert!((-1.2..=1.2).contains(&render_pulse(phase, dt, 0.5)));
         assert!((-1.1..=1.1).contains(&render_triangle(phase)));
         assert!((-1.1..=1.1).contains(&render_sine(phase)));
-        assert!((-1.2..=1.2).contains(&render_supersaw(phase, dt)));
+        assert!((-1.2..=1.2).contains(&render_supersaw(&[phase; 7], dt)));
         assert!((-1.2..=1.2).contains(&render_organ(phase)));
         assert!((-1.2..=1.2).contains(&render_chiptune(phase, 0.5)));
         assert!((-1.2..=1.2).contains(&render_fm(phase, 0.1, 0.9)));

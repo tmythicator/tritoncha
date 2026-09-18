@@ -1,4 +1,4 @@
-//! Shared kernel: pure mathematical primitives, DSP arithmetic, and anti-aliasing.
+//! Pure mathematical primitives, DSP arithmetic, and anti-aliasing.
 
 pub mod adaa;
 pub mod math;

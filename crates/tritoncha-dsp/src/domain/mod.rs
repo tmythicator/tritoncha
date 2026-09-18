@@ -1,4 +1,4 @@
-//! Domain model layer: sound synthesis, drums, audio effects, and sequencing.
+//! Sound synthesis, drums, audio effects, and sequencing.
 
 pub mod drums;
 pub mod effects;

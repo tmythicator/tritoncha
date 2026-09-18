@@ -57,7 +57,7 @@
    :break          :bus/drums})
 
 (def sub-voices
-  #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808})
+  #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808 :sub-moog :moog-sub})
 
 (def ^:private default-category-instruments
   {:bass :bass-analog
@@ -94,7 +94,7 @@
   (contains? valid-busses (normalize-bus-key k)))
 
 (defn instrument-bus
-  "Resolves the destination audio bus for an instrument, track, or category keyword.
+  "Resolves the target audio bus for an instrument, track, or category keyword.
   Priority:
     1. Direct :bus in map spec (e.g. {:bus :bus/space, :osc ...})
     2. :bus in referenced instrument (e.g. {:inst :tracker-lead})

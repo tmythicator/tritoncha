@@ -166,7 +166,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
           }
           break;
 
-        case 'setMasterFilter':
+        case 'setFilter':
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
             this.wasmExports.tritoncha_dsp_set_master_filter(
               this.wasmEnginePtr,
@@ -176,7 +176,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
           }
           break;
 
-        case 'sweepMasterFilter':
+        case 'sweepFilter':
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_sweep_master_filter) {
             this.wasmExports.tritoncha_dsp_sweep_master_filter(
               this.wasmEnginePtr,
@@ -214,6 +214,30 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             this.wasmExports.tritoncha_dsp_set_sidechain(
               this.wasmEnginePtr,
               data.amount !== undefined ? data.amount : 0.0
+            );
+          }
+          break;
+
+        case 'setCompressor':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_master_compressor) {
+            this.wasmExports.tritoncha_dsp_set_master_compressor(
+              this.wasmEnginePtr,
+              data.enabled ? 1 : 0,
+              data.thresholdDb !== undefined ? data.thresholdDb : -12.0,
+              data.ratio !== undefined ? data.ratio : 4.0,
+              data.attackS !== undefined ? data.attackS : 0.010,
+              data.releaseS !== undefined ? data.releaseS : 0.100,
+              data.makeupDb !== undefined ? data.makeupDb : 2.5,
+              data.mix !== undefined ? data.mix : 1.0
+            );
+          }
+          break;
+
+        case 'setVolume':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_master_volume) {
+            this.wasmExports.tritoncha_dsp_set_master_volume(
+              this.wasmEnginePtr,
+              data.gainDb !== undefined ? data.gainDb : 0.0
             );
           }
           break;

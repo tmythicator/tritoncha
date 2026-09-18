@@ -8,12 +8,47 @@
 
 ;; Neutral Baseline DSP Processor Configuration
 (def ^:private neutral-processors
-  {:distort       {:distortion 0.0 :algorithm :adaa}
-   :crusher       {:bits 16.0 :sample-hold 1.0}
-   :chorus        {:rate 0.8 :depth 0.4 :wet 0.0}
-   :master-filter {:q 0.0}
-   :delay         {:time "8n." :feedback 0.35 :wet 0.25}
-   :reverb        {:room-size 0.75 :wet 0.35 :algorithm :fdn}})
+  {:distort    {:distortion 0.0 :algorithm :adaa}
+   :crusher    {:bits 16.0 :sample-hold 1.0}
+   :chorus     {:rate 0.8 :depth 0.4 :wet 0.0}
+   :filter     {:q 0.0}
+   :delay      {:time "8n." :feedback 0.35 :wet 0.25}
+   :reverb     {:room-size 0.75 :wet 0.35 :algorithm :fdn}
+   :compressor {:enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 0.0}})
+
+(defn normalize-routes
+  "Normalizes route specifications into a standard map:
+  {bus-key {:inserts [fx ...] :target (:bus/master or :out)}}.
+  Examples:
+    (normalize-routes {:bus/drums [] :bus/direct :out})
+    -> {:bus/drums {:inserts [] :target :bus/master}
+        :bus/direct {:inserts [] :target :out}}"
+  [routes]
+  (if (map? routes)
+    (into {}
+          (map (fn [[bus val]]
+                 (let [master? (= bus :bus/master)]
+                   (cond
+                     (= val :out)
+                     [bus {:inserts [] :target :out}]
+
+                     (vector? val)
+                     (let [last-item   (last val)
+                           target-out? (= last-item :out)
+                           target      (cond
+                                         target-out?               :out
+                                         master?                   :out
+                                         (= last-item :bus/master) :bus/master
+                                         :else                     :bus/master)
+                           inserts     (if (or target-out? (= last-item :bus/master))
+                                         (vec (butlast val))
+                                         val)]
+                       [bus {:inserts inserts :target target}])
+
+                     :else
+                     [bus {:inserts [] :target (if master? :out :bus/master)}]))))
+          routes)
+    {}))
 
 (defn- resolve-filter-frequency
   "Resolves the cutoff frequency in Hz: declared topology frequency, active track cutoff, or 18000 Hz."
@@ -37,7 +72,7 @@
     :chorus
     (fx/set-chorus! (or (:rate spec) 0.8) (or (:depth spec) 0.4) (or (:wet spec) 0.0))
 
-    :master-filter
+    :filter
     (let [freq (resolve-filter-frequency spec)
           q    (or (:q spec) 0.0)]
       (fx/set-filter-cutoff! freq)
@@ -50,6 +85,9 @@
     (do
       (fx/set-reverb! (or (:roomSize spec) (:room-size spec) 0.75) (or (:wet spec) 0.0))
       (fx/set-reverb-mode! (or (:algorithm spec) (:mode spec) :fdn)))
+
+    :compressor
+    (fx/set-compressor! spec)
 
     nil))
 

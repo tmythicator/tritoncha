@@ -9,7 +9,7 @@ use crate::core::math::{
     calc_rate, sin_phase, soft_clip, time_to_samples, wrap_phase, xorshift32_norm,
     SEMITONES_PER_OCTAVE,
 };
-use crate::domain::effects::StateVariableFilter;
+use crate::domain::effects::{LadderFilter, StateVariableFilter};
 
 // Voice Tuning and Timing Constants
 pub const MIN_PORTAMENTO_TIME_SEC: f32 = 0.001;
@@ -35,7 +35,7 @@ pub const KARPLUS_OUTPUT_GAIN: f32 = 1.5;
 pub const DEFAULT_INITIAL_NOISE_SEED: u32 = 0x9e3779b9;
 pub const NOISE_SEED_PRIME: u32 = 2654435761;
 
-/// Polyphonic Synthesizer Voice Aggregate.
+/// Polyphonic synthesizer voice.
 pub struct SynthVoice {
     pub active: bool,
     pub patch_id: usize,
@@ -51,6 +51,8 @@ pub struct SynthVoice {
     sub_phase: f32,
     mod_phase: f32,
     filter: StateVariableFilter,
+    ladder_filter: LadderFilter,
+    supersaw_phases: [f32; NUM_SUPERSAW_VOICES],
 
     // Karplus-Strong string synthesis buffer
     ks_buffer: [f32; KARPLUS_BUFFER_SIZE],
@@ -82,6 +84,8 @@ impl SynthVoice {
             sub_phase: 0.0,
             mod_phase: 0.0,
             filter: StateVariableFilter::new(),
+            ladder_filter: LadderFilter::new(),
+            supersaw_phases: [0.0; NUM_SUPERSAW_VOICES],
             ks_buffer: [0.0; KARPLUS_BUFFER_SIZE],
             ks_pos: 0,
             ks_len: 200,
@@ -163,8 +167,8 @@ impl SynthVoice {
         );
 
         self.mod_env.trigger_ad(
-            patch.mod_attack.max(0.001),
-            patch.mod_decay.max(0.005),
+            patch.mod_attack.max(MIN_ATTACK_SEC),
+            patch.mod_decay.max(MIN_DECAY_SEC),
             sample_rate,
         );
 
@@ -200,6 +204,15 @@ impl SynthVoice {
             + ((patch_id % NUM_DRIFT_VOICE_SLOTS) as f32) * VCO_DRIFT_INCREMENT_HZ;
         self.drift_phase_inc = drift_hz / sample_rate;
 
+        // Initialize free-running supersaw phase offsets
+        if patch.osc_type == OSC_SUPERSAW {
+            let mut seed = self.noise_seed;
+            for phase in &mut self.supersaw_phases {
+                *phase = (xorshift32_norm(&mut seed) * 0.5 + 0.5).fract();
+            }
+        }
+
+        self.ladder_filter.reset();
         self.filter.reset();
     }
 
@@ -254,7 +267,10 @@ impl SynthVoice {
             OscillatorType::Pulse => render_pulse(self.phase, dt, patch.pulse_width),
             OscillatorType::Triangle => render_triangle(self.phase),
             OscillatorType::Sine => render_sine(self.phase),
-            OscillatorType::Supersaw => render_supersaw(self.phase, dt),
+            OscillatorType::Supersaw => {
+                advance_supersaw_phases(&mut self.supersaw_phases, dt);
+                render_supersaw(&self.supersaw_phases, dt)
+            }
             OscillatorType::Organ => render_organ(self.phase),
             OscillatorType::Chiptune => render_chiptune(self.phase, patch.pulse_width),
             OscillatorType::Fm => {
@@ -301,14 +317,24 @@ impl SynthVoice {
             + patch.cutoff_env_amt * mod_env_level)
             .clamp(20.0, 20000.0);
 
-        let filtered = self.filter.process_with_drive(
-            osc,
-            cutoff,
-            patch.resonance,
-            sample_rate,
-            patch.filter_type,
-            patch.filter_drive,
-        );
+        let filtered = if patch.filter_type == FILTER_LADDER_24DB {
+            self.ladder_filter.process(
+                osc,
+                cutoff,
+                patch.resonance,
+                sample_rate,
+                patch.filter_drive,
+            )
+        } else {
+            self.filter.process_with_drive(
+                osc,
+                cutoff,
+                patch.resonance,
+                sample_rate,
+                patch.filter_type,
+                patch.filter_drive,
+            )
+        };
         soft_clip(filtered)
     }
 }

@@ -321,6 +321,46 @@ pub unsafe extern "C" fn tritoncha_dsp_set_reverb_mode(ptr: *mut TritonchaEngine
     }
 }
 
+/// Configures master bus glue compressor parameters.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn tritoncha_dsp_set_master_compressor(
+    ptr: *mut TritonchaEngine,
+    enabled: i32,
+    threshold_db: f32,
+    ratio: f32,
+    attack_s: f32,
+    release_s: f32,
+    makeup_db: f32,
+    mix: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_master_compressor(crate::domain::effects::CompressorConfig {
+            enabled: enabled != 0,
+            threshold_db,
+            ratio,
+            attack_sec: attack_s,
+            release_sec: release_s,
+            makeup_gain_db: makeup_db,
+            mix,
+        });
+    }
+}
+
+/// Sets master output volume in decibels.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_master_volume(ptr: *mut TritonchaEngine, gain_db: f32) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_master_volume(gain_db);
+    }
+}
+
 /// Updates parameters for a modular voice patch.
 ///
 /// # Safety

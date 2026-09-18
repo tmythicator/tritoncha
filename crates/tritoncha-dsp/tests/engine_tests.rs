@@ -374,3 +374,102 @@ fn test_sequencer_track_trigger_mask() {
         }
     }
 }
+
+#[test]
+fn test_ladder_24db_filter_in_synth_voice() {
+    let mut voice = SynthVoice::new();
+    let mut patch = ModularPatch::default_lead();
+    patch.filter_type = tritoncha_dsp::domain::synth::patch::FILTER_LADDER_24DB;
+    patch.resonance = 0.85;
+    patch.cutoff_base = 600.0;
+    let sr = 48000.0;
+
+    voice.trigger(220.0, 0.9, 5, &patch, sr, 0.2);
+
+    let mut samples = Vec::new();
+    for _ in 0..1000 {
+        let s = voice.process_sample(&patch, sr);
+        assert!(!s.is_nan());
+        assert!(!s.is_infinite());
+        samples.push(s);
+    }
+
+    assert!(samples.iter().any(|&s| s.abs() > 0.05));
+}
+
+#[test]
+fn test_free_running_supersaw_voice() {
+    let mut voice = SynthVoice::new();
+    let mut patch = ModularPatch::default();
+    patch.osc_type = tritoncha_dsp::domain::synth::patch::OSC_SUPERSAW;
+    let sr = 48000.0;
+
+    voice.trigger(440.0, 0.95, 12, &patch, sr, 0.3);
+
+    for _ in 0..500 {
+        let s = voice.process_sample(&patch, sr);
+        assert!(!s.is_nan());
+        assert!(!s.is_infinite());
+    }
+}
+
+#[test]
+fn test_master_bus_compressor_in_engine() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    engine.set_master_compressor(tritoncha_dsp::domain::effects::CompressorConfig {
+        enabled: true,
+        threshold_db: -15.0,
+        ratio: 4.0,
+        attack_sec: 0.005,
+        release_sec: 0.050,
+        makeup_gain_db: 2.0,
+        mix: 1.0,
+    });
+
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+
+    // Trigger loud synth note
+    engine.trigger_note(4, 110.0, 1.0, 0.5);
+    engine.process_block(&mut out_l, &mut out_r);
+
+    for i in 0..128 {
+        assert!(!out_l[i].is_nan());
+        assert!(!out_r[i].is_nan());
+        assert!(out_l[i].abs() <= 1.0);
+        assert!(out_r[i].abs() <= 1.0);
+    }
+}
+
+#[test]
+fn test_master_volume_control() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    assert!((engine.master_gain - 1.0).abs() < 1e-4);
+
+    engine.set_master_volume(-6.0);
+    assert!(engine.master_gain < 0.6);
+    assert!(engine.master_gain > 0.45);
+
+    engine.set_master_volume(0.0);
+    assert!((engine.master_gain - 1.0).abs() < 1e-4);
+}
+
+#[test]
+fn test_direct_bus_bypasses_master_gain() {
+    let mut engine = TritonchaEngine::new(48000.0);
+    // Silence master bus completely
+    engine.set_master_volume(-60.0);
+
+    // Trigger metronome click which is mapped to BUS_DIRECT (PATCH_CLICK = 11)
+    engine.trigger_note(11, 1000.0, 1.0, 0.05);
+
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+    engine.process_block(&mut out_l, &mut out_r);
+
+    let max_amp = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+    assert!(
+        max_amp > 0.05,
+        "Direct bus signal must pass through even when master volume is silent"
+    );
+}

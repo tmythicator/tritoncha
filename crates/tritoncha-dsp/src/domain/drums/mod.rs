@@ -112,7 +112,7 @@ pub fn is_drum_inst(inst_id: i32) -> bool {
     )
 }
 
-/// Drum Machine Aggregate Root managing all drum voices.
+/// Drum machine managing all drum voices.
 pub struct DrumMachine {
     pub kick: KickVoice,
     pub snare: SnareVoice,

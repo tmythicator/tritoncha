@@ -1,6 +1,7 @@
 //! Unconditionally stable Topology-Preserving Transform (TPT) State Variable Filter (SVF)
 //! with non-linear feedback saturation modeling analog filter drive.
 
+use crate::core::math::tanh_approx;
 use std::f32::consts::PI;
 
 pub const MIN_CUTOFF_HZ: f32 = 20.0;
@@ -13,6 +14,11 @@ pub const DRIVE_SAT_SCALE: f32 = 0.8;
 pub const DRIVE_NORM_SCALE: f32 = 0.8;
 pub const DRIVE_THRESHOLD: f32 = 0.001;
 
+pub const LADDER_MAX_RESONANCE: f32 = 0.99;
+pub const LADDER_SELF_OSC_K: f32 = 3.96;
+pub const LADDER_DRIVE_GAIN: f32 = 2.5;
+pub const LADDER_BASS_COMP_SCALE: f32 = 0.5;
+
 /// Filter response modes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]
@@ -22,6 +28,7 @@ pub enum FilterMode {
     Highpass = 1,
     Bandpass = 2,
     Notch = 3,
+    Ladder24 = 4,
 }
 
 impl From<u8> for FilterMode {
@@ -31,6 +38,7 @@ impl From<u8> for FilterMode {
             1 => FilterMode::Highpass,
             2 => FilterMode::Bandpass,
             3 => FilterMode::Notch,
+            4 => FilterMode::Ladder24,
             _ => FilterMode::Lowpass,
         }
     }
@@ -127,7 +135,7 @@ impl StateVariableFilter {
             FilterMode::Highpass => in_driven - k * v1_sat - v2,
             FilterMode::Bandpass => v1_sat,
             FilterMode::Notch => in_driven - k * v1_sat,
-            FilterMode::Lowpass => v2,
+            FilterMode::Lowpass | FilterMode::Ladder24 => v2,
         };
 
         if drive > DRIVE_THRESHOLD {
@@ -214,6 +222,92 @@ impl StateVariableFilter {
 impl Default for StateVariableFilter {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Virtual Analog 4-Pole (24 dB/oct) Moog Ladder Filter with non-linear feedback saturation.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LadderFilter {
+    s1: f32,
+    s2: f32,
+    s3: f32,
+    s4: f32,
+}
+
+impl LadderFilter {
+    pub fn new() -> Self {
+        Self {
+            s1: 0.0,
+            s2: 0.0,
+            s3: 0.0,
+            s4: 0.0,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.s1 = 0.0;
+        self.s2 = 0.0;
+        self.s3 = 0.0;
+        self.s4 = 0.0;
+    }
+
+    #[inline(always)]
+    pub fn process(
+        &mut self,
+        input: f32,
+        cutoff_hz: f32,
+        resonance: f32,
+        sample_rate: f32,
+        drive: f32,
+    ) -> f32 {
+        let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
+        let g = (clamped_cutoff * PI / sample_rate).tan();
+        let big_g = g / (1.0 + g);
+        let big_g2 = big_g * big_g;
+        let big_g3 = big_g2 * big_g;
+        let big_g4 = big_g2 * big_g2;
+
+        let res_clamped = resonance.clamp(0.0, LADDER_MAX_RESONANCE);
+        let k = res_clamped * LADDER_SELF_OSC_K;
+
+        let drive_mult = 1.0 + drive.max(0.0) * LADDER_DRIVE_GAIN;
+        let driven_in = input * drive_mult;
+
+        // Instantaneous feedback linear predictor
+        let s_total = big_g3 * self.s1 + big_g2 * self.s2 + big_g * self.s3 + self.s4;
+        let y4_predicted = (big_g4 * driven_in + s_total) / (1.0 + k * big_g4);
+
+        // Saturate feedback loop modeling transistor differential pair
+        let u = tanh_approx(driven_in - k * y4_predicted);
+
+        // Stage 1
+        let v1 = big_g * (u - self.s1);
+        let y1 = v1 + self.s1;
+        self.s1 += 2.0 * v1;
+
+        // Stage 2
+        let v2 = big_g * (y1 - self.s2);
+        let y2 = v2 + self.s2;
+        self.s2 += 2.0 * v2;
+
+        // Stage 3
+        let v3 = big_g * (y2 - self.s3);
+        let y3 = v3 + self.s3;
+        self.s3 += 2.0 * v3;
+
+        // Stage 4
+        let v4 = big_g * (y3 - self.s4);
+        let y4 = v4 + self.s4;
+        self.s4 += 2.0 * v4;
+
+        // Bass resonance compensation to maintain punch
+        let out = y4 * (1.0 + res_clamped * LADDER_BASS_COMP_SCALE);
+
+        if drive > DRIVE_THRESHOLD {
+            out / (1.0 + drive * DRIVE_NORM_SCALE)
+        } else {
+            out
+        }
     }
 }
 
@@ -318,6 +412,31 @@ mod tests {
             let out = filter.process_lp_with_drive(10.0, 100.0, MAX_RESONANCE, sample_rate, 1.0);
             assert!(!out.is_nan() && !out.is_infinite());
             assert!(out.abs() < 50.0);
+        }
+    }
+
+    #[test]
+    fn test_ladder_filter_stability_and_resonance() {
+        let mut ladder = LadderFilter::new();
+        let sample_rate = 48000.0;
+
+        for cutoff in [40.0, 200.0, 1000.0, 5000.0, 15000.0] {
+            ladder.reset();
+            for _ in 0..500 {
+                let out = ladder.process(1.0, cutoff, 0.95, sample_rate, 0.5);
+                assert!(
+                    !out.is_nan(),
+                    "Ladder output should not be NaN at {cutoff} Hz"
+                );
+                assert!(
+                    !out.is_infinite(),
+                    "Ladder output should not blow up at {cutoff} Hz"
+                );
+                assert!(
+                    out.abs() < 10.0,
+                    "Ladder output should be bounded by saturation"
+                );
+            }
         }
     }
 }

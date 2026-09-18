@@ -26,7 +26,7 @@
 
 (deftest core-instruments-catalog-test
   (testing "Core instruments catalog contains standard melodic synthesizer voices"
-    (let [mnemonic-voices [:bass-analog :bass-303 :sub-pure :sub-808 :bass-reese :bass-slap :bass-neuro
+    (let [mnemonic-voices [:bass-analog :bass-303 :sub-moog :bass-moog :sub-pure :sub-808 :bass-reese :bass-slap :bass-neuro
                            :pad-cinema :pad-strings :pad-shimmer :pad-vocal :pad-glass :pad-drone
                            :lead-pluck :lead-supersaw :lead-fm :lead-blade :lead-hoover :lead-string :lead-8bit :lead-bell
                            :click :fx-siren :fx-laser]]
