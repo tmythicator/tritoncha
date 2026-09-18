@@ -1,61 +1,75 @@
 (ns app.live.jam
-  "Live performance scratchpad for Emacs CIDER (C-c C-e / C-c C-k)."
-  (:require [app.api :as a :refer [_ arp b! c! chord click! d drop! euc f! g! jam! l! m! mod-all!
-                                   pat play! redrum! refresh! s! set-key! so! stat stop! sw! tr-all!
-                                   u! undrum! unso! w!]]))
+  "Live performance scratchpad and Algorave cockpit for Emacs CIDER."
+  (:require [app.api :as a :refer [b! c! clear-loops! click! drive-mode! f!
+                                   g! hud! inst! jam! jams! loop! m! play!
+                                   q! rebass! redrum! relead! repad!
+                                   reverb-mode! scene! send! sidechain! so!
+                                   stat stats! stop! sw! u! unbass! undrum!
+                                   unlead! unpad! unso! v! vel! w! wet!]]))
+
+;; Live Performance Controls
+;; Note: For music theory guides, Euclidean patterns and synth design, see: src/app/demo/tutorial.cljs
 
 (comment
+  ;; Transport and Preset Launcher
   (play!)
-  (jam! :sub-roller)
-  (jam! :acid-roller)
-  (jam! :ambient-drift)
-  (refresh!)
   (stop!)
+  (b! 172)
+  (click!)
+  (jam! :street-roller)
+  (jam! :orbital-roller)
+  (jam! :downtempo-chill)
+  (jam! :cyber-dub)
+  (jam! :hardcore-rave)
+  (jam! :synthwave-run)
 
-  (set-key! :d :minor 2)
-  (l! :bass-1 {:inst :bass :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :vel 0.95})
-  (l! :bass-2 {:inst :bass :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "8n" :vel 0.95})
-  (l! :bass {:inst :bass :notes (d [1 1 _ 2 3 _ 1 5  1 _ 4 3 2 _ 1 _]) :step "16n" :vel 1.0})
-  (l! :sub  {:inst :sub  :notes (d [1 _ _ _ 2 _ _ _  1 _ _ _ 4 _ 3 _]) :step "16n" :dur "8n"})
+  ;; Bus Volume and FX Send Controls
+  (v! :bus/drums 0.85)
+  (v! :bus/bass 0.90)
+  (v! :bus/space 0.70)
+  (v! :bus/lead 0.80)
+  (send! :bus/lead :reverb 0.35)
+  (send! :bus/space :delay 0.40)
 
-  (l! :pad {:inst :pad :notes [(chord :e :dark-m9) (chord :c :maj9) (chord :d :sus4) (chord :b :min7 2)] :step "1m" :dur "1m" :vel 0.35})
-  (l! :arp {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35})
-
-  (l! :kick  {:inst :kick  :notes (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
-  (l! :snare {:inst :snare :notes (pat ". . . .  s . . .  . . . .  s . . g") :step "16n"})
-  (l! :snare {:inst :snare :notes (pat ". . . .  s . . .  . . s .  r r r r") :step "16n"})
-  (l! :hat   {:inst :hh-c  :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.4 0.7 0.3 0.8]})
-
-;; FX + Transitions
-  (m! :bass :bass-1 :bass-2 :sub)
-  (u! :bass :bass-1 :bass-2 :sub)
-  (m! :kick :snare :hat)
-  (f! 450)
-  (sw! 400 5500 4)
-  (s!)
-  (u! :kick :snare :hat)
-  (so! :kick :snare :hat)
-  (drop!)
+  ;; Track Mute and Solo Controls
+  (m! :kick :snare :hats)
+  (u! :kick :snare :hats)
   (so! :bass :sub)
   (unso!)
+  (vel! :bass 0.85)
 
-  ;; Live Key Modulations + Transpositions
-  (mod-all! :f :phrygian 1)
-  (mod-all! :d :dorian 2)
-  (tr-all! 2)
-  (tr-all! -2)
-
-  ;; Drumming control
+  ;; Section Drops 
   (undrum!)
-  (click!)
-  (b! 174)
   (redrum!)
+  (unbass!)
+  (rebass!)
+  (unlead!)
+  (relead!)
+  (unpad!)
+  (repad!)
 
-  ;; Visuals
+  ;; DSP Automations and Filter Sweeps
+  (sw! 300 6000 4)
+  (f! 3400)
+  (q! 0.6)
+  (sidechain! 0.65)
+  (drive-mode! :adaa)
+  (reverb-mode! :fdn)
+  (wet! 0.35)
+
+  ;; Quick Live Looping
+  (loop! :acid {:inst :bass-303 :notes ["C2" nil "D#2" "F2" nil "G2" "A#2" nil] :step "16n" :dur "16n" :vel 0.85})
+  (clear-loops!)
+
+  ;; Three.js WebGL Visual Controls
+  (scene! :cyber-torus)
   (g! :torus-knot)
-  (g! :icosahedron)
-  (g! :sphere)
+  (c! "#030814" "#00e5ff")
   (w!)
-  (c! "#080412" "#ff007f")
-  (c! "#020b14" "#00ffcc")
-  (stat))
+
+  ;; HUD, Diagnostics and Browser Windows
+  (stat)
+  (stats!)
+  (hud!)
+  (inst!)
+  (jams!))

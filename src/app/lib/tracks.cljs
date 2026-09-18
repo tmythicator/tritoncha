@@ -38,9 +38,9 @@
      {:kick    {:notes (pattern "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
       :snare   {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
       :hats    {:notes (pattern "h_ . clk .  . . o_ .  h_ . clk .  . . o_ .") :step "16n"}
-      :sub     {:inst :sub-pure
-                :notes ["F1" "F1" nil "F1" "Ab1" nil "C2" nil "F1" nil "Eb1" "F1" nil "Db1" nil "C1"]
-                :step "16n" :dur "16n" :vel 0.70}
+      :sub     {:inst :bass-liquid
+                :notes (deg :f :minor [1 1 _ 1  3 _ 5 _  1 _ 7 1  _ 6 _ 5] {:octave 1})
+                :step "16n" :dur "8n" :vel 0.55}
       :strings {:inst :pad-glass
                 :notes [(chord :f :min9 {:octave 3})
                         (chord :db :maj9 {:octave 3})
@@ -78,7 +78,7 @@
                 :inst :bass-liquid
                 :notes (deg :e :phrygian [1 _ 1 2  _ 1 4 3  1 _ 5 4  _ 2 1 _
                                           1 _ _ 2  _ 1 :b5 _  1 _ 4 3  _ 2 1 _] {:octave 1})
-                :step "16n" :dur "8n" :vel 0.75}
+                :step "16n" :dur "8n" :vel 0.70}
       :echo    {:figure :sat
                 :inst :pad-glass
                 :bus  :bus/space
@@ -121,7 +121,7 @@
                         [:tom-low 0.65 "D2"] [:kick 0.85 "C1"] [:hh-clk 0.3] [:sn-clk 0.4]
                         [:snare 0.85 "C3"] [:splash 0.5] [:hh-c 0.3] [:sn-gh 0.3]]
                 :step "16n"}
-      :bass    {:inst :sub-pure
+      :bass    {:inst :sub-moog
                 :notes (deg :c :dorian [1 _ _ _ 3 _ _ _ 4 _ _ _ 5 _ _ _] {:octave 1})
                 :step "16n" :dur "4n" :vel 0.70}
       :strings {:inst :pad-strings
@@ -214,9 +214,9 @@
      {:kick   {:notes (pattern "k . . .  . . . .  k . . .  . . . .") :step "16n"}
       :snare  {:notes (pattern ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
       :hats   {:notes (pattern "h . clk .  h . o .  h . sp .  h . o .") :step "16n"}
-      :bass   {:inst :sub-pure
+      :bass   {:inst :sub-808
                :notes (deg :c :minor [1 _ _ _ 1 _ _ _ 1 _ _ _ :b7 _ 5 _] {:octave 1})
-               :step "16n" :dur "8n" :vel 0.75}
+               :step "16n" :dur "8n" :vel 0.78}
       :chords {:inst :pad-glass
                :notes [(chord :c :min9 {:octave 3}) nil nil nil
                        (chord :bb :sus4 {:octave 3}) nil nil nil]
@@ -238,11 +238,11 @@
       :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
       :perc  {:notes (pattern ". clk . .  . . . .  cb . . .  . . clk .") :step "16n"}
       :bass  {:inst :bass-analog
-              :notes (deg :d :dorian [_ 1 _ 1 _ 1 _ 1 _ 1 _ 1 _ :b7 _ 1] {:octave 1})
-              :step "16n" :dur "32n" :vel 0.85}
+              :notes (deg :d :dorian [_ 1 _ 1  _ 1 _ 1  _ 1 _ 1  _ :b7 _ 1] {:octave 1})
+              :step "16n" :dur "16n" :vel 0.82}
       :synth {:inst :lead-pluck
-              :notes (deg :d :dorian [1 _ _ 3 _ 5 _ 4 _ _ 7 _ 5 _ 4 _] {:octave 2})
-              :step "16n" :dur "16n" :vel 0.35}}}]
+              :notes (deg :d :dorian [1 _ _ 3  _ 5 _ 4  _ _ 7 _  5 _ 4 _] {:octave 3})
+              :step "16n" :dur "16n" :vel 0.36}}}]
 
    [:synthwave-run
     {:name   "Neon Highway Outrun"
@@ -258,7 +258,7 @@
                         [:kick 0.95 "A1"] [:hh-c 0.4] [:hh-c 0.4] [:hh-c 0.4]
                         [:clap 0.95] [:tom-high 0.8 "D3"] [:tom-mid 0.85 "A2"] [:tom-low 0.9 "D2"]]
                 :step "16n"}
-      :bass    {:inst :bass-analog
+      :bass    {:inst :bass-moog
                 :notes (deg :a :minor [1 1 1 1 1 1 1 1 :b7 :b7 :b7 :b7 6 6 6 6] {:octave 1})
                 :step "16n" :dur "16n" :vel 0.9}
       :strings {:inst :lead-blade
@@ -415,9 +415,9 @@
       :bass  {:inst :bass-analog
               :notes (deg :f :phrygian [_ 1 1 1 _ 1 1 1 _ 1 1 1 _ 2 2 1] {:octave 1})
               :step "16n" :dur "32n" :vel 0.78}
-      :lead  {:inst :bass-303
+      :lead  {:inst :lead-supersaw
               :notes (deg :f :phrygian [nil 1 1 2 nil 1 3 1 nil 1 1 4 nil 3 2 1] {:octave 2})
-              :step "16n" :dur "16n" :vel 0.45}}}]
+              :step "16n" :dur "16n" :vel 0.40}}}]
 
    [:future-garage
     {:name   "Midnight Drizzle 2-Step"
