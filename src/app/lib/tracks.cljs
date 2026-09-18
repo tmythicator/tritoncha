@@ -24,10 +24,10 @@
                           (chord :c :maj9 {:octave 3})
                           (chord :a :min7 {:octave 3})
                           (chord :d :dom7 {:octave 3})]
-                  :step "2m" :dur "2m" :vel 0.1}}}]
+                  :step "2m" :dur "2m" :vel 0.3}}}]
 
    [:street-roller
-    {:name   "Messenger Street Roller"
+    {:name   "Messenger On A Fixie"
      :mod    :natural
      :bpm    172
      :scale  [:f :minor 1]
@@ -37,7 +37,7 @@
      :tracks
      {:kick    {:notes (pattern "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
       :snare   {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
-      :hats    {:notes (pattern "h_ . clk .  . . o_ .  h_ . clk .  . . o_ .") :step "16n"}
+      :hats    {:notes (pattern "h_ . hc .  . . o_ .  h_ . hc .  . . o_ .") :step "16n"}
       :sub     {:inst :bass-liquid
                 :notes (deg :f :minor [1 1 _ 1  3 _ 5 _  1 _ 7 1  _ 6 _ 5] {:octave 1})
                 :step "16n" :dur "8n" :vel 0.55}
@@ -49,7 +49,7 @@
                 :step "1m" :dur "1m" :vel 0.26}}}]
 
    [:orbital-matrix
-    {:name   "Orbital Multi-Object Matrix"
+    {:name   "Orbital Breaking Bits"
      :mod    :analog
      :bpm    168
      :scale  [:e :phrygian 1]
@@ -71,8 +71,8 @@
                                 . . . .  rs . . g_  . . . .  rs . clk_ .")
                 :step "16n"}
       :hats    {:figure :ring
-                :notes (pattern "hc_ . h_ .  hc_ . o_ .  hc_ . h_ clk_  hc_ . o_ .
-                                hc_ . h_ .  hc_ . o_ .  hc_ clk_ h_ .  hc_ . o_ .")
+                :notes (pattern "hc_ . h_ .  hc_ . o_ .  hc_ . h_ hc_  hc_ . o_ .
+                                hc_ . h_ .  hc_ . o_ .  hc_ hc_ h_ .  hc_ . o_ .")
                 :step "16n"}
       :bass    {:figure :pillar
                 :inst :bass-liquid
@@ -99,16 +99,16 @@
       :perc  {:notes (pattern ". . . ch  . rs . .  . cb . .  . . . crack") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg :b :phrygian [1 1 1 1 1 1 1 1 2 2 2 2 1 1 1 1] {:octave 1})
-              :step "16n" :dur "32n" :vel 0.9}
+              :step "16n" :dur "32n" :vel 0.45}
       :sub   {:inst :sub-pure
               :notes (deg :b :phrygian [1 _ _ _ 1 _ _ _ 1 _ _ _ 2 _ _ _] {:octave 1})
-              :step "16n" :dur "8n" :vel 0.95}
+              :step "16n" :dur "8n" :vel 0.7}
       :drone {:inst :lead-fm
               :notes (deg :b :phrygian [1 _ _ _ _ _ _ _ 2 _ _ _ _ _ _ _] {:octave 2})
               :step "16n" :dur "8n" :vel 0.4}}}]
 
    [:downtempo-chill
-    {:name   "Dusty Twilight Vinyl"
+    {:name   "Twilight Peaks"
      :mod    :natural
      :bpm    88
      :scale  [:c :dorian 1]
@@ -135,7 +135,7 @@
                 :step "16n" :dur "8n" :vel 0.3}}}]
 
    [:acid-roller
-    {:name   "Acid Downtempo Jungle"
+    {:name   "Deck 2016"
      :mod    :analog
      :bpm    130
      :scale  [:a :aeolian 1]
@@ -145,7 +145,7 @@
      :tracks
      {:kick  {:notes (pattern "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
       :snare {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
-      :hats  {:notes (pattern "h_ . clk .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
+      :hats  {:notes (pattern "h_ . hc .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
       :bass  {:inst :bass-303
               :notes (deg :a :aeolian [1 _ _ 3 1 _ 4 _ 1 _ :b7 1 _ _ 5 _] {:octave 1})
               :step "16n" :dur "16n" :vel 0.70}
@@ -153,7 +153,7 @@
               :notes (deg :a :aeolian [1 _ _ _ _ _ 1 _ 1 _ _ _ _ _ 5 _] {:octave 1})
               :step "16n" :dur "8n" :vel 0.68}}}]
 
-   [:ambient-drift
+   [:martian-drift
     {:name   "Phobos Moon"
      :mod    :natural
      :bpm    138
@@ -164,7 +164,7 @@
      :tracks
      {:kick    {:notes (pattern "k_ . . .  . . . .  k_ . . .  . . k_ .") :step "16n"}
       :snare   {:notes (pattern ". . . .  crack_ . . .  . . . .  rs . g_ .") :step "16n"}
-      :perc    {:notes (pattern ". . clk .  . . . .  . . sp_ .  . . clk_ .") :step "16n"}
+      :perc    {:notes (pattern ". . rs .  . . . .  . . sp_ .  . . g_ .") :step "16n"}
       :bass    {:inst :bass-liquid
                 :notes (deg :d :phrygian [1 _ _ _ _ _ 2 _ 1 _ _ _ :b5 _ _ _] {:octave 1})
                 :step "16n" :dur "8n" :vel 0.65}
@@ -179,7 +179,7 @@
                 :step "16n" :dur "16n" :vel 0.24}}}]
 
    [:neuro-tech
-    {:name   "Dystopian Tech Menace"
+    {:name   "Neuro-Dystopia"
      :mod    :industrial
      :bpm    175
      :scale  [:f :phrygian 1]
@@ -202,8 +202,8 @@
               :notes (deg :f :phrygian [nil nil nil 1 nil nil :b5 nil nil nil 2 nil nil :b7 nil nil] {:octave 2})
               :step "16n" :dur "32n" :vel 0.4}}}]
 
-   [:cyber-dub
-    {:name   "Echo Chamber Cavern"
+   [:glow-dub
+    {:name   "Glowing Cavern"
      :mod    :analog
      :bpm    130
      :scale  [:c :minor 1]
@@ -213,7 +213,7 @@
      :tracks
      {:kick   {:notes (pattern "k . . .  . . . .  k . . .  . . . .") :step "16n"}
       :snare  {:notes (pattern ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
-      :hats   {:notes (pattern "h . clk .  h . o .  h . sp .  h . o .") :step "16n"}
+      :hats   {:notes (pattern "h . hc .  h . o .  h . sp .  h . o .") :step "16n"}
       :bass   {:inst :sub-808
                :notes (deg :c :minor [1 _ _ _ 1 _ _ _ 1 _ _ _ :b7 _ 5 _] {:octave 1})
                :step "16n" :dur "8n" :vel 0.78}
@@ -225,8 +225,8 @@
                :notes [(chord :c :min9 {:octave 2})]
                :step "1m" :dur "1m" :vel 0.35}}}]
 
-   [:deep-minimal
-    {:name   "Obsidian Minimal Pulse"
+   [:laser-turret
+    {:name   "Laser Turret"
      :mod    :analog
      :bpm    126
      :scale  [:d :dorian 1]
@@ -236,7 +236,6 @@
      :tracks
      {:kick  {:notes (pattern "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
-      :perc  {:notes (pattern ". clk . .  . . . .  cb . . .  . . clk .") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg :d :dorian [_ 1 _ 1  _ 1 _ 1  _ 1 _ 1  _ :b7 _ 1] {:octave 1})
               :step "16n" :dur "16n" :vel 0.82}
@@ -245,7 +244,7 @@
               :step "16n" :dur "16n" :vel 0.36}}}]
 
    [:synthwave-run
-    {:name   "Neon Highway Outrun"
+    {:name   "Neon Highway Pursuit"
      :mod    :analog
      :bpm    124
      :scale  [:a :minor 1]
@@ -266,13 +265,13 @@
                         (chord :f :maj7 {:octave 3})
                         (chord :c :maj7 {:octave 3})
                         (chord :g :dom7 {:octave 3})]
-                :step "1m" :dur "1m" :vel 0.38}
-      :arp     {:inst :lead-pluck
+                :step "1m" :dur "1m" :vel 0.25}
+      :arp     {:inst :lead-supersaw
                 :notes (deg :a :minor [1 3 5 8 5 3 1 3] {:octave 3})
-                :step "16n" :dur "16n" :vel 0.4}}}]
+                :step "16n" :dur "8n" :vel 0.29}}}]
 
    [:electro-break
-    {:name   "Cyborg Motor Circuit"
+    {:name   "Cyborg Factory"
      :mod    :analog
      :bpm    134
      :scale  [:e :phrygian 1]
@@ -282,7 +281,7 @@
      :tracks
      {:kick  {:notes (pattern "k! . . .  . . k_ .  . . k! .  k . . .") :step "16n"}
       :snare {:notes (pattern ". . . .  cp! . . .  . . . .  cp! . clk_ .") :step "16n"}
-      :hats  {:notes (pattern "h . cb .  . . o! .  h . cb .  . clk o! .") :step "16n"}
+      :hats  {:notes (pattern "h . cb .  . . o! .  h . cb .  . hc o! .") :step "16n"}
       :bass  {:inst :bass-slap
               :notes (deg :e :phrygian [1 _ 1 _ 2 _ 1 _ _ 1 _ 3 2 _ 1 _] {:octave 1})
               :step "16n" :dur "16n" :vel 0.76}
@@ -294,7 +293,7 @@
               :step "16n" :dur "16n" :vel 0.4}}}]
 
    [:hardcore-rave
-    {:name   "Resurrection Warehouse Rave"
+    {:name   "Never Sleep Rave"
      :mod    :natural
      :bpm    165
      :scale  [:c :dorian 1]
@@ -313,7 +312,7 @@
               :step "16n" :dur "16n" :vel 0.45}}}]
 
    [:dubstep-wobble
-    {:name   "Seismic Sound System"
+    {:name   "Seismic Aftershock"
      :mod    :natural
      :bpm    140
      :scale  [:d :minor 1]
@@ -338,7 +337,7 @@
                 :step "1m" :dur "1m" :vel 0.35}}}]
 
    [:ambient-temple
-    {:name   "Sanctuary of Silence"
+    {:name   "Sanctuary of Order"
      :mod    :natural
      :bpm    110
      :scale  [:e :in-sen 2]
@@ -362,7 +361,7 @@
                 :step "16n" :dur "4n" :vel 0.28}}}]
 
    [:glitch-hop
-    {:name   "Fractured Quantum Funk"
+    {:name   "Fractured Display"
      :mod    :idm
      :bpm    105
      :scale  [:g :blues 1]
@@ -383,7 +382,7 @@
                 :step "16n" :dur "32n" :vel 0.35}}}]
 
    [:chiptune-odyssey
-    {:name   "Pixelated Starquest"
+    {:name   "Pixelated Joy"
      :mod    :analog
      :bpm    150
      :scale  [:c :major 1]
@@ -396,13 +395,13 @@
       :hats  {:notes (pattern ". . h .  . . h .  . . h .  . . o .") :step "16n"}
       :bass  {:inst :lead-8bit
               :notes (deg :c :major [1 1 1 1 5 5 5 5 6 6 6 6 4 4 4 4] {:octave 1})
-              :step "16n" :dur "16n" :vel 0.85}
+              :step "16n" :dur "16n" :vel 0.5}
       :lead  {:inst :lead-8bit
               :notes (deg :c :major [1 3 5 8 5 3 1 3 4 6 8 6 5 3 2 1] {:octave 3})
-              :step "16n" :dur "16n" :vel 0.45}}}]
+              :step "16n" :dur "16n" :vel 0.3}}}]
 
    [:psy-trance
-    {:name   "Cosmic Warp Vortex"
+    {:name   "Warp Speed Vortex"
      :mod    :analog
      :bpm    145
      :scale  [:f :phrygian 1]
@@ -420,7 +419,7 @@
               :step "16n" :dur "16n" :vel 0.40}}}]
 
    [:future-garage
-    {:name   "Midnight Drizzle 2-Step"
+    {:name   "Ease Out"
      :mod    :natural
      :bpm    136
      :scale  [:f :minor 1]
