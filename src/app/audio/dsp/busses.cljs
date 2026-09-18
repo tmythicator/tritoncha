@@ -57,7 +57,7 @@
    :break          :bus/drums})
 
 (def sub-voices
-  #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808})
+  #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808 :sub-moog :moog-sub})
 
 (def ^:private default-category-instruments
   {:bass :bass-analog

@@ -43,6 +43,8 @@
    :lead-organ    16 :organ 16
    :lead-8bit     17 :8bit 17
    :pad-glass     19 :glass 19
+   :sub-moog      42 :moog-sub 42
+   :bass-moog     43 :moog-bass 43
    :pad-shimmer   27 :shimmer 27
    :pad-strings   29 :strings 29
    :pad-vocal     30 :choir 30
@@ -65,8 +67,8 @@
 (defn register-custom-patch-id!
   "Resolves or allocates a patch ID for an instrument.
   Built-in synths preserve their canonical patch ID.
-  Truly custom user synths are allocated from the safe range 42..63.
-  Examples: (register-custom-patch-id! :my-synth) -> 42."
+  Truly custom user synths are allocated from the safe range 44..63.
+  Examples: (register-custom-patch-id! :my-synth) -> 44."
   [synth-key]
   (let [sk (keyword synth-key)]
     (if-let [cid (get canonical-inst-ids sk)]
@@ -78,9 +80,9 @@
       (if-let [id (get @custom-synth-patch-ids sk)]
         id
         (let [used (set (vals @custom-synth-patch-ids))
-              free (first (filter #(not (contains? used %)) (range 42 64)))]
-          (swap! custom-synth-patch-ids assoc sk (or free 42))
-          (or free 42))))))
+              free (first (filter #(not (contains? used %)) (range 44 64)))]
+          (swap! custom-synth-patch-ids assoc sk (or free 44))
+          (or free 44))))))
 
 (defn inst-keyword->id
   "Resolves an instrument keyword to its numeric ID for the Rust DSP engine.
@@ -124,16 +126,16 @@
     0))
 
 (defn filter-type->id
-  "Maps filter type keyword to numeric identifier for voice filters (SVF and 4-Pole Moog Ladder).
-  Supported types: :lp (:lowpass), :hp (:highpass), :bp (:bandpass), :notch, :ladder (:moog, :ladder-24db).
+  "Maps filter type keyword to numeric identifier for voice filters (SVF and 4-Pole 24dB Ladder).
+  Supported types: :lp (:lowpass), :hp (:highpass), :bp (:bandpass), :notch, :ladder (:ladder24).
   Examples: (filter-type->id :lowpass) -> 0, (filter-type->id :ladder) -> 4."
   [ft]
   (case (keyword ft)
     (:lp :lowpass) 0
     (:hp :highpass) 1
     (:bp :bandpass) 2
-    (:notch) 3
-    (:ladder :moog :ladder-24db :ladder24) 4
+    :notch 3
+    (:ladder :ladder24) 4
     0))
 
 (defn drum-mod->id

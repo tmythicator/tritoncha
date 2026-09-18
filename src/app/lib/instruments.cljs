@@ -1,12 +1,9 @@
 (ns app.lib.instruments
   "Core built-in instrument library and synthesizer voice catalog for Tritoncha.")
 
-;; Sound Design in ClojureScript:
-;; Instruments are configured as pure, neutral declarative maps.
-;; The Rust WASM DSP provides clean, uncolored building blocks:
+;; Sound Design Specification:
 ;;   :osc       - {:type :saw|:pulse|:tri|:sine|:supersaw|:karplus|:organ|:chiptune|:fm|:reese|:blade|:hoover
-;;                 :sub-level 0.0..1.0 :pulse-width 0.05..0.95
-;;                 :noise 0.0..1.0 :drift 0.0..1.0}
+;;                 :sub-level 0.0..1.0 :pulse-width 0.05..0.95 :noise 0.0..1.0 :drift 0.0..1.0}
 ;;   :filter    - {:type :lowpass|:highpass|:bandpass|:notch|:ladder :cutoff 20..20000 :q 0.0..0.98
 ;;                 :drive 0.0..1.0 :env-amount -10000..10000 :key-track 0.0..4.0}
 ;;   :amp-env   - {:attack 0.001..2.0 :decay 0.005..4.0 :sustain 0.0..1.0 :release 0.005..4.0}
@@ -37,6 +34,27 @@
     :amp-env  {:attack 0.003 :decay 0.15 :sustain 0.0 :release 0.1}
     :mod-env  {:attack 0.003 :decay 0.15}
     :glide    0.04}
+
+   :sub-moog
+   {:category  :bass
+    :type      :mono
+    :bus       :bus/bass
+    :osc       {:type :tri :sub-level 0.70 :drift 0.10}
+    :filter    {:type :ladder :cutoff 220 :q 0.35 :drive 0.20 :env-amount 300 :key-track 1.0}
+    :amp-env   {:attack 0.006 :decay 0.30 :sustain 0.7 :release 0.20}
+    :mod-env   {:attack 0.006 :decay 0.30}
+    :glide     0.04}
+
+   :bass-moog
+   {:category  :bass
+    :type      :mono
+    :bus       :bus/bass
+    :osc       {:type :saw :sub-level 0.40 :drift 0.15}
+    :pitch-env {:amount 9 :decay 0.012}
+    :filter    {:type :ladder :cutoff 950 :q 0.65 :drive 0.40 :env-amount 4800 :key-track 2.0}
+    :amp-env   {:attack 0.003 :decay 0.18 :sustain 0.3 :release 0.15}
+    :mod-env   {:attack 0.003 :decay 0.18}
+    :glide     0.035}
 
    :sub-pure
    {:category :bass
