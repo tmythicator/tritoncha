@@ -3,7 +3,11 @@
   (:require [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.audio.dsp.worklet.slots :as slots]
-            [app.audio.dsp.worklet.transport :as transport]))
+            [app.audio.dsp.worklet.transport :as transport]
+            [app.audio.theory.harmony :as harmony]
+            [app.config :as cfg]
+            [app.state :refer [audio-state]]
+            [app.utils.audio :as audio-utils]))
 
 ;; Low-level WebAudio Transport and Lifecycle
 (def init-audio-worklet! transport/init-audio-worklet!)
@@ -107,6 +111,59 @@
   Examples: (solo-track! 1 true)."
   [track-idx solo?]
   (transport/send-msg! #js {:type "soloTrack" :trackIdx (int track-idx) :solo (boolean solo?)}))
+
+(defn- chord-progression?
+  "Returns true if notes is a sequence of chords (vectors of pitch notes or frequencies)."
+  [notes]
+  (and (sequential? notes)
+       (seq notes)
+       (sequential? (first notes))
+       (not (keyword? (first (first notes))))))
+
+(defn- clear-voice-slots!
+  "Deactivates and unassigns hardware sequencer sub-slots for polyphonic voice indices."
+  [track-key voice-indices]
+  (doseq [v-idx voice-indices]
+    (let [sub-tk (keyword (str (name track-key) "-v" (inc v-idx)))]
+      (when-let [sub-slot (get @slots/track-slot-assignments sub-tk)]
+        (deactivate-track! sub-slot)
+        (swap! slots/track-slot-assignments dissoc sub-tk)))))
+
+(defn sync-track-to-worklet!
+  "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords.
+  Resolves scale degrees against the active musical key if not already resolved.
+  Examples: (sync-track-to-worklet! :bass {:notes ['C2' 'E2'] :step '16n'})."
+  [tk pat-data]
+  (let [inst-k   (or (:inst pat-data) (:synth pat-data) tk)
+        raw-hits (or (:notes pat-data) (:hits-vec pat-data) [true])
+        key-ctx  (get @audio-state :key cfg/default-key)
+        track-o  (or (:oct pat-data) (:octave pat-data))
+        hits     (harmony/resolve-track-notes raw-hits
+                                              [(:root key-ctx) (:mode key-ctx) (or track-o (:octave key-ctx))]
+                                              track-o)
+        notes    (if (sequential? hits) hits [hits])
+        step-m   (audio-utils/step->mult (:step pat-data))
+        bpm      (:bpm @audio-state 168)
+        dur-raw  (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
+        dur-s    (audio-utils/dur->seconds dur-raw bpm)
+        base-vel (or (:vel pat-data) (:vel-vec pat-data) 0.9)]
+    (if (chord-progression? notes)
+      (let [max-voices   (min 4 (apply max 1 (map #(if (sequential? %) (count %) 1) notes)))
+            scale-factor (if (> max-voices 1) (/ 1.0 (js/Math.sqrt max-voices)) 1.0)
+            voice-vel    (if (number? base-vel)
+                           (* (float base-vel) scale-factor)
+                           (mapv #(* % scale-factor) (if (sequential? base-vel) base-vel [0.9])))]
+        (doseq [v-idx (range max-voices)]
+          (let [sub-tk      (keyword (str (name tk) "-v" (inc v-idx)))
+                voice-notes (mapv #(if (sequential? %) (nth % v-idx nil) (when (zero? v-idx) %)) notes)
+                slot        (slots/get-or-assign-track-slot! sub-tk)]
+            (set-track! slot inst-k voice-notes step-m dur-s voice-vel)))
+        (clear-voice-slots! tk (range max-voices 4)))
+      (let [slot (slots/get-or-assign-track-slot! tk)]
+        (set-track! slot inst-k (vec notes) step-m dur-s base-vel)
+        (clear-voice-slots! tk (range 1 4))))))
+
+(def sync-track! sync-track-to-worklet!)
 
 ;; Mixer Bus and Patch Routing Commands
 (defn set-bus-params!

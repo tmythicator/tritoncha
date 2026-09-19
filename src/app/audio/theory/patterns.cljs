@@ -1,6 +1,6 @@
 (ns app.audio.theory.patterns
   "Algorithmic rhythm generators, mini-notation parser, and temporal pattern combinators."
-  (:require [app.lib.drums :refer [mini-notation-aliases]]
+  (:require [app.audio.dsp.worklet.protocol :refer [drum-remaps]]
             [app.utils.coll :as coll]
             [clojure.string :as str]))
 
@@ -34,7 +34,7 @@
            (vec (build-pattern init-ones init-zeros))))))))
 
 (def ^:private mini-alias-pattern
-  (let [aliases (sort-by (comp - count) (keys mini-notation-aliases))
+  (let [aliases (sort-by (comp - count) (keys drum-remaps))
         escaped (map #(str/replace % #"([.*+?^${}()|\[\]/\\])" "\\\\$1") aliases)]
     (re-pattern (str "(?:" (str/join "|" escaped) "|[a-zA-Z0-9.-])[!_]?"))))
 
@@ -47,7 +47,7 @@
                 (subs tok 0 (dec (count tok)))
 
                 :else tok)]
-    (or (contains? mini-notation-aliases clean)
+    (or (contains? drum-remaps clean)
         (contains? #{"" "." "_" "-" "0" "x" "1" "b"} clean))))
 
 (defn- expand-mini-tokens [tokens]
@@ -93,7 +93,7 @@
                   (= clean "1") (if (seq suffix) (keyword (str "1" suffix)) true)
                   (= clean "b") (keyword (str "bass" suffix))
                   :else
-                  (if-let [alias-kw (get mini-notation-aliases clean)]
+                  (if-let [alias-kw (get drum-remaps clean)]
                     (keyword (str (name alias-kw) suffix))
                     (keyword tok)))))
             tokens))))

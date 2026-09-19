@@ -7,7 +7,6 @@
             [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
             [app.state :refer [audio-state engine-ctx pulse!]]
-            [app.utils.audio :as audio-utils]
             [app.utils.math :refer [clamp]]
             [clojure.string :as str]
             [reagent.core :as r]))
@@ -53,51 +52,9 @@
   [track-key]
   (worklet/track-slot track-key))
 
-(defn- chord-progression?
-  "Returns true if notes is a sequence of chords (vectors of pitch notes or frequencies)."
-  [notes]
-  (and (sequential? notes)
-       (seq notes)
-       (sequential? (first notes))
-       (not (keyword? (first (first notes))))))
-
-(defn- clear-voice-slots!
-  "Deactivates and unassigns hardware sequencer sub-slots for polyphonic voice indices."
-  [track-key voice-indices]
-  (doseq [v-idx voice-indices]
-    (let [sub-tk (keyword (str (name track-key) "-v" (inc v-idx)))]
-      (when-let [sub-slot (get @worklet/track-slot-assignments sub-tk)]
-        (worklet/deactivate-track! sub-slot)
-        (swap! worklet/track-slot-assignments dissoc sub-tk)))))
-
-(defn sync-track-to-worklet!
+(def sync-track-to-worklet!
   "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords."
-  [tk pat-data]
-  (let [inst-k   (or (:inst pat-data) (:synth pat-data) tk)
-        hits     (or (:notes pat-data) (:hits-vec pat-data) [true])
-        notes    (if (sequential? hits) hits [hits])
-        step-m   (audio-utils/step->mult (:step pat-data))
-        bpm      (:bpm @audio-state 168)
-        dur-raw  (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
-        dur-s    (audio-utils/dur->seconds dur-raw bpm)
-        base-vel (or (:vel pat-data) (:vel-vec pat-data) 0.9)]
-    (if (chord-progression? notes)
-      (let [max-voices   (min 4 (apply max 1 (map #(if (sequential? %) (count %) 1) notes)))
-            scale-factor (if (> max-voices 1) (/ 1.0 (js/Math.sqrt max-voices)) 1.0)
-            voice-vel    (if (number? base-vel)
-                           (* (float base-vel) scale-factor)
-                           (mapv #(* % scale-factor) (if (sequential? base-vel) base-vel [0.9])))]
-        (doseq [v-idx (range max-voices)]
-          (let [sub-tk      (keyword (str (name tk) "-v" (inc v-idx)))
-                voice-notes (mapv #(if (sequential? %) (nth % v-idx nil) (when (zero? v-idx) %)) notes)
-                slot        (worklet/get-or-assign-track-slot! sub-tk)]
-            (worklet/set-track! slot inst-k voice-notes step-m dur-s voice-vel)))
-        ;; Deactivate any remaining voices if chord density was reduced
-        (clear-voice-slots! tk (range max-voices 4)))
-      (let [slot (worklet/get-or-assign-track-slot! tk)]
-        (worklet/set-track! slot inst-k (vec notes) step-m dur-s base-vel)
-        ;; Deactivate any leftover polyphony sub-slots if switching to monophonic
-        (clear-voice-slots! tk (range 1 4))))))
+  worklet/sync-track-to-worklet!)
 
 (defn sync-all-active-tracks!
   "Re-transmits all active session tracks to the Rust WASM sequencer."
@@ -148,11 +105,13 @@
   (let [tk       (keyword track-name)
         pat-data (sched/normalize-pattern-data tk pattern-map)
         inst-k   (or (:inst pat-data) (:synth pat-data) tk)]
-    (when-let [drum-m (:mod pat-data)]
-      (if (or (= tk :drums) (not (busses/drum? tk)))
-        (worklet/set-drum-mode! drum-m)
-        (let [base (get (inst/all-instruments) tk {})]
-          (worklet/set-worklet-drum-patch! tk (assoc base :mod drum-m)))))
+    (let [target-drum (cond (busses/drum? inst-k) inst-k (busses/drum? tk) tk :else nil)]
+      (when target-drum
+        (when-let [base (inst/resolve-instrument-spec target-drum)]
+          (let [spec (if-let [m (:mod pat-data)] (assoc base :mod m) base)]
+            (worklet/set-worklet-drum-patch! target-drum spec))))
+      (when (and (= target-drum :drums) (:mod pat-data))
+        (worklet/set-drum-mode! (:mod pat-data))))
     (if-let [tr (get (:active-tracks @audio-state) tk)]
       (let [old-pat @(:pattern tr)]
         (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false))))
