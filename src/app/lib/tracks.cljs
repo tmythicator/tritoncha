@@ -1,7 +1,7 @@
 (ns app.lib.tracks
   "Built-in track library and baseline catalog for Tritoncha."
   (:require [app.audio.theory.harmony :refer [_ deg prog]]
-            [app.audio.theory.patterns :refer [pattern]]))
+            [app.audio.theory.patterns :refer [pat]]))
 
 (def core-tracks-catalog
   [[:orbital-roller
@@ -13,9 +13,9 @@
      :colors ["#030514" "#00e5ff"]
      :cutoff 5200
      :tracks
-     {:kick      {:notes (pattern "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
-      :snare     {:notes (pattern ". . . .  s . . .  . . . .  s . g_ .") :step "16n"}
-      :hats      {:notes (pattern "h_ . h_ .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
+     {:kick      {:notes (pat "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
+      :snare     {:notes (pat ". . . .  s . . .  . . . .  s . g_ .") :step "16n"}
+      :hats      {:notes (pat "h_ . h_ .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
       :sub       {:inst :sub-pure
                   :notes (deg [1 _ _ _ _ _ _ _ 6 _ _ _ _ _ _ _ 4 _ _ _ _ _ _ _ 7 _ _ _ _ _ _ _] 1)
                   :step "16n" :dur "4n" :vel 0.70}
@@ -35,9 +35,9 @@
      :colors ["#030814" "#00e5ff"]
      :cutoff 4400
      :tracks
-     {:kick    {:notes (pattern "k . . .  . . k .  . . k .  . . . .") :step "16n"}
-      :snare   {:notes (pattern ". . . .  s! . . .  . . . .  s! g_ g_ g_") :step "16n"}
-      :hats    {:notes (pattern "h_ . hc .  . . o_ .  h_ . hc .  . . o_ .") :step "16n"}
+     {:kick    {:notes (pat "k . . .  . . k .  . . k .  . . . .") :step "16n"}
+      :snare   {:notes (pat ". . . .  s! . . .  . . . .  s! g_ g_ g_") :step "16n"}
+      :hats    {:notes (pat "h_ . hc .  . . o_ .  h_ . hc .  . . o_ .") :step "16n"}
       :sub     {:inst :bass-liquid
                 :notes (deg [1 1 _ 1  3 _ 5 _  1 _ 7 1  _ 6 _ 5] 1)
                 :step "16n" :dur "8n" :vel 0.55}
@@ -63,15 +63,15 @@
       :ring   {:geom :dodecahedron :pos [0 -2.8 0] :scale 0.75 :colors {:mesh "#ffe600" :wire "#ff3300"} :rot-speed [0.005 0.009 0.003]}}
      :tracks
      {:kick    {:figure :core
-                :notes (pattern "k_ . . .  . . k_ .  . . . .  . . k_ .
+                :notes (pat "k_ . . .  . . k_ .  . . . .  . . k_ .
                                 k_ . . .  . . k_ .  . . k_ .  . . . k_")
                 :step "16n"}
       :snare   {:figure :halo
-                :notes (pattern ". . . .  s . . .  . . . .  s . g_ .
+                :notes (pat ". . . .  s . . .  . . . .  s . g_ .
                                 . . . .  s . . g_  . . . .  s . clk_ .")
                 :step "16n"}
       :hats    {:figure :ring
-                :notes (pattern "hc_ . h_ .  hc_ . o_ .  hc_ . h_ hc_  hc_ . o_ .
+                :notes (pat "hc_ . h_ .  hc_ . o_ .  hc_ . h_ hc_  hc_ . o_ .
                                 hc_ . h_ .  hc_ . o_ .  hc_ hc_ h_ .  hc_ . o_ .")
                 :step "16n"}
       :bass    {:figure :pillar
@@ -94,9 +94,9 @@
      :colors ["#080808" "#ff1122"]
      :cutoff 2800
      :tracks
-     {:kick  {:notes (pattern "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
-      :perc  {:notes (pattern "s . . ch  s . . .  . cb . .  s_ s_ s_ ck") :step "16n"}
+     {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
+      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
+      :perc  {:notes (pat "s . . ch  s . . .  . cb . .  s_ s_ s_ ck") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [1 1 1 1 1 1 1 1 2 2 2 2 1 1 1 1] 1)
               :step "16n" :dur "32n" :vel 0.45}
@@ -143,9 +143,9 @@
      :colors ["#140404" "#ff3300"]
      :cutoff 3800
      :tracks
-     {:kick  {:notes (pattern "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
-      :snare {:notes (pattern ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
-      :hats  {:notes (pattern "h_ . hc .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
+     {:kick  {:notes (pat "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
+      :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
+      :hats  {:notes (pat "h_ . hc .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
       :bass  {:inst :bass-303
               :notes (deg [1 _ _ 3 1 _ 4 _ 1 _ :b7 1 _ _ 5 _] 1)
               :step "16n" :dur "16n" :vel 0.70}
@@ -162,8 +162,8 @@
      :colors ["#0a0302" "#ff6600"]
      :cutoff 4200
      :tracks
-     {:kick    {:notes (pattern "k_ . . .  . . . .  k_ . . .  . . k_ .") :step "16n"}
-      :snare   {:notes (pattern ". . s! .  ck_ . . .  . . sp_ .  s! . g_ .") :step "16n"}
+     {:kick    {:notes (pat "k_ . . .  . . . .  k_ . . .  . . k_ .") :step "16n"}
+      :snare   {:notes (pat ". . s! .  ck_ . . .  . . sp_ .  s! . g_ .") :step "16n"}
       :bass    {:inst :bass-liquid
                 :notes (deg [1 _ _ _ _ _ 2 _ 1 _ _ _ :b5 _ _ _] 1)
                 :step "16n" :dur "8n" :vel 0.65}
@@ -210,9 +210,9 @@
      :colors ["#05080c" "#00e5a3"]
      :cutoff 2600
      :tracks
-     {:kick   {:notes (pattern "k . . .  . . . .  k . . .  . . . .") :step "16n"}
-      :snare  {:notes (pattern ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
-      :hats   {:notes (pattern "h . hc .  h . o .  h . sp .  h . o .") :step "16n"}
+     {:kick   {:notes (pat "k . . .  . . . .  k . . .  . . . .") :step "16n"}
+      :snare  {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
+      :hats   {:notes (pat "h . hc .  h . o .  h . sp .  h . o .") :step "16n"}
       :bass   {:inst :sub-808
                :notes (deg [1 _ _ _ 1 _ _ _ 1 _ _ _ :b7 _ 5 _] 1)
                :step "16n" :dur "8n" :vel 0.78}
@@ -233,8 +233,8 @@
      :colors ["#0a0b0d" "#e2e8f0"]
      :cutoff 3000
      :tracks
-     {:kick  {:notes (pattern "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
+     {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
+      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [_ 1 _ 1  _ 1 _ 1  _ 1 _ 1  _ :b7 _ 1] 1)
               :step "16n" :dur "16n" :vel 0.82}
@@ -278,9 +278,9 @@
      :colors ["#040a18" "#00aaff"]
      :cutoff 4000
      :tracks
-     {:kick  {:notes (pattern "k! . . .  . . k_ .  . . k! .  k . . .") :step "16n"}
-      :snare {:notes (pattern ". . . .  cp! . . .  . . . .  cp! . clk_ .") :step "16n"}
-      :hats  {:notes (pattern "h . cb .  . . o! .  h . cb .  . hc o! .") :step "16n"}
+     {:kick  {:notes (pat "k! . . .  . . k_ .  . . k! .  k . . .") :step "16n"}
+      :snare {:notes (pat ". . . .  cp! . . .  . . . .  cp! . clk_ .") :step "16n"}
+      :hats  {:notes (pat "h . cb .  . . o! .  h . cb .  . hc o! .") :step "16n"}
       :bass  {:inst :bass-slap
               :notes (deg [1 _ 1 _ 2 _ 1 _ _ 1 _ 3 2 _ 1 _] 1)
               :step "16n" :dur "16n" :vel 0.76}
@@ -300,9 +300,9 @@
      :colors ["#050505" "#ffee00"]
      :cutoff 6000
      :tracks
-     {:kick  {:notes (pattern "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :snare {:notes (pattern ". . . .  s! . . .  . . . .  s! . . s_") :step "16n"}
-      :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
+     {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
+      :snare {:notes (pat ". . . .  s! . . .  . . . .  s! . . s_") :step "16n"}
+      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
       :bass  {:inst :liquid-reese
               :notes (deg [1 _ 1 _ 3 _ 1 _ :b7 _ 1 _ 5 _ 4 _] 1)
               :step "16n" :dur "16n" :vel 0.58}
@@ -368,7 +368,7 @@
      :colors ["#120814" "#00ffb7"]
      :cutoff 4200
      :tracks
-     {:drums   {:notes (pattern "k! hc_ cb k_  s! hc_ h g_  sp k_ ck clk_  s! o_ roll clk!")
+     {:drums   {:notes (pat "k! hc_ cb k_  s! hc_ h g_  sp k_ ck clk_  s! o_ roll clk!")
                 :step "16n"}
       :bass    {:inst :bass-slap
                 :notes (deg [1 _ 1 _ 3 _ 3 _ 4 _ 5 _ 5 _ 1 _] 1)
@@ -389,9 +389,9 @@
      :colors ["#020b08" "#00ff66"]
      :cutoff 7000
      :tracks
-     {:kick  {:notes (pattern "k . . .  . . . .  k . . .  . . . .") :step "16n"}
-      :snare {:notes (pattern ". . . .  s . . .  . . . .  s . . .") :step "16n"}
-      :hats  {:notes (pattern ". . h .  . . h .  . . h .  . . o .") :step "16n"}
+     {:kick  {:notes (pat "k . . .  . . . .  k . . .  . . . .") :step "16n"}
+      :snare {:notes (pat ". . . .  s . . .  . . . .  s . . .") :step "16n"}
+      :hats  {:notes (pat ". . h .  . . h .  . . h .  . . o .") :step "16n"}
       :bass  {:inst :lead-8bit
               :notes (deg [1 1 1 1 5 5 5 5 6 6 6 6 4 4 4 4] 1)
               :step "16n" :dur "16n" :vel 0.5}
@@ -408,8 +408,8 @@
      :colors ["#050014" "#ff00d4"]
      :cutoff 4800
      :tracks
-     {:kick  {:notes (pattern "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pattern ". . o! .  . . o! .  . . o! .  . . o! ck") :step "16n"}
+     {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
+      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! ck") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [_ 1 1 1 _ 1 1 1 _ 1 1 1 _ 2 2 1] 1)
               :step "16n" :dur "32n" :vel 0.78}
@@ -426,9 +426,9 @@
      :colors ["#080c14" "#88aacc"]
      :cutoff 3600
      :tracks
-     {:kick  {:notes (pattern "k . . .  . . . .  . . k .  . . . .") :step "16n"}
-      :snare {:notes (pattern ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
-      :hats  {:notes (pattern "hc . h .  . . h .  sp o . .  h . hc .") :step "16n"}
+     {:kick  {:notes (pat "k . . .  . . . .  . . k .  . . . .") :step "16n"}
+      :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
+      :hats  {:notes (pat "hc . h .  . . h .  sp o . .  h . hc .") :step "16n"}
       :bass    {:inst :bass-organ
                 :notes (deg [1 _ _ 1 _ _ :b7 _ _ 5 _ _ 4 _ _ _] 1)
                 :step "16n" :dur "8n" :vel 0.9}

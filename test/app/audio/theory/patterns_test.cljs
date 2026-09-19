@@ -33,7 +33,11 @@
     (is (= [:crash-16! nil :ride-bell_ nil :tom-high! :tom-mid_ :tom-low! :cowbell_]
            (pat/pattern "cr16! . rb_ . th! tm_ tl! cb_")))
     (is (= [:splash! nil :china_ nil :crash-17! :crash-18_]
-           (pat/pattern "sp! . ch_ . cr17! cr18_")))))
+           (pat/pattern "sp! . ch_ . cr17! cr18_"))))
+
+  (testing "pat shortcut alias behaves identically to pattern"
+    (is (= (pat/pattern "k . . .  s . . .")
+           (pat/pat "k . . .  s . . .")))))
 
 (deftest fast-and-slow-combinators-test
   (testing "fast repeats sequence"

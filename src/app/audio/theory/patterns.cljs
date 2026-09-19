@@ -98,6 +98,11 @@
                     (keyword tok)))))
             tokens))))
 
+(def pat
+  "Shortcut alias for pattern mini-notation parser.
+  Examples: (pat \"k . . .  s . . .\")."
+  pattern)
+
 (defn fast
   "Speeds up and compresses a pattern by repeating it factor times within the same grid duration.
   Examples: (fast 2 ['C4' 'E4']) -> ['C4' 'E4' 'C4' 'E4']."
