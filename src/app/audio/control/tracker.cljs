@@ -6,7 +6,7 @@
             [app.audio.dsp.engine :refer [init-audio!]]
             [app.audio.dsp.fx :refer [set-filter-cutoff!]]
             [app.audio.dsp.instruments :refer [reload-instruments!]]
-            [app.audio.theory.harmony :refer [chord]]
+            [app.audio.theory.harmony :as harmony :refer [chord]]
             [app.audio.theory.patterns :refer [pattern]]
             [app.config :as cfg]
             [app.custom.tracks :refer [user-tracks]]
@@ -52,6 +52,16 @@
     (keyword? preset-spec)  (get track-aliases preset-spec preset-spec)
     :else preset-spec))
 
+(defn- resolve-track-scale-notes
+  "Resolves deferred scale degrees or raw degree vectors against preset track scale."
+  [track-opts scale]
+  (let [orig-notes (:notes track-opts)
+        resolved   (harmony/resolve-track-notes orig-notes scale (or (:oct track-opts) (:octave track-opts)))]
+    (cond-> (assoc track-opts :notes resolved)
+      (or (:progression (meta resolved))
+          (:progression (meta orig-notes)))
+      (assoc :progression (or (:template (meta resolved)) orig-notes)))))
+
 (defn play-preset!
   "Launches a track by keyword (from all-tracks), 0-based catalog index, or custom data map.
   Examples: (play-preset! 0), (play-preset! :roller), (play-preset! {:bpm 165 :scale [:f :phrygian 1] ...})."
@@ -88,7 +98,7 @@
     (when cutoff (set-filter-cutoff! cutoff))
 
     (doseq [[track-name track-opts] tracks]
-      (loop! track-name track-opts))))
+      (loop! track-name (resolve-track-scale-notes track-opts scale)))))
 
 (defn play-track-at!
   "Launches the track preset at the specified 0-based index from the catalog.

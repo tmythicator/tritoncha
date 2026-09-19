@@ -35,6 +35,7 @@
    'deg                 api/deg
    'chord               api/chord
    'progression         api/progression
+   'prog                api/prog
    'scale               api/scale
    'sc                  api/sc
    'arp                 api/arp
@@ -129,10 +130,6 @@
    'deftrack!           api/deftrack!
    'instruments         api/instruments
    'definst!            api/definst!
-   'defsynth!           api/defsynth!
-   'defdrum!            api/defdrum!
-   'patch-drum!         api/patch-drum!
-   'drum!               api/drum!
    'patch!              api/patch!
    'reset-inst!         api/reset-inst!
    'reset-instrument!   api/reset-instrument!

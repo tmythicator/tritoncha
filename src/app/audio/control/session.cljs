@@ -39,15 +39,6 @@
          o-map (normalize-opts opts octave)]
      (harmony/deg root mode degrees o-map))))
 
-(defn deg
-  "Resolves scale degrees with explicit root and mode, with fallback to global context.
-  Examples: (deg :e :phrygian [1 3 5]), (deg :d :dorian [:i :iii :v])."
-  ([root mode degrees] (deg root mode degrees nil))
-  ([root mode degrees opts]
-   (let [octave (get-in @audio-state [:key :octave] 1)
-         o-map  (normalize-opts opts octave)]
-     (harmony/deg root mode degrees o-map))))
-
 (defn scale
   "Returns notes of the active session scale across octaves.
   Examples: (scale), (scale 2)."
@@ -85,10 +76,41 @@
   "Pure transform modulating pattern notes to new key context or applying chromatic pitch shift."
   [pat track-key delta-st {:keys [root mode oct-shift]}]
   (let [notes (or (:notes pat) (:pattern pat))
-        degs  (or (:deg pat) (:degrees pat) (when (vector? notes) (:degrees (meta notes))))]
+        degs  (or (:deg pat) (:degrees pat) (when (vector? notes) (:degrees (meta notes))))
+        prog  (or (:progression pat)
+                  (when (and (vector? notes) (:progression (meta notes))) notes)
+                  (when (vector? notes) (:template (meta notes)))
+                  (when (and (vector? notes)
+                             (seq notes)
+                             (vector? (first notes))
+                             (number? (first (first notes))))
+                    notes))]
     (cond
+      prog
+      (let [base-oct     (or (:oct pat)
+                             (:octave pat)
+                             (:octave (meta prog))
+                             (:octave prog)
+                             (when (vector? notes) (:octave (meta notes)))
+                             (when (vector? notes) (let [sc (:scale (meta notes))] (when (vector? sc) (last sc))))
+                             3)
+            track-oct    (+ base-oct oct-shift)
+            updated-prog (if (and (meta prog) (:progression (meta prog)))
+                           (vary-meta prog assoc :octave track-oct)
+                           prog)
+            new-notes    (harmony/resolve-track-notes updated-prog [root mode track-oct] track-oct)]
+        (assoc pat
+               :notes new-notes
+               :hits-vec new-notes
+               :oct track-oct
+               :octave track-oct
+               :progression updated-prog))
+
       degs
-      (let [base-oct  (or (:oct pat) (:octave pat)
+      (let [base-oct  (or (:oct pat)
+                          (:octave pat)
+                          (:octave (:opts (meta degs)))
+                          (:octave (meta degs))
                           (when (vector? notes) (:octave (meta notes)))
                           (if (busses/bass? track-key) cfg/default-bass-octave cfg/default-lead-octave))
             track-oct (+ base-oct oct-shift)
@@ -97,7 +119,8 @@
                :notes new-notes
                :hits-vec new-notes
                :deg degs
-               :oct track-oct))
+               :oct track-oct
+               :octave track-oct))
 
       notes
       (transpose-track-melody pat delta-st)
@@ -105,16 +128,7 @@
       :else pat)))
 
 (defn- worklet-sync-track! [tk pat-data]
-  (when-let [slot (worklet/track-slot tk)]
-    (let [inst-k  (or (:inst pat-data) (:synth pat-data) tk)
-          hits    (or (:notes pat-data) (:hits-vec pat-data) [true])
-          notes   (if (sequential? hits) hits [hits])
-          step-m  (audio-utils/step->mult (:step pat-data))
-          bpm     (:bpm @audio-state 168)
-          dur-raw (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
-          dur-s   (audio-utils/dur->seconds dur-raw bpm)
-          vel     (or (:vel pat-data) 0.9)]
-      (worklet/set-track! slot inst-k (vec notes) step-m dur-s vel))))
+  (worklet/sync-track-to-worklet! tk pat-data))
 
 (defn transpose-all!
   "Transposes all active melodic loops by N semitones live.

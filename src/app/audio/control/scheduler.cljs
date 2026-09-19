@@ -27,6 +27,14 @@
         notes-in   (:notes raw-data)
         meta-info  (when (vector? notes-in) (meta notes-in))
         degs       (or (:deg raw-data) (:degrees raw-data) (when meta-info (:degrees meta-info)))
+        prog       (or (:progression raw-data)
+                       (when (and meta-info (:progression meta-info)) notes-in)
+                       (when meta-info (:template meta-info))
+                       (when (and (vector? notes-in)
+                                  (seq notes-in)
+                                  (vector? (first notes-in))
+                                  (number? (first (first notes-in))))
+                         notes-in))
         with-degs  (if (and degs (not notes-in))
                      (let [oct (or (:oct raw-data) (:octave raw-data))]
                        (assoc raw-data :notes (session/d degs (if oct {:octave oct} {}))))
@@ -34,8 +42,12 @@
         notes      (:notes with-degs)
         oct        (or (:oct with-degs)
                        (:octave with-degs)
-                       (when (vector? notes) (:octave (meta notes)))
                        (when meta-info (:octave meta-info))
+                       (when (vector? notes) (:octave (meta notes)))
+                       (when (vector? notes) (let [sc (:scale (meta notes))] (when (vector? sc) (last sc))))
+                       (when (and prog (meta prog)) (:octave (meta prog)))
+                       (when (and degs (meta degs)) (:octave (:opts (meta degs))))
+                       (when (and degs (meta degs)) (:octave (meta degs)))
                        (if (busses/bass? tk) cfg/default-bass-octave cfg/default-lead-octave))
         raw-hits   (or notes (:hits-vec with-degs) (:pattern with-degs) (:hits with-degs) [true])
         hits-vec   (if (sequential? raw-hits) (vec raw-hits) [raw-hits])
@@ -47,6 +59,7 @@
         vel        (or (:vel with-degs) cfg/default-velocity)]
     (cond-> (assoc with-degs
                    :oct oct
+                   :octave oct
                    :notes final-hits
                    :hits-vec final-hits
                    :vel vel
@@ -54,4 +67,5 @@
                    :step (or (:step with-degs) cfg/default-step))
       mask-vec (assoc :mask-vec mask-vec)
       (vector? vel) (assoc :vel-vec vel)
-      degs (assoc :deg degs))))
+      degs (assoc :deg degs)
+      prog (assoc :progression prog))))
