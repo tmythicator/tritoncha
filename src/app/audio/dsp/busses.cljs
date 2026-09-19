@@ -1,7 +1,6 @@
 (ns app.audio.dsp.busses
   "Audio bus registry, normalization, routing mappings, and category predicates."
-  (:require [app.audio.dsp.worklet.protocol :as protocol]
-            [app.custom.drums :refer [user-drums]]
+  (:require [app.custom.drums :refer [user-drums]]
             [app.custom.synth :refer [user-synths]]
             [app.lib.drums :refer [core-drums]]
             [app.lib.synth :refer [core-synths]]
@@ -57,16 +56,25 @@
    :lead :lead-pluck})
 
 (defn find-instrument-spec
-  "Looks up an instrument specification map across REPL, custom, and core catalogs."
-  [k]
-  (let [canonical (get default-category-instruments k k)]
-    (or (get (:instruments @repl-registry) canonical)
-        (get user-synths canonical)
-        (get user-drums canonical)
-        (get core-synths canonical)
-        (get core-drums canonical))))
-
-(reset! protocol/inst-spec-resolver find-instrument-spec)
+  "Looks up an instrument specification map across REPL, custom, and core catalogs.
+  Examples: (find-instrument-spec :bass) -> {:title \"Analog Saw\" ...}."
+  [x]
+  (cond
+    (map? x) x
+    (nil? x) nil
+    :else
+    (let [k         (if (keyword? x) x (keyword (str x)))
+          canonical (get default-category-instruments k k)]
+      (or (get (:instruments @repl-registry) k)
+          (get (:instruments @repl-registry) canonical)
+          (get user-synths canonical)
+          (get user-drums canonical)
+          (get core-synths canonical)
+          (get core-drums canonical)
+          (get user-synths k)
+          (get user-drums k)
+          (get core-synths k)
+          (get core-drums k)))))
 
 (def drum-keywords
   "Unified set of all drum instrument keywords."

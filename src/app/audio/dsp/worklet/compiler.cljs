@@ -74,7 +74,7 @@
   ([hit default-inst-key] (parse-step-hit hit default-inst-key 0.9))
   ([hit default-inst-key default-vel]
    (let [def-v  (float (or default-vel 0.9))
-         def-id (inst-keyword->id default-inst-key)]
+         def-id (inst-keyword->id default-inst-key (find-instrument-spec default-inst-key))]
      (cond
        (or (nil? hit) (false? hit))
        {:inst-id def-id :note -1 :vel 0.0}
@@ -91,7 +91,7 @@
        (let [[k v n]           hit
              [clean-k art-vel] (extract-articulation k def-v)
              target-inst       (resolve-target-inst (keyword clean-k) default-inst-key)]
-         {:inst-id (inst-keyword->id target-inst)
+         {:inst-id (inst-keyword->id target-inst (find-instrument-spec target-inst))
           :note    (if n (parse-midi-note n) 60)
           :vel     (float (or v art-vel def-v))})
 
@@ -111,14 +111,15 @@
 
            (or resolved-alias (drum-keyword? clean-kw))
            (let [target (resolve-target-inst clean-kw default-inst-key)]
-             {:inst-id (inst-keyword->id target) :note 60 :vel (float art-vel)})
+             {:inst-id (inst-keyword->id target (find-instrument-spec target)) :note 60 :vel (float art-vel)})
 
            :else
            (let [m (parse-midi-note clean)]
              (if (neg? m)
-               {:inst-id (inst-keyword->id (resolve-target-inst clean-kw default-inst-key))
-                :note    60
-                :vel     (float art-vel)}
+               (let [target (resolve-target-inst clean-kw default-inst-key)]
+                 {:inst-id (inst-keyword->id target (find-instrument-spec target))
+                  :note    60
+                  :vel     (float art-vel)})
                {:inst-id def-id :note m :vel (float art-vel)}))))
 
        :else

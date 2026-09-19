@@ -80,3 +80,12 @@
                    (pat/fast 2)
                    (pat/shift 1))]
       (is (= ["E4" "C4" "E4" "C4"] res)))))
+
+(deftest apply-mask-test
+  (testing "Mask applies boolean pattern with rests"
+    (is (= [:hh-c nil :hh-c nil]
+           (pat/apply-mask [:hh-c] [true false true nil])))
+    (is (= ["C4" nil]
+           (pat/apply-mask ["C4" "E4"] [true false])))
+    (is (= ["A1" "B1" nil "D1"]
+           (pat/apply-mask ["A1" "B1" "C1" "D1"] [true true nil true])))))

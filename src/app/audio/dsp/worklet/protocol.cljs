@@ -1,5 +1,6 @@
 (ns app.audio.dsp.worklet.protocol
-  "Protocol codecs, enum mappings, and numeric identifier encoders for Rust WASM DSP.")
+  "Protocol codecs, enum mappings, and numeric identifier encoders for Rust WASM DSP."
+  (:require [app.custom.drums :refer [user-drums]]))
 
 (def drum-remaps
   "Lookup map of short drum notation tokens to canonical drum keywords for live mini-notation."
@@ -98,16 +99,15 @@
    :cowbell    73})
 
 (defonce custom-drum-ids
-  (atom {}))
+  (atom (into {}
+              (for [[k spec] user-drums]
+                [k (get drum-type->id (:type spec) 0)]))))
 
 (defn register-custom-drum-id!
   "Maps a custom drum keyword to its underlying Rust drum voice ID.
   Examples: (register-custom-drum-id! :fat-kick 0)."
   [drum-key drum-id]
   (swap! custom-drum-ids assoc (keyword drum-key) (int drum-id)))
-
-(defonce inst-spec-resolver
-  (atom nil))
 
 (defonce custom-synth-patch-ids
   (atom {}))
@@ -135,19 +135,20 @@
 (defn inst-keyword->id
   "Resolves an instrument keyword to its numeric ID for the Rust DSP engine.
   Examples: (inst-keyword->id :kick) -> 0, (inst-keyword->id :bass-analog) -> 4."
-  [inst-key]
-  (let [k (keyword inst-key)]
-    (or (get canonical-inst-ids k)
-        (get @custom-drum-ids k)
-        (when-let [resolve-fn @inst-spec-resolver]
-          (when-let [spec (resolve-fn k)]
-            (when (or (= (:category spec) :drums)
-                      (contains? drum-type->id (:type spec)))
-              (let [drum-id (get drum-type->id (:type spec) 0)]
-                (register-custom-drum-id! k drum-id)
-                drum-id))))
-        (get @custom-synth-patch-ids k)
-        (register-custom-patch-id! k))))
+  ([inst-key]
+   (inst-keyword->id inst-key nil))
+  ([inst-key spec]
+   (let [k (keyword inst-key)]
+     (or (get canonical-inst-ids k)
+         (get @custom-drum-ids k)
+         (when spec
+           (when (or (= (:category spec) :drums)
+                     (contains? drum-type->id (:type spec)))
+             (let [drum-id (get drum-type->id (:type spec) 0)]
+               (register-custom-drum-id! k drum-id)
+               drum-id)))
+         (get @custom-synth-patch-ids k)
+         (register-custom-patch-id! k)))))
 
 (defn bus-key->id
   "Maps symbolic audio bus keyword to numeric index for the Rust multi-bus DSP mixer.

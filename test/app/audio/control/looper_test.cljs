@@ -31,15 +31,6 @@
       (is (= [0.4 0.8] (:vel-vec pat)))
       (is (= "32n" (:dur pat))))))
 
-(deftest apply-mask-test
-  (testing "Mask applies boolean pattern with rests"
-    (is (= [:hh-c nil :hh-c nil]
-           (sched/apply-mask [:hh-c] [true false true nil])))
-    (is (= ["C4" nil]
-           (sched/apply-mask ["C4" "E4"] [true false])))
-    (is (= ["A1" "B1" nil "D1"]
-           (sched/apply-mask ["A1" "B1" "C1" "D1"] [true true nil true])))))
-
 (deftest step->mult-test
   (testing "Converts step notation to multiplier relative to 64th notes"
     (is (= 1 (audio-utils/step->mult "64n")))

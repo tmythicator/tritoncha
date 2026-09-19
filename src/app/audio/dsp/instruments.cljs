@@ -23,6 +23,12 @@
   []
   (merge core-drums user-drums (:instruments @repl-registry)))
 
+(defn all-synths
+  "Returns a merged map of core built-in synthesizers, user custom synths, and REPL synths.
+  Examples: (all-synths)."
+  []
+  (merge core-synths user-synths (:instruments @repl-registry)))
+
 (defn all-instruments
   "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments.
   Examples: (all-instruments)."
@@ -59,21 +65,16 @@
    :siren        :fx-siren
    :util-click   :click})
 
-(defn resolve-instrument-spec
+(defn find-instrument-spec
+  "Looks up an instrument specification map across REPL, custom, and core catalogs.
+  Examples: (find-instrument-spec :bass) -> {:type :mono ...}."
+  [spec]
+  (busses/find-instrument-spec spec))
+
+(def resolve-instrument-spec
   "Resolves an instrument keyword or map, expanding canonical aliases (:bass, :sub, :pad).
   Examples: (resolve-instrument-spec :bass) -> {:type :mono ...}."
-  [spec]
-  (cond
-    (map? spec) spec
-    (keyword? spec)
-    (let [canonical  (get instrument-aliases spec spec)
-          repl-insts (:instruments @repl-registry)
-          all        (all-instruments)]
-      (or (get repl-insts spec)
-          (get repl-insts canonical)
-          (get all canonical)
-          (get all spec)))
-    :else spec))
+  find-instrument-spec)
 
 (defn sync-instrument-dsp!
   "Transmits instrument DSP configuration to Rust WASM engine without touching REPL registry.

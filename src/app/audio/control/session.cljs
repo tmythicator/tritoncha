@@ -3,6 +3,7 @@
   (:require [app.audio.dsp.busses :as busses]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.theory.harmony :as harmony]
+            [app.audio.theory.patterns :as patterns]
             [app.config :as cfg]
             [app.state :refer [audio-state]]
             [app.utils.audio :as audio-utils :refer [normalize-opts note->midi]]))
@@ -76,24 +77,11 @@
   "Pure transform modulating pattern notes to new key context or applying chromatic pitch shift."
   [pat track-key delta-st {:keys [root mode oct-shift]}]
   (let [notes (or (:notes pat) (:pattern pat))
-        degs  (or (:deg pat) (:degrees pat) (when (vector? notes) (:degrees (meta notes))))
-        prog  (or (:progression pat)
-                  (when (and (vector? notes) (:progression (meta notes))) notes)
-                  (when (vector? notes) (:template (meta notes)))
-                  (when (and (vector? notes)
-                             (seq notes)
-                             (vector? (first notes))
-                             (number? (first (first notes))))
-                    notes))]
+        degs  (patterns/extract-pattern-degs pat notes)
+        prog  (patterns/extract-pattern-prog pat notes)]
     (cond
       prog
-      (let [base-oct     (or (:oct pat)
-                             (:octave pat)
-                             (:octave (meta prog))
-                             (:octave prog)
-                             (when (vector? notes) (:octave (meta notes)))
-                             (when (vector? notes) (let [sc (:scale (meta notes))] (when (vector? sc) (last sc))))
-                             3)
+      (let [base-oct     (patterns/extract-pattern-octave pat notes degs prog 3)
             track-oct    (+ base-oct oct-shift)
             updated-prog (if (and (meta prog) (:progression (meta prog)))
                            (vary-meta prog assoc :octave track-oct)
@@ -107,12 +95,8 @@
                :progression updated-prog))
 
       degs
-      (let [base-oct  (or (:oct pat)
-                          (:octave pat)
-                          (:octave (:opts (meta degs)))
-                          (:octave (meta degs))
-                          (when (vector? notes) (:octave (meta notes)))
-                          (if (busses/bass? track-key) cfg/default-bass-octave cfg/default-lead-octave))
+      (let [def-oct   (if (busses/bass? track-key) cfg/default-bass-octave cfg/default-lead-octave)
+            base-oct  (patterns/extract-pattern-octave pat notes degs prog def-oct)
             track-oct (+ base-oct oct-shift)
             new-notes (harmony/deg root mode degs {:octave track-oct})]
         (assoc pat

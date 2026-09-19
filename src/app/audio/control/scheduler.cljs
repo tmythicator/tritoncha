@@ -2,21 +2,8 @@
   "Pure algorithmic scheduler logic, pattern canonicalization and mask resolution."
   (:require [app.audio.control.session :as session]
             [app.audio.dsp.busses :as busses]
+            [app.audio.theory.patterns :as patterns]
             [app.config :as cfg]))
-
-(defn apply-mask
-  "Combines a sequence of hits with a boolean or truthy mask sequence.
-  Falsy or nil mask values become rests (nil).
-  Examples: (apply-mask [:c4 :e4] [true false true]) -> [:c4 nil :e4]."
-  [hits-vec mask-vec]
-  (let [h-cnt (count hits-vec)
-        m-cnt (count mask-vec)
-        total (max h-cnt m-cnt)]
-    (mapv (fn [i]
-            (let [m (nth mask-vec (rem i m-cnt))]
-              (when (and (some? m) (not (false? m)))
-                (nth hits-vec (rem i h-cnt)))))
-          (range total))))
 
 (defn normalize-pattern-data
   "Pure transform that canonicalizes pattern specifications, resolving degrees and masks.
@@ -25,36 +12,21 @@
   (let [tk         (keyword track-key)
         raw-data   (if (vector? pattern-map) {:notes pattern-map} pattern-map)
         notes-in   (:notes raw-data)
-        meta-info  (when (vector? notes-in) (meta notes-in))
-        degs       (or (:deg raw-data) (:degrees raw-data) (when meta-info (:degrees meta-info)))
-        prog       (or (:progression raw-data)
-                       (when (and meta-info (:progression meta-info)) notes-in)
-                       (when meta-info (:template meta-info))
-                       (when (and (vector? notes-in)
-                                  (seq notes-in)
-                                  (vector? (first notes-in))
-                                  (number? (first (first notes-in))))
-                         notes-in))
+        degs       (patterns/extract-pattern-degs raw-data notes-in)
+        prog       (patterns/extract-pattern-prog raw-data notes-in)
         with-degs  (if (and degs (not notes-in))
                      (let [oct (or (:oct raw-data) (:octave raw-data))]
                        (assoc raw-data :notes (session/d degs (if oct {:octave oct} {}))))
                      raw-data)
         notes      (:notes with-degs)
-        oct        (or (:oct with-degs)
-                       (:octave with-degs)
-                       (when meta-info (:octave meta-info))
-                       (when (vector? notes) (:octave (meta notes)))
-                       (when (vector? notes) (let [sc (:scale (meta notes))] (when (vector? sc) (last sc))))
-                       (when (and prog (meta prog)) (:octave (meta prog)))
-                       (when (and degs (meta degs)) (:octave (:opts (meta degs))))
-                       (when (and degs (meta degs)) (:octave (meta degs)))
-                       (if (busses/bass? tk) cfg/default-bass-octave cfg/default-lead-octave))
+        def-oct    (if (busses/bass? tk) cfg/default-bass-octave cfg/default-lead-octave)
+        oct        (patterns/extract-pattern-octave with-degs notes degs prog def-oct)
         raw-hits   (or notes (:hits-vec with-degs) (:pattern with-degs) (:hits with-degs) [true])
         hits-vec   (if (sequential? raw-hits) (vec raw-hits) [raw-hits])
         mask       (:mask with-degs)
         mask-vec   (when mask (if (sequential? mask) (vec mask) [mask]))
         final-hits (if (and mask-vec (seq mask-vec))
-                     (apply-mask hits-vec mask-vec)
+                     (patterns/apply-mask hits-vec mask-vec)
                      hits-vec)
         vel        (or (:vel with-degs) cfg/default-velocity)]
     (cond-> (assoc with-degs

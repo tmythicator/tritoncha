@@ -24,7 +24,7 @@
                                 [6 :maj9]
                                 [4 :min7]
                                 [7 :dom7]] 3)
-                  :step "2n" :dur "2n" :vel 0.3}}}]
+                  :step "2n" :dur "2n" :vel 0.23}}}]
 
    [:street-roller
     {:name   "Messenger On A Fixie"
