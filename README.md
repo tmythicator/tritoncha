@@ -149,7 +149,7 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
 
 ```clojure
 ;; Define a custom synthesizer patch live in the REPL
-(defsynth! :supersaw-lead-custom
+(definst! :supersaw-lead-custom
   {:category :leads :type :mono :bus :bus/space
    :osc      {:type :supersaw :sub-level 0.4 :drift 0.2}
    :filter   {:type :lowpass :cutoff 1400 :q 0.5 :drive 0.25 :env-amount 3000}

@@ -1,12 +1,14 @@
 (ns app.audio.dsp.busses
   "Audio bus registry, normalization, routing mappings, and category predicates."
-  (:require [app.custom.instruments :refer [user-instruments]]
-            [app.lib.drums :refer [core-drum-instruments core-drum-voices]]
-            [app.lib.instruments :refer [core-instruments]]
+  (:require [app.audio.dsp.worklet.protocol :as protocol]
+            [app.custom.drums :refer [user-drums]]
+            [app.custom.synth :refer [user-synths]]
+            [app.lib.drums :refer [core-drums]]
+            [app.lib.synth :refer [core-synths]]
             [app.state :refer [repl-registry]]))
 
 (def valid-busses
-  #{:bus/master :bus/direct :bus/drums :bus/bass :bus/space :bus/lead :bus/glitch})
+  #{:bus/master :bus/direct :bus/drums :bus/bass :bus/space :bus/lead})
 
 (def category-default-busses
   {:drums :bus/drums
@@ -23,7 +25,6 @@
    :bass       :bass
    :drum       :drums
    :drums      :drums
-   :hat        :drums
    :hats       :drums
    :perc       :drums
    :percussion :drums
@@ -42,22 +43,12 @@
   [cat]
   (get category-default-busses (normalize-category cat) :bus/master))
 
-(def default-instrument-busses category-default-busses)
-
 (def ^:private standalone-instrument-busses
-  {:glitch         :bus/glitch
-   :glitch-texture :bus/glitch
-   :noise          :bus/glitch
-   :click          :bus/direct
-   :util-click     :bus/direct
-   :metronome      :bus/direct
-   :hats           :bus/drums
-   :perc           :bus/drums
-   :percussion     :bus/drums
-   :break          :bus/drums})
+  {:click      :bus/direct
+   :util-click :bus/direct})
 
 (def sub-voices
-  #{:sub :sub-bass :sub-sine :808-sub :sub-pure :sub-808 :808 :sub-moog :moog-sub})
+  #{:sub :sub-pure :sub-808 :808 :sub-moog :moog-sub})
 
 (def ^:private default-category-instruments
   {:bass :bass-analog
@@ -70,13 +61,18 @@
   [k]
   (let [canonical (get default-category-instruments k k)]
     (or (get (:instruments @repl-registry) canonical)
-        (get user-instruments canonical)
-        (get core-instruments canonical)
-        (get core-drum-instruments canonical)
-        (when (contains? core-drum-voices canonical)
-          (if (= canonical :click)
-            {:category :fx :bus :bus/direct}
-            {:category :drums :bus :bus/drums})))))
+        (get user-synths canonical)
+        (get user-drums canonical)
+        (get core-synths canonical)
+        (get core-drums canonical))))
+
+(reset! protocol/inst-spec-resolver find-instrument-spec)
+
+(def drum-keywords
+  "Unified set of all drum instrument keywords."
+  (into #{:drums :clap :sn-rs :sn-clk :sn-gh :sn-roll :hat-closed :hat-open :hh-c :hh-o :hh-clk}
+        (concat (keys core-drums)
+                (keys user-drums))))
 
 (defn normalize-bus-key
   "Ensures a keyword is in the :bus/<name> format.
@@ -99,7 +95,7 @@
     1. Direct :bus in map spec (e.g. {:bus :bus/space, :osc ...})
     2. :bus in referenced instrument (e.g. {:inst :tracker-lead})
     3. Direct category keyword (e.g. :bass, :pads, :drums, :leads, :fx)
-    4. Standalone bus override (e.g. :glitch-texture, :click)
+    4. Standalone bus override (e.g. :click)
     5. :bus declared in catalog instrument spec (REPL registry, user custom, or core)
     6. Category default bus fallback determined by instrument category
     7. Fallback :bus/master"
@@ -119,7 +115,7 @@
     (contains? category-aliases x)
     (category-default-bus x)
 
-    ;; 4. Standalone bus override (e.g. :glitch-texture, :click)
+    ;; 4. Standalone bus override (e.g. :click)
     (contains? standalone-instrument-busses x)
     (get standalone-instrument-busses x)
 
@@ -157,6 +153,13 @@
   Examples: (drum? :kick) -> true, (drum? :bass-analog) -> false."
   [x]
   (= (sound-category x) :drums))
+
+(defn drum-keyword?
+  "Checks if a keyword represents a drum instrument or drum hit.
+  Examples: (drum-keyword? :kick) -> true, (drum-keyword? :bass-analog) -> false."
+  [k]
+  (or (contains? drum-keywords (keyword k))
+      (drum? k)))
 
 (defn bass?
   "Returns true if key or spec belongs to the :bass category.

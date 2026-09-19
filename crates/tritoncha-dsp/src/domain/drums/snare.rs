@@ -85,13 +85,18 @@ pub const STYLE_GHOST: SnareStylePreset = SnareStylePreset {
     noise_decay: 0.9980,
 };
 
+// Sharp stick-on-rim contact click (E5) and fast transient decay (~15 ms)
+pub const SNARE_RIM_CLICK_FREQ: f32 = 660.0;
+pub const SNARE_RIM_CLICK_DECAY: f32 = 0.9940;
+pub const SNARE_RIM_CLICK_GAIN: f32 = 0.85;
+
 pub const STYLE_RIM: SnareStylePreset = SnareStylePreset {
-    env_tone: 1.4,
-    env_noise: 0.2,
-    cutoff_hz: 4200.0,
-    resonance: 0.85,
-    base_freq: 420.0,
-    noise_decay: 0.9975,
+    env_tone: 1.45,
+    env_noise: 1.35,
+    cutoff_hz: 5200.0,
+    resonance: 0.70,
+    base_freq: 215.0,
+    noise_decay: 0.9989,
 };
 
 pub const STYLE_DEFAULT: SnareStylePreset = SnareStylePreset {
@@ -108,8 +113,10 @@ pub const STYLE_DEFAULT: SnareStylePreset = SnareStylePreset {
 pub struct SnareVoice {
     pub active: bool,
     phase: f32,
+    phase_rim: f32,
     env_tone: f32,
     env_noise: f32,
+    env_rim: f32,
     vel: f32,
     filter: StateVariableFilter,
     noise_seed: u32,
@@ -153,8 +160,10 @@ impl SnareVoice {
         Self {
             active: false,
             phase: 0.0,
+            phase_rim: 0.0,
             env_tone: 0.0,
             env_noise: 0.0,
+            env_rim: 0.0,
             vel: 0.0,
             filter: StateVariableFilter::new(),
             noise_seed: DEFAULT_SNARE_SEED,
@@ -197,6 +206,13 @@ impl SnareVoice {
         self.phase = 0.0;
         self.vel = v;
 
+        if style == DRUM_SNARE_RIM {
+            self.env_rim = 1.0;
+            self.phase_rim = 0.0;
+        } else {
+            self.env_rim = 0.0;
+        }
+
         let preset = match style {
             DRUM_SNARE_CRACK => STYLE_CRACK,
             DRUM_SNARE_WIRE => STYLE_WIRE,
@@ -220,13 +236,22 @@ impl SnareVoice {
             return 0.0;
         }
 
+        let rim_click = if self.env_rim > MIN_AUDIBLE_VELOCITY {
+            let rc = sin_phase(self.phase_rim) * self.env_rim * SNARE_RIM_CLICK_GAIN;
+            self.phase_rim = wrap_phase(self.phase_rim + SNARE_RIM_CLICK_FREQ / sample_rate);
+            self.env_rim *= SNARE_RIM_CLICK_DECAY;
+            rc
+        } else {
+            0.0
+        };
+
         let (tone, noise) = match self.mode {
             DrumMode::Natural => {
                 // Natural: acoustic wooden shell (185 Hz fundamental + 330 Hz harmonic)
                 let tone1 = sin_phase(self.phase) * SNARE_NATURAL_HEAD1_GAIN;
                 let tone2 =
                     sin_phase(self.phase * SNARE_NATURAL_HEAD2_MULT) * SNARE_NATURAL_HEAD2_GAIN;
-                let t = (tone1 + tone2) * self.env_tone * self.tone_gain;
+                let t = (tone1 + tone2 + rim_click) * self.env_tone * self.tone_gain;
                 let noise_raw = xorshift32_norm(&mut self.noise_seed);
                 let noise_filtered = self.filter.process_bp(
                     noise_raw,
@@ -243,7 +268,7 @@ impl SnareVoice {
                 let chirp = (self.phase * std::f32::consts::TAU * std::f32::consts::PI).sin()
                     * self.env_tone
                     * SNARE_IDM_CHIRP_DEPTH;
-                let t = sin_phase(self.phase + chirp)
+                let t = (sin_phase(self.phase + chirp) + rim_click)
                     * self.env_tone
                     * (self.tone_gain * SNARE_IDM_TONE_GAIN_MULT);
                 let noise_raw = xorshift32_norm(&mut self.noise_seed);
@@ -259,7 +284,7 @@ impl SnareVoice {
             }
             DrumMode::Industrial => {
                 // Industrial: overdriven, crunching wire noise and saturated body
-                let raw_tone = sin_phase(self.phase) * self.env_tone * self.tone_gain;
+                let raw_tone = (sin_phase(self.phase) + rim_click) * self.env_tone * self.tone_gain;
                 let t = soft_clip(raw_tone * SNARE_IND_OVERDRIVE);
                 let noise_raw = xorshift32_norm(&mut self.noise_seed);
                 let noise_filtered =
@@ -272,7 +297,7 @@ impl SnareVoice {
             }
             DrumMode::Analog => {
                 // Analog (default 808/909):
-                let t = sin_phase(self.phase) * self.env_tone * self.tone_gain;
+                let t = (sin_phase(self.phase) + rim_click) * self.env_tone * self.tone_gain;
                 let noise_raw = xorshift32_norm(&mut self.noise_seed);
                 let noise_filtered =
                     self.filter
@@ -298,8 +323,10 @@ impl SnareVoice {
     pub fn reset(&mut self) {
         self.active = false;
         self.phase = 0.0;
+        self.phase_rim = 0.0;
         self.env_tone = 0.0;
         self.env_noise = 0.0;
+        self.env_rim = 0.0;
         self.filter.reset();
     }
 }

@@ -1,8 +1,8 @@
 (ns app.audio.dsp.worklet-test
-  (:require [app.audio.dsp.worklet :as worklet]
+  (:require [app.audio.dsp.busses :refer [drum-keywords]]
+            [app.audio.dsp.worklet :as worklet]
             [app.audio.dsp.worklet.protocol :as protocol]
-            [app.lib.drums :as drums]
-            [app.lib.instruments :as insts]
+            [app.lib.synth :as synths]
             [clojure.set :as set]
             [cljs.test :refer-macros [deftest is testing]]))
 
@@ -90,7 +90,7 @@
 (deftest test-sound-registration-no-id-collisions
   (testing "Zero ID collisions between drum voices and synthesizer voice patches"
     (let [drum-ids #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73}
-          synth-keys (disj (set (keys insts/primary-instruments)) :click)
+          synth-keys (disj (set (keys synths/core-synths)) :click)
           synth-ids (set (map protocol/inst-keyword->id synth-keys))]
       ;; Ensure drums and synths have empty intersection
       (is (empty? (set/intersection drum-ids synth-ids)))
@@ -102,7 +102,7 @@
       (is (= 20 (protocol/canonical-inst-ids :ride)))
       (is (= 21 (protocol/canonical-inst-ids :tom)))
       ;; Verify all drum keywords in the catalog resolve to valid drum IDs (or click)
-      (doseq [dk (disj drums/drum-keywords :click :util-click)]
+      (doseq [dk (disj drum-keywords :click :util-click)]
         (when-let [id (protocol/canonical-inst-ids dk)]
           (is (contains? drum-ids id))))
       ;; Custom dynamic synth allocator must stay within the safe range 44..63

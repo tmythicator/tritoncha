@@ -55,8 +55,8 @@
 (deftest dynamic-routing-registry-test
   (testing "Dynamic routing graph registration and lookup"
     (let [custom-key  :test-ambient-routing
-          custom-spec {:busses     {:bus/pad    {:type :volume :volume 0}
-                                    :bus/master {:type :volume :volume 0}}
+          custom-spec {:busses     {:bus/pad    {}
+                                    :bus/master {}}
                        :processors {:shimmer {:type :reverb :wet 0.8}}
                        :routes     {:bus/pad    [:shimmer :bus/master]
                                     :bus/master :out}}]
@@ -125,8 +125,8 @@
 
   (testing "custom dynamic routing registration and switching"
     (routing/register-routing! :custom-matrix
-                               {:busses     {:bus/direct {:type :volume :volume 0}
-                                             :bus/master {:type :volume :volume 0}}
+                               {:busses     {:bus/direct {}
+                                             :bus/master {}}
                                 :processors {}
                                 :routes     {:bus/direct :out
                                              :bus/master :out}})

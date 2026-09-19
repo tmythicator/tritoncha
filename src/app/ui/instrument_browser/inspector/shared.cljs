@@ -1,6 +1,7 @@
 (ns app.ui.instrument-browser.inspector.shared
   "Shared inspector UI sections for mixer bus routing, code specification generation, and parameter sliders."
   (:require
+   [app.audio.dsp.busses :as busses]
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.components :as comps]
    [app.ui.instrument-browser.formatters :as fmt]
@@ -56,12 +57,17 @@
     [:span.neo-v.v-cyan (comps/bus-fx-summary (:bus cur-spec))]]])
 
 (defn code-spec-section
-  "Render declarative code specification block ready for custom/instruments.cljs.
-  Examples: [code-spec-section :saw-bass cur-spec]."
-  [cur-sel-key cur-spec]
-  [:div.inst-spec-container
-   [:div.inst-spec-header
-    [:div.inst-section-label "SYNTH SCRIPT"]
-    [:span.inst-slider-label "Ready for custom/instruments.cljs"]]
-   [:pre.inst-spec-pre
-    (fmt/format-spec-map cur-sel-key cur-spec)]])
+  "Render declarative code specification block ready for custom/synth.cljs or custom/drums.cljs.
+  Examples: [code-spec-section cur-sel-key cur-spec] or [code-spec-section cur-sel-key cur-spec drum?]."
+  ([cur-sel-key cur-spec]
+   (code-spec-section cur-sel-key cur-spec (busses/drum? (or cur-spec cur-sel-key))))
+  ([cur-sel-key cur-spec drum?]
+   [:div.inst-box.code-preview-box
+    [:div.inst-box-header
+     [:span.inst-box-title (if drum? "DRUM DEFINITION (CLOJURE)" "SYNTH SPECIFICATION (CLOJURE)")]
+     [:div.inst-code-actions
+      [:span.inst-slider-label (if drum? "Ready for custom/drums.cljs" "Ready for custom/synth.cljs")]]]
+    [:pre.inst-spec-pre
+     (fmt/format-spec-map cur-sel-key cur-spec)]]))
+
+(def code-preview-block code-spec-section)

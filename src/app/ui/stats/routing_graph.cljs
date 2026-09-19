@@ -118,7 +118,7 @@
                         (get routings :default)
                         default-graph)
         routes-map  (routing/normalize-routes (:routes active-spec))
-        bus-order   (sort-busses (keys (:busses active-spec)))
+        bus-order   (sort-busses (or (seq (keys (:busses active-spec))) canonical-bus-order))
         processors  (:processors active-spec)
         live-ctx    (:tone @engine-ctx)]
     [:div.neo-section

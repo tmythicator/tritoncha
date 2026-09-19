@@ -4,6 +4,7 @@
    [app.audio.control.looper :as looper]
    [app.audio.dsp.busses :as busses]
    [app.audio.dsp.instruments :as instruments]
+   [app.audio.dsp.worklet :as worklet]
    [reagent.core :as r]))
 
 (defonce audition-loop-active? (r/atom false))
@@ -33,12 +34,14 @@
     (reset! audition-loop-active? true)
     (case family
       :drums
-      (looper/loop! :inst-audition
-                    {:inst inst-key
-                     :notes [inst-key nil inst-key nil]
-                     :step "8n"
-                     :dur "16n"
-                     :vel 0.9})
+      (do
+        (worklet/set-worklet-drum-patch! inst-key spec)
+        (looper/loop! :inst-audition
+                      {:inst inst-key
+                       :notes [inst-key nil inst-key nil]
+                       :step "8n"
+                       :dur "16n"
+                       :vel 0.9}))
 
       :fx
       (looper/loop! :inst-audition
@@ -94,7 +97,9 @@
         (let [spec   (instruments/resolve-instrument-spec inst-key)
               family (sound-family inst-key spec)]
           (case family
-            :drums (instruments/trigger-drum! inst-key 0.9)
+            :drums (do
+                     (worklet/set-worklet-drum-patch! inst-key spec)
+                     (instruments/trigger-drum! inst-key 0.9))
             :fx    (instruments/trigger-note! inst-key "E4" "16n" 0.9)
             :bass  (instruments/trigger-note! inst-key "E1" "2n" 0.85)
             :pads  (instruments/trigger-note! inst-key ["E3" "G3" "B3" "D4"] "1m" 0.5)
@@ -107,7 +112,9 @@
   (let [spec   (instruments/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
     (case family
-      :drums (instruments/trigger-drum! inst-key 0.95)
+      :drums (do
+               (worklet/set-worklet-drum-patch! inst-key spec)
+               (instruments/trigger-drum! inst-key 0.95))
       :fx    (instruments/trigger-note! inst-key "E4" "8n" 0.95)
       :bass  (instruments/trigger-note! inst-key "E1" "4n" 0.92)
       :pads  (instruments/trigger-note! inst-key ["E3" "G3" "B3" "D4"] "2n" 0.85)
@@ -121,11 +128,13 @@
         family (sound-family inst-key spec)]
     (case family
       :drums
-      (doseq [[idx v] (map-indexed vector [0.9 0.5 0.85 0.6 1.0])]
-        (js/setTimeout
-         (fn []
-           (instruments/trigger-drum! inst-key v))
-         (* idx 110)))
+      (do
+        (worklet/set-worklet-drum-patch! inst-key spec)
+        (doseq [[idx v] (map-indexed vector [0.9 0.5 0.85 0.6 1.0])]
+          (js/setTimeout
+           (fn []
+             (instruments/trigger-drum! inst-key v))
+           (* idx 110))))
 
       :fx
       (let [notes ["E5" "B4" "E4" "B3" "E3"]]
@@ -170,12 +179,14 @@
         family (sound-family inst-key spec)]
     (case family
       :drums
-      (let [velocities [0.9 0.4 0.8 0.5 0.95 0.6 0.85 1.0]]
-        (doseq [[idx v] (map-indexed vector velocities)]
-          (js/setTimeout
-           (fn []
-             (instruments/trigger-drum! inst-key v))
-           (* idx 85))))
+      (do
+        (worklet/set-worklet-drum-patch! inst-key spec)
+        (let [velocities [0.9 0.4 0.8 0.5 0.95 0.6 0.85 1.0]]
+          (doseq [[idx v] (map-indexed vector velocities)]
+            (js/setTimeout
+             (fn []
+               (instruments/trigger-drum! inst-key v))
+             (* idx 85)))))
 
       :fx
       (let [notes ["E4" "G4" "B4" "E5" "E4" "G4" "B4" "E5"]]

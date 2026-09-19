@@ -1,32 +1,56 @@
 (ns app.audio.dsp.worklet.protocol
-  "Protocol codecs, enum mappings, and numeric identifier encoders for Rust WASM DSP."
-  (:require [app.lib.drums :refer [drum-keywords]]))
+  "Protocol codecs, enum mappings, and numeric identifier encoders for Rust WASM DSP.")
+
+(def drum-remaps
+  "Lookup map of short drum notation tokens to canonical drum keywords for live mini-notation."
+  {"k"    :kick
+   "s"    :snare
+   "rs"   :sn-rs
+   "clk"  :sn-clk
+   "ck"   :sn-crack
+   "g"    :sn-gh
+   "roll" :sn-roll
+   "h"    :hat-closed
+   "o"    :hat-open
+   "hc"   :hh-clk
+   "cp"   :clap
+   "th"   :tom-high
+   "tm"   :tom-mid
+   "tl"   :tom-low
+   "rb"   :ride-bell
+   "cr16" :crash-16
+   "cr17" :crash-17
+   "cr18" :crash-18
+   "sp"   :splash
+   "ch"   :china
+   "cb"   :cowbell})
 
 (def canonical-inst-ids
   {;; Analog Drum Voices (fixed DSP algorithms in Rust)
-   :kick          0 :bd 0
-   :snare         1 :sn-rs 1 :sn-roll 1
-   :hh-c          2 :hh 2 :hh-clk 2 :hat-closed 2 :hat 2
-   :hh-o          3 :hat-open 3
-   :util-click    11 :click 11
+   :kick          0
+   :snare         1
+   :sn-roll       1
+   :hat-closed    2 :hh-c 2 :hh-clk 2
+   :hat-open      3 :hh-o 3
+   :util-click    11
    :clap          18
    :ride          20
    :tom           21
    :sn-crack      22
-   :snare-wire    23 :sn-wire 23
-   :snare-body    24 :sn-body 24
+   :snare-wire    23
+   :snare-body    24
    :snare-ghost   25 :sn-gh 25
-   :snare-rim     26 :sn-clk 26
-   :ride-bell     64 :rb 64
-   :tom-high      65 :th 65 :tom-h 65
-   :tom-mid       66 :tm 66 :tom-m 66
-   :tom-low       67 :tl 67 :tom-l 67
-   :crash-16      68 :cr16 68 :crash 68 :cr 68
-   :crash-17      69 :cr17 69
-   :crash-18      70 :cr18 70
-   :splash        71 :sp 71
-   :china         72 :ch 72
-   :cowbell       73 :cb 73
+   :snare-rim     26 :sn-rs 26 :sn-clk 26
+   :ride-bell     64
+   :tom-high      65
+   :tom-mid       66
+   :tom-low       67
+   :crash-16      68
+   :crash-17      69
+   :crash-18      70
+   :splash        71
+   :china         72
+   :cowbell       73
 
    ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..41)
    :bass-analog   4  :bass 4
@@ -35,7 +59,7 @@
    :pad-cinema    7  :pad 7
    :lead-pluck    8  :lead 8 :pluck 8 :arp 8
    :lead-fm       9  :fm 9
-   :bass-reese    10 :reese 10
+   :bass-reese    10 :reese 10 :liquid-reese 10
    :lead-supersaw 12 :supersaw 12
    :lead-blade    13
    :lead-hoover   14 :hoover 14
@@ -45,7 +69,6 @@
    :pad-glass     19 :glass 19
    :sub-moog      42 :moog-sub 42
    :bass-moog     43 :moog-bass 43
-   :pad-shimmer   27 :shimmer 27
    :pad-strings   29 :strings 29
    :pad-vocal     30 :choir 30
    :pad-drone     31 :drone 31
@@ -59,7 +82,32 @@
    :fx-laser      41 :laser 41})
 
 (def drum-id-set
-  (into #{} (keep canonical-inst-ids drum-keywords)))
+  #{0 1 2 3 11 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73})
+
+(def drum-type->id
+  {:kick       0
+   :snare      1
+   :hat        2
+   :hat-closed 2
+   :hat-open   3
+   :clap       18
+   :ride       20
+   :metallic   20
+   :tom        21
+   :membrane   21
+   :cowbell    73})
+
+(defonce custom-drum-ids
+  (atom {}))
+
+(defn register-custom-drum-id!
+  "Maps a custom drum keyword to its underlying Rust drum voice ID.
+  Examples: (register-custom-drum-id! :fat-kick 0)."
+  [drum-key drum-id]
+  (swap! custom-drum-ids assoc (keyword drum-key) (int drum-id)))
+
+(defonce inst-spec-resolver
+  (atom nil))
 
 (defonce custom-synth-patch-ids
   (atom {}))
@@ -90,6 +138,14 @@
   [inst-key]
   (let [k (keyword inst-key)]
     (or (get canonical-inst-ids k)
+        (get @custom-drum-ids k)
+        (when-let [resolve-fn @inst-spec-resolver]
+          (when-let [spec (resolve-fn k)]
+            (when (or (= (:category spec) :drums)
+                      (contains? drum-type->id (:type spec)))
+              (let [drum-id (get drum-type->id (:type spec) 0)]
+                (register-custom-drum-id! k drum-id)
+                drum-id))))
         (get @custom-synth-patch-ids k)
         (register-custom-patch-id! k))))
 

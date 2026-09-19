@@ -23,16 +23,19 @@
         cat-filter  @state/active-category
         query       (str/trim (str/lower-case @state/search-query))
         all-insts     (instruments/all-instruments)
-        primary-insts (into {} (remove (fn [[_k spec]] (:legacy? spec))) all-insts)
+        primary-insts all-insts
         cur-sel-key   @state/selected-inst
         cur-spec      (instruments/resolve-instrument-spec cur-sel-key)
         drum?         (busses/drum? (or cur-spec cur-sel-key))
         looping?      @audition/audition-loop-active?
         filtered      (into []
                             (filter (fn [[k spec]]
-                                      (let [nm (str/lower-case (name k))]
+                                      (let [nm    (str/lower-case (name k))
+                                            title (str/lower-case (str (:title spec)))]
                                         (and (state/inst-matches-category? k spec cat-filter)
-                                             (or (empty? query) (str/includes? nm query))))))
+                                             (or (empty? query)
+                                                 (str/includes? nm query)
+                                                 (str/includes? title query))))))
                             primary-insts)]
     [:div.instrument-browser-modal
      {:role       "dialog"

@@ -12,11 +12,14 @@
   [cur-sel-key cur-spec drum?]
   [:div.inst-inspector-header
    [:div.inst-inspector-title-row
-    [:span.inst-inspector-title (str cur-sel-key)]
+    [:div.inst-inspector-title-group
+     [:span.inst-inspector-title (or (:title cur-spec) (name cur-sel-key))]
+     (when (:title cur-spec)
+       [:span.inst-inspector-keyword (str cur-sel-key)])]
     [:div.inst-inspector-badges
      (when (state/custom-file-inst? cur-sel-key)
        [:span.neo-badge.badge-custom
-        {:title "User custom instrument defined in custom/instruments.cljs (persisted on disk)"}
+        {:title "User custom instrument defined in custom/synth.cljs or custom/drums.cljs"}
         "CUSTOM"])
      (when (state/session-inst? cur-sel-key)
        [:span.neo-badge.badge-session

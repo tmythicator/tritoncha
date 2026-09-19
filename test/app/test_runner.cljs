@@ -12,7 +12,7 @@
    [app.eval.buffer-test]
    [app.eval.core-test]
    [app.lib.drums-test]
-   [app.lib.instruments-test]
+   [app.lib.synth-test]
    [app.lib.routes-test]
    [app.lib.scenes-test]
    [app.lib.tracks-test]

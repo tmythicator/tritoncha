@@ -1,45 +1,16 @@
 (ns app.lib.routes
-  "Core built-in audio routing topologies and default DSP bus graph for Tritoncha.
+  "Core built-in audio routing topologies and default DSP bus graph for Tritoncha.")
 
-  Architecture Overview:
-  Tritoncha routes real-time sound synthesis through 5 stereo audio busses into
-  dedicated send processors and a master insert chain:
-
-  1. Audio Busses:
-     - :bus/drums  Drums and percussion (membrane, acoustic, 808/909 kits)
-     - :bus/bass   Bass synths, reese, 303 acid, sub-bass
-     - :bus/lead   Melodic leads, arpeggiators, pluck synths
-     - :bus/space  Ambient pads, chord stabs, textured soundscapes
-     - :bus/direct Metronome clicks and audition voices (bypasses master)
-     - :bus/master Master summing bus with master insert processing
-
-  2. Send Processors (Parallel Bus Sends):
-     - :reverb  Global spatial diffusion. Supports two selectable engines:
-                - :fdn      8-channel Householder Feedback Delay Network with
-                            mutually prime delay lines, T60 absorption damping,
-                            and dual quadrature LFO modulation.
-                - :freeverb Classic Schroeder 8-comb plus 4-allpass diffusion.
-     - :delay   Stereo ping-pong delay with lowpass feedback damping.
-
-  3. Master Insert Processors (Serial Master Chain):
-     - :filter     Topology-Preserving Transform (TPT) State-Variable Lowpass Filter.
-     - :compressor Stereo-linked VCA studio bus glue compressor (threshold, ratio, attack, release, makeup, mix).
-     - :distort    Master analog saturation overdrive (ADAA or classic Pade).
-     - :crusher    Bit depth reduction (1 to 16 bits) and sample-hold decimation.
-     - :chorus     Dual-quadrature stereo chorus and flanger.
-     - :limiter    Analog-style soft-clipping master output stage.")
-
-;; Default Studio Graph
 (def default-graph
   "Clean studio default routing with uncolored busses and natural track filter cutoff."
   {:title "DEFAULT"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:filter     {:type :filter :filter-type "lowpass"}
@@ -56,17 +27,16 @@
     :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
-;; Studio Master (Punchy VCA Glue Bus Compressor + Crisp Lowpass + FDN Reverb)
 (def studio-master
   "Punchy studio mastering topology with VCA glue bus compression, natural filter dynamics, and lush FDN room diffusion."
   {:title "STUDIO MASTER"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:filter     {:type :filter :filter-type "lowpass"}
@@ -83,17 +53,16 @@
     :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
-;; Liminal Prison (Infinite Subterranean FDN Diffusion + Cross-Fed Ping-Pong Hallways)
 (def liminal-prison
   "Mind-bending liminal space topology with vast subterranean FDN diffusion, cross-fed ping-pong echoes, and cold eerie acoustics."
   {:title "LIMINAL PRISON"
    :busses
-   {:bus/drums  {:type :volume :volume 0 :delay 0.28 :reverb 0.42}
-    :bus/bass   {:type :volume :volume 0 :delay 0.05 :reverb 0.15}
-    :bus/lead   {:type :volume :volume 0 :delay 0.42 :reverb 0.65}
-    :bus/space  {:type :volume :volume 0 :delay 0.55 :reverb 0.85}
-    :bus/direct {:type :volume :volume 0 :delay 0.0  :reverb 0.0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {:delay 0.28 :reverb 0.42}
+    :bus/bass   {:delay 0.05 :reverb 0.15}
+    :bus/lead   {:delay 0.42 :reverb 0.65}
+    :bus/space  {:delay 0.55 :reverb 0.85}
+    :bus/direct {:delay 0.0  :reverb 0.0}
+    :bus/master {}}
 
    :processors
    {:chorus  {:type :chorus :rate 0.18 :depth 0.70 :wet 0.35}
@@ -110,17 +79,16 @@
     :bus/direct :out
     :bus/master [:filter :limiter]}})
 
-;; Heavy Dub Echo Chamber (Cathedral FDN Reverb + Warm ADAA Tape Saturation)
 (def dub-echo-chamber
   "Heavy dub routing with tape delay feedback and deep cathedral FDN reverb."
   {:title "DUB ECHO"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:distort    {:type :distortion :algorithm :adaa :distortion 0.05 :wet 0.25}
@@ -139,17 +107,16 @@
     :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
-;; Tape Lo-Fi Cassette (Analog Tape Hiss, Quantization Grain and Wow Flutter)
 (def tape-lofi
   "Vintage cassette tape character with 10-bit quantization noise, tape saturation and wow flutter."
   {:title "TAPE LO-FI"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:crusher {:type :bitcrusher :bits 10.0 :sample-hold 1.35 :wet 0.45}
@@ -168,17 +135,16 @@
     :bus/direct :out
     :bus/master [:filter :limiter]}})
 
-;; Crematorium (Searing Incineration Matrix with Overdriven Bass and Resonant Scorch Filter)
 (def crematorium
   "Searing incineration matrix with overdriven burning bass into resonant scorch filter and dry drums."
   {:title "CREMATORIUM"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:distort {:type :distortion :algorithm :adaa :distortion 0.20 :wet 0.75}
@@ -195,17 +161,16 @@
     :bus/direct :out
     :bus/master [:filter :limiter]}})
 
-;; Ambient Prism (Crystalline Spatial Diffusion + 8-Channel Cathedral FDN)
 (def ambient-prism
   "Ultra-clean crystalline spatial diffusion with cathedral FDN reverb and zero saturation."
   {:title "AMBIENT PRISM"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:chorus  {:type :chorus :rate 0.32 :depth 0.65 :wet 0.40}
@@ -222,17 +187,16 @@
     :bus/direct :out
     :bus/master [:filter :limiter]}})
 
-;; Industrial Crush (Cyberpunk EBM + Classic Pade Tanh Clipping Overdrive)
 (def industrial-crush
   "Aggressive industrial dance matrix with 5-bit decimation and classic Pade clipping overdrive."
   {:title "INDUSTRIAL CRUSH"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:crusher    {:type :bitcrusher :bits 5.0 :sample-hold 2.2 :wet 0.65}
@@ -251,17 +215,16 @@
     :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
-;; Cyber Glitch Industrial Graph (Aggressive Crusher + ADAA Drive)
 (def cyber-glitch
   "Aggressive industrial DSP graph with bitcrusher and resonance filtering."
   {:title "CYBER GLITCH"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:crusher    {:type :bitcrusher :bits 6 :sample-hold 1.5 :wet 0.7}
@@ -281,17 +244,16 @@
     :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
-;; Vintage Schroeder Graph (Classic 90s Freeverb + Classic Pade Tanh Drive)
 (def vintage-schroeder
   "Classic early digital DSP graph with Schroeder comb reverb and Pade drive."
   {:title "VINTAGE SCHROEDER"
    :busses
-   {:bus/drums  {:type :volume :volume 0}
-    :bus/bass   {:type :volume :volume 0}
-    :bus/lead   {:type :volume :volume 0}
-    :bus/space  {:type :volume :volume 0}
-    :bus/direct {:type :volume :volume 0}
-    :bus/master {:type :volume :volume 0}}
+   {:bus/drums  {}
+    :bus/bass   {}
+    :bus/lead   {}
+    :bus/space  {}
+    :bus/direct {}
+    :bus/master {}}
 
    :processors
    {:distort {:type :distortion :algorithm :classic :distortion 0.35 :wet 0.8}
@@ -309,7 +271,6 @@
     :bus/direct :out
     :bus/master [:filter :limiter]}})
 
-;; Catalog of Core Routing Topologies
 (def core-routes
   {:default           default-graph
    :studio-master     studio-master

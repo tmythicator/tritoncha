@@ -17,7 +17,9 @@
     (is (true? (busses/valid-bus? :drums)))
     (is (true? (busses/valid-bus? :bus/bass)))
     (is (true? (busses/valid-bus? :bus/space)))
-    (is (true? (busses/valid-bus? :bus/glitch)))
+    (is (true? (busses/valid-bus? :bus/lead)))
+    (is (true? (busses/valid-bus? :bus/direct)))
+    (is (false? (busses/valid-bus? :bus/glitch)))
     (is (false? (busses/valid-bus? :non-existent-bus)))
     (is (false? (busses/valid-bus? nil)))))
 
@@ -33,7 +35,7 @@
     (is (= :bus/bass (busses/instrument-bus :bass-303)))
     (is (= :bus/space (busses/instrument-bus :pad-cinema)))
     (is (= :bus/lead (busses/instrument-bus :lead-pluck)))
-    (is (= :bus/glitch (busses/instrument-bus :glitch-texture)))
+    (is (= :bus/direct (busses/instrument-bus :click)))
     (is (= :bus/master (busses/instrument-bus :unregistered-synth-xyz)))))
 
 (deftest bus-predicates-and-spec-test
@@ -49,9 +51,9 @@
     (is (true? (busses/drum? {:inst :kick})))
     (is (false? (busses/drum? :bass-analog)))
 
-    ;; Bass & Sub
+    ;; Bass + Sub
     (is (true? (busses/bass? :bass-analog)))
-    (is (true? (busses/bass? :bass-reese)))
+    (is (true? (busses/bass? :liquid-reese)))
     (is (true? (busses/bass? {:bus :bus/bass})))
     (is (true? (busses/bass? {:inst :sub-pure})))
     (is (false? (busses/bass? :kick)))
@@ -69,7 +71,7 @@
 
     ;; Pads & Space
     (is (true? (busses/pad? :pad-cinema)))
-    (is (true? (busses/pad? :pad-shimmer)))
+    (is (true? (busses/pad? :pad-strings)))
     (is (true? (busses/pad? {:bus :bus/space})))
     (is (false? (busses/pad? :kick)))
 

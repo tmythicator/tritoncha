@@ -1,16 +1,23 @@
 (ns app.ui.instrument-browser.formatters
-  "Declarative ClojureScript code generators (defsynth! and defdrum!) for Instrument Studio.")
+  "Declarative ClojureScript code generator (definst!) for Instrument Studio.")
+
+(defn- title-line [spec]
+  (if-let [t (:title spec)]
+    (str "   :title       " (pr-str t) "\n")
+    ""))
 
 (defn format-drum-spec-map
-  "Generate ClojureScript defdrum! map for drum voices.
-  Examples: (format-drum-spec-map :kick spec) -> \"(defdrum! :kick ...)\"."
+  "Generate ClojureScript definst! map for drum voices.
+  Examples: (format-drum-spec-map :kick spec) -> \"(definst! :kick ...)\"."
   [inst-key spec]
-  (let [bus (or (:bus spec) :bus/drums)
-        mod-val (or (:mod spec) :natural)]
+  (let [bus     (or (:bus spec) :bus/drums)
+        mod-val (or (:mod spec) :natural)
+        t-line  (title-line spec)]
     (case (:type spec)
       :kick
-      (str "(defdrum! " inst-key "\n"
-           "  {:category    :drums\n"
+      (str "(definst! " inst-key "\n"
+           "  {" (if (seq t-line) (subs t-line 3) ":category    :drums\n")
+           (when (seq t-line) "   :category    :drums\n")
            "   :type        :kick\n"
            "   :bus         " bus "\n"
            "   :mod         " mod-val "\n"
@@ -22,8 +29,9 @@
            "   :drive       " (.toFixed (or (:drive spec) 1.6) 2) "})")
 
       :snare
-      (str "(defdrum! " inst-key "\n"
-           "  {:category    :drums\n"
+      (str "(definst! " inst-key "\n"
+           "  {" (if (seq t-line) (subs t-line 3) ":category    :drums\n")
+           (when (seq t-line) "   :category    :drums\n")
            "   :type        :snare\n"
            "   :bus         " bus "\n"
            "   :mod         " mod-val "\n"
@@ -34,8 +42,9 @@
            "   :snappy      " (.toFixed (or (:snappy spec) 0.85) 2) "})")
 
       :hat
-      (str "(defdrum! " inst-key "\n"
-           "  {:category     :drums\n"
+      (str "(definst! " inst-key "\n"
+           "  {" (if (seq t-line) (subs t-line 3) ":category     :drums\n")
+           (when (seq t-line) "   :category     :drums\n")
            "   :type         :hat\n"
            "   :bus          " bus "\n"
            "   :mod          " mod-val "\n"
@@ -44,8 +53,9 @@
            "   :decay-open   " (.toFixed (or (:decay-open spec) 0.24) 2) "})")
 
       :membrane
-      (str "(defdrum! " inst-key "\n"
-           "  {:category    :drums\n"
+      (str "(definst! " inst-key "\n"
+           "  {" (if (seq t-line) (subs t-line 3) ":category    :drums\n")
+           (when (seq t-line) "   :category    :drums\n")
            "   :type        :membrane\n"
            "   :bus         " bus "\n"
            "   :mod         " mod-val "\n"
@@ -56,8 +66,9 @@
            "   :drive       " (.toFixed (or (:drive spec) 1.10) 2) "})")
 
       :metallic
-      (str "(defdrum! " inst-key "\n"
-           "  {:category  :drums\n"
+      (str "(definst! " inst-key "\n"
+           "  {" (if (seq t-line) (subs t-line 3) ":category  :drums\n")
+           (when (seq t-line) "   :category  :drums\n")
            "   :type      :metallic\n"
            "   :bus       " bus "\n"
            "   :mod       " mod-val "\n"
@@ -70,8 +81,9 @@
            "   :drive     " (.toFixed (or (:drive spec) 1.0) 2) "})")
 
       :clap
-      (str "(defdrum! " inst-key "\n"
-           "  {:category  :drums\n"
+      (str "(definst! " inst-key "\n"
+           "  {" (if (seq t-line) (subs t-line 3) ":category  :drums\n")
+           (when (seq t-line) "   :category  :drums\n")
            "   :type      :clap\n"
            "   :bus       " bus "\n"
            "   :mod       " mod-val "\n"
@@ -80,12 +92,12 @@
            "   :decay     " (.toFixed (or (:decay spec) 0.28) 2) "\n"
            "   :drive     " (.toFixed (or (:drive spec) 1.0) 2) "})")
 
-      (str "(defdrum! " inst-key "\n"
+      (str "(definst! " inst-key "\n"
            "  " (pr-str spec) ")"))))
 
 (defn format-spec-map
-  "Generate ClojureScript defsynth! or defdrum! map matching instrument definitions.
-  Examples: (format-spec-map :saw-bass spec) -> \"(defsynth! :saw-bass ...)\"."
+  "Generate ClojureScript definst! map matching instrument definitions.
+  Examples: (format-spec-map :saw-bass spec) -> \"(definst! :saw-bass ...)\"."
   [inst-key spec]
   (if (= (:category spec) :drums)
     (format-drum-spec-map inst-key spec)
@@ -96,9 +108,11 @@
           pitch-e  (:pitch-env spec)
           bus      (or (:bus spec) :bus/lead)
           poly?    (= (:type spec) :poly)
-          glide    (:glide spec)]
-      (str "(defsynth! " inst-key "\n"
-           "  {:osc     {:type " (or (:type osc) :saw)
+          glide    (:glide spec)
+          t-line   (title-line spec)]
+      (str "(definst! " inst-key "\n"
+           (when (seq t-line) (str "  {" (subs t-line 3)))
+           (if (seq t-line) "   :osc     {:type " "  {:osc     {:type ") (or (:type osc) :saw)
            (if (and (:sub-level osc) (> (:sub-level osc) 0.001))
              (str " :sub-level " (.toFixed (:sub-level osc) 2))
              "")

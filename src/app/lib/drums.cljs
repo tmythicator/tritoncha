@@ -1,9 +1,25 @@
 (ns app.lib.drums
-  "Core built-in drum kit synthesizer instruments and composite drum voice catalog.")
+  "Core built-in drum kit synthesizer instruments and sound design catalog for Tritoncha.")
 
-(def core-drum-instruments
+;; Drum Sound Design Specification:
+;;   :title        - Human-readable display title for UI and Studio
+;;   :category     - :drums
+;;   :type         - :kick, :snare, :hat, :membrane, :metallic, :clap
+;;   :bus          - :bus/drums (default) or :bus/direct
+;;   :mod          - Character synthesis mode (:analog, :natural, :idm, :industrial)
+;;
+;; Parameters by drum type:
+;;   :kick     - {:base-pitch 40..80 :pitch-drop 50..400 :pitch-decay 0.01..0.10 :decay 0.05..1.5 :click 0.0..1.0 :drive 0.5..4.0}
+;;   :snare    - {:base-freq 120..350 :tone-decay 0.990..0.9999 :noise-decay 0.990..0.9999 :cutoff 1000..12000 :snappy 0.0..2.5}
+;;   :hat      - {:cutoff 3000..14000 :decay-closed 0.01..0.15 :decay-open 0.05..0.80}
+;;   :membrane - {:start-pitch 80..400 :min-pitch 40..250 :pitch-decay 0.005..0.05 :decay 0.1..1.2 :drive 0.5..3.0}
+;;   :metallic - {:cutoff 500..8000 :resonance 0.05..0.95 :decay 0.1..4.0 :drive 0.5..3.0}
+;;   :clap     - {:cutoff 500..4000 :resonance 0.10..0.95 :decay 0.05..0.80 :drive 0.5..3.0}
+
+(def core-drums
   {:kick
-   {:category    :drums
+   {:title       "Kick Drum"
+    :category    :drums
     :type        :kick
     :bus         :bus/drums
     :mod         :analog
@@ -15,7 +31,8 @@
     :drive       1.6}
 
    :snare
-   {:category    :drums
+   {:title       "Snare Drum"
+    :category    :drums
     :type        :snare
     :bus         :bus/drums
     :mod         :analog
@@ -25,50 +42,9 @@
     :cutoff      2400.0
     :snappy      0.85}
 
-   :hat
-   {:category     :drums
-    :type         :hat
-    :bus          :bus/drums
-    :mod          :analog
-    :cutoff       7200.0
-    :decay-closed 0.04
-    :decay-open   0.24}
-
-   :snare-body
-   {:category   :drums
-    :type       :snare
-    :bus        :bus/drums
-    :mod        :analog
-    :base-freq  160.0
-    :tone-decay 0.9985}
-
-   :snare-wire
-   {:category    :drums
-    :type        :snare
-    :bus         :bus/drums
-    :mod         :analog
-    :noise-decay 0.9993
-    :cutoff      5200.0}
-
-   :snare-rim
-   {:category   :drums
-    :type       :snare
-    :bus        :bus/drums
-    :mod        :analog
-    :base-freq  420.0
-    :tone-decay 0.9975
-    :cutoff     4200.0}
-
-   :snare-ghost
-   {:category    :drums
-    :type        :snare
-    :bus         :bus/drums
-    :mod         :analog
-    :base-freq   190.0
-    :noise-decay 0.9980}
-
    :hat-closed
-   {:category     :drums
+   {:title        "Closed Hi-Hat"
+    :category     :drums
     :type         :hat
     :bus          :bus/drums
     :mod          :analog
@@ -76,15 +52,56 @@
     :decay-closed 0.04}
 
    :hat-open
-   {:category   :drums
-    :type       :hat
+   {:title       "Open Hi-Hat"
+    :category    :drums
+    :type        :hat
+    :bus         :bus/drums
+    :mod         :analog
+    :cutoff      7200.0
+    :decay-open  0.24}
+
+   :snare-body
+   {:title      "Snare Body Component"
+    :category   :drums
+    :type       :snare
     :bus        :bus/drums
     :mod        :analog
-    :cutoff     7200.0
-    :decay-open 0.24}
+    :base-freq  160.0
+    :tone-decay 0.9985}
+
+   :snare-wire
+   {:title       "Snare Wire Noise"
+    :category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :analog
+    :noise-decay 0.9993
+    :cutoff      5200.0}
+
+   :snare-rim
+   {:title       "Snare Rimshot"
+    :category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :natural
+    :base-freq   215.0
+    :tone-decay  0.9985
+    :noise-decay 0.9989
+    :cutoff      5200.0
+    :snappy      1.35}
+
+   :snare-ghost
+   {:title       "Snare Ghost Hit"
+    :category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :analog
+    :base-freq   190.0
+    :noise-decay 0.9980}
 
    :ride
-   {:category  :drums
+   {:title     "Ride Cymbal"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -94,7 +111,8 @@
     :drive     1.15}
 
    :tom
-   {:category    :drums
+   {:title       "Tom Drum"
+    :category    :drums
     :type        :membrane
     :bus         :bus/drums
     :mod         :analog
@@ -105,7 +123,8 @@
     :drive       1.10}
 
    :sn-crack
-   {:category   :drums
+   {:title      "Snare Crack"
+    :category   :drums
     :type       :snare
     :bus        :bus/drums
     :mod        :analog
@@ -114,7 +133,8 @@
     :tone-decay 0.9988}
 
    :ride-bell
-   {:category  :drums
+   {:title     "Ride Cymbal Bell"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -125,7 +145,8 @@
     :drive     1.25}
 
    :tom-high
-   {:category    :drums
+   {:title       "High Tom"
+    :category    :drums
     :type        :membrane
     :bus         :bus/drums
     :mod         :analog
@@ -136,7 +157,8 @@
     :drive       1.15}
 
    :tom-mid
-   {:category    :drums
+   {:title       "Mid Tom"
+    :category    :drums
     :type        :membrane
     :bus         :bus/drums
     :mod         :analog
@@ -147,7 +169,8 @@
     :drive       1.15}
 
    :tom-low
-   {:category    :drums
+   {:title       "Floor Tom"
+    :category    :drums
     :type        :membrane
     :bus         :bus/drums
     :mod         :analog
@@ -158,7 +181,8 @@
     :drive       1.15}
 
    :crash-16
-   {:category  :drums
+   {:title     "16\" Crash"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -169,7 +193,8 @@
     :drive     1.05}
 
    :crash-17
-   {:category  :drums
+   {:title     "17\" Crash"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -180,7 +205,8 @@
     :drive     1.05}
 
    :crash-18
-   {:category  :drums
+   {:title     "18\" Crash"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -191,7 +217,8 @@
     :drive     1.05}
 
    :splash
-   {:category  :drums
+   {:title     "Splash Cymbal"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -202,7 +229,8 @@
     :drive     0.95}
 
    :china
-   {:category  :drums
+   {:title     "China Cymbal"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -213,7 +241,8 @@
     :drive     1.35}
 
    :cowbell
-   {:category  :drums
+   {:title     "Cowbell"
+    :category  :drums
     :type      :metallic
     :bus       :bus/drums
     :mod       :analog
@@ -224,7 +253,8 @@
     :drive     1.40}
 
    :clap
-   {:category  :drums
+   {:title     "Handclap"
+    :category  :drums
     :type      :clap
     :bus       :bus/drums
     :mod       :analog
@@ -232,106 +262,3 @@
     :resonance 0.70
     :decay     0.28
     :drive     1.00}})
-
-(def core-drum-voices
-  {:kick      {:node :kick        :default-note "D1" :dur "16n" :pulse 1.5}
-   :snare     {:layers [{:node :snare-body :default-note "G3" :dur "16n"}
-                        {:node :snare-wire :dur "16n"}]
-               :pulse 1.3}
-   :sn-rs     {:layers [{:node :snare-body :default-note "B3" :dur "16n" :vel-scale 1.1}
-                        {:node :snare-wire :dur "16n" :vel-scale 1.15}
-                        {:node :snare-rim  :default-note "E5" :dur "32n" :vel-scale 0.9}]
-               :pulse 1.6}
-   :sn-clk    {:node :snare-rim   :default-note "D5" :dur "32n" :vel-scale 0.8 :pulse 0.6}
-   :sn-gh     {:node :snare-ghost :dur "32n" :vel-scale 0.45 :pulse 0.3}
-   :sn-roll   {:layers [{:node :snare-body :default-note "A3" :dur "32n" :vel-scale 0.85}
-                        {:node :snare-wire :dur "32n" :vel-scale 0.72}]
-               :pulse 0.9}
-   :sn-crack  {:node :sn-crack    :default-note "G3" :dur "16n" :pulse 1.5}
-   :hh-c      {:node :hat-closed  :dur "32n" :vel-scale 0.6 :pulse 0.5}
-   :hh-o      {:node :hat-open    :dur "16n" :vel-scale 0.75 :pulse 0.7}
-   :hh-clk    {:node :hat-closed  :dur "64n" :vel-scale 0.45 :pulse 0.35}
-   :ride      {:node :ride        :dur "16n" :vel-scale 0.7 :pulse 0.6}
-   :ride-bell {:node :ride-bell   :dur "16n" :vel-scale 0.8 :pulse 0.7}
-   :tom       {:node :tom         :default-note "A2" :dur "16n" :pulse 1.0}
-   :tom-high  {:node :tom-high    :default-note "D3" :dur "16n" :pulse 1.0}
-   :tom-mid   {:node :tom-mid     :default-note "A2" :dur "16n" :pulse 1.1}
-   :tom-low   {:node :tom-low     :default-note "D2" :dur "16n" :pulse 1.2}
-   :crash-16  {:node :crash-16    :dur "8n"  :vel-scale 0.9 :pulse 1.8}
-   :crash-17  {:node :crash-17    :dur "8n"  :vel-scale 0.9 :pulse 1.9}
-   :crash-18  {:node :crash-18    :dur "4n"  :vel-scale 0.95 :pulse 2.0}
-   :splash    {:node :splash      :dur "16n" :vel-scale 0.85 :pulse 1.3}
-   :china     {:node :china       :dur "8n"  :vel-scale 0.95 :pulse 1.7}
-   :cowbell   {:node :cowbell     :dur "16n" :vel-scale 0.85 :pulse 0.9}
-   :click     {:node :click       :default-note "C6" :dur "32n" :pulse 0.4}})
-
-(def drum-keywords
-  "Unified set of all drum instrument keywords and aliases."
-  (into #{:drums :clap :handclap :crack :rimshot :hh :hihat :closed-hh :open-hh :bd :bassdrum
-          :rb :th :tm :tl :cr :crash :cr16 :cr17 :cr18 :sp :ch :cb
-          :hats :perc :percussion :break}
-        (concat (keys core-drum-voices)
-                (keys core-drum-instruments))))
-
-(defn drum-keyword?
-  "Checks if a keyword represents a drum instrument or drum hit.
-  Examples: (drum-keyword? :kick) -> true, (drum-keyword? :bass-analog) -> false."
-  [k]
-  (contains? drum-keywords (keyword k)))
-
-(def mini-notation-aliases
-  "Lookup map for mini-notation drum tokens and aliases to canonical keywords."
-  {"k"         :kick
-   "bd"        :kick
-   "s"         :snare
-   "rs"        :sn-rs
-   "sn-rs"     :sn-rs
-   "c"         :sn-clk
-   "clk"       :sn-clk
-   "sn-clk"    :sn-clk
-   "g"         :sn-gh
-   "gh"        :sn-gh
-   "sn-gh"     :sn-gh
-   "roll"      :sn-roll
-   "sn-roll"   :sn-roll
-   "h"         :hh-c
-   "hh"        :hh-c
-   "hh-c"      :hh-c
-   "o"         :hh-o
-   "oh"        :hh-o
-   "hh-o"      :hh-o
-   "hc"        :hh-clk
-   "hh-clk"    :hh-clk
-   "crack"     :sn-crack
-   "sn-crack"  :sn-crack
-   "rim"       :snare-rim
-   "wire"      :snare-wire
-   "body"      :snare-body
-   "ghost"     :snare-ghost
-   "ride"      :ride
-   "rb"        :ride-bell
-   "ride-bell" :ride-bell
-   "bell"      :ride-bell
-   "tom"       :tom
-   "th"        :tom-high
-   "tom-high"  :tom-high
-   "tm"        :tom-mid
-   "tom-mid"   :tom-mid
-   "tl"        :tom-low
-   "tom-low"   :tom-low
-   "cr"        :crash-16
-   "crash"     :crash-16
-   "cr16"      :crash-16
-   "crash-16"  :crash-16
-   "cr17"      :crash-17
-   "crash-17"  :crash-17
-   "cr18"      :crash-18
-   "crash-18"  :crash-18
-   "sp"        :splash
-   "splash"    :splash
-   "ch"        :china
-   "china"     :china
-   "cb"        :cowbell
-   "cowbell"   :cowbell
-   "clap"      :clap
-   "cp"        :clap})
