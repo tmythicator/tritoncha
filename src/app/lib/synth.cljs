@@ -166,7 +166,7 @@
     :type          :poly
     :bus           :bus/space
     :maxPolyphony  16
-    :osc           {:type :supersaw :sub-level 0.0 :drift 0.32}
+    :osc           {:type :supersaw :sub-level 0.0 :drift 0.32 :noise 0.065}
     :filter        {:type :lowpass :cutoff 1900 :q 0.12 :drive 0.12 :env-amount 800 :key-track 0.85}
     :amp-env       {:attack 0.07 :decay 0.45 :sustain 0.8 :release 0.7}
     :mod-env       {:attack 0.07 :decay 0.45}}
@@ -190,7 +190,7 @@
     :type          :poly
     :bus           :bus/space
     :maxPolyphony  16
-    :osc           {:type :sine :sub-level 0.0 :drift 0.18 :noise 0.015}
+    :osc           {:type :sine :sub-level 0.0 :drift 0.18 :noise 0.045}
     :filter        {:type :lowpass :cutoff 3200 :q 0.15 :drive 0.08 :env-amount 1200 :key-track 1.0}
     :amp-env       {:attack 0.01 :decay 0.25 :sustain 0.0 :release 0.2}
     :mod-env       {:attack 0.01 :decay 0.25}}

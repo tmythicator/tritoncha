@@ -11,7 +11,7 @@
      :scale   [:e :minor 1]
      :geom    :dodecahedron
      :colors  ["#030514" "#00e5ff"]
-     :routing :studio-master
+     :routing :default
      :tracks
      {:kick      {:notes (pat "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
       :snare     {:notes (pat ". . . .  s . . .  . . . .  s . g_ .") :step "16n"}
@@ -33,7 +33,7 @@
      :scale   [:f :minor 1]
      :geom    :icosahedron
      :colors  ["#030814" "#00e5ff"]
-     :routing :liminal-prison
+     :routing :crematorium
      :tracks
      {:kick    {:notes (pat "k . . .  . . k .  . . k .  . . . .") :step "16n"}
       :snare   {:notes (pat ". . . .  s! . . .  . . . .  s! g_ g_ g_") :step "16n"}
@@ -54,7 +54,7 @@
      :bpm     168
      :scale   [:e :phrygian 1]
      :colors  ["#050410" "#00ffcc"]
-     :routing :default
+     :routing :ambient-prism
      :figures
      {:core   {:geom :torus-knot  :pos [0 0 0]     :scale 1.05 :colors {:mesh "#ff007f" :wire "#00ffff"} :rot-speed [0.006 0.009 0.0]}
       :halo   {:geom :torus       :pos [0 2.8 0]   :rot [1.57 0 0] :scale 0.75 :colors {:mesh "#00ffff" :wire "#ffffff"} :rot-speed [0.002 0.010 0.0]}
@@ -114,7 +114,7 @@
      :scale   [:c :dorian 1]
      :geom    :sphere
      :colors  ["#120c08" "#ffaa77"]
-     :routing :tape-lofi
+     :routing :vintage-schroeder
      :tracks
      {:drums   {:notes [[:kick 0.95 "C1"] [:hh-clk 0.3] [:hh-c 0.35] [:hh-clk 0.25]
                         [:snare 0.85 "C3"] [:sn-gh 0.25] [:hh-c 0.35] [:hh-o 0.45]
@@ -231,7 +231,7 @@
      :scale  [:d :dorian 1]
      :geom   :octahedron
      :colors ["#0a0b0d" "#e2e8f0"]
-     :routing :cyber-glitch
+     :routing :crematorium
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
@@ -249,7 +249,7 @@
      :scale  [:a :minor 1]
      :geom   :torus-knot
      :colors ["#12031a" "#ff00aa"]
-     :routing :ambient-prism
+     :routing :void-chamber
      :tracks
      {:drums   {:notes [[:kick 1.0 "A1"] [:hh-c 0.4] [:hh-c 0.4] [:hh-c 0.4]
                         [:clap 0.95] [:hh-c 0.4] [:kick 0.85 "A1"] [:hh-c 0.4]
@@ -387,7 +387,7 @@
      :scale  [:c :major 1]
      :geom   :octahedron
      :colors ["#020b08" "#00ff66"]
-     :routing :default
+     :routing :studio-master
      :tracks
      {:kick  {:notes (pat "k . . .  . . . .  k . . .  . . . .") :step "16n"}
       :snare {:notes (pat ". . . .  s . . .  . . . .  s . . .") :step "16n"}
@@ -406,7 +406,7 @@
      :scale  [:f :phrygian 1]
      :geom   :icosahedron
      :colors ["#050014" "#ff00d4"]
-     :routing :liminal-prison
+     :routing :crematorium
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! ck") :step "16n"}
@@ -424,7 +424,7 @@
      :scale  [:f :minor 1]
      :geom   :dodecahedron
      :colors ["#080c14" "#88aacc"]
-     :routing :vintage-schroeder
+     :routing :tape-lofi
      :tracks
      {:kick  {:notes (pat "k . . .  . . . .  . . k .  . . . .") :step "16n"}
       :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
