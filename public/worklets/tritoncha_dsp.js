@@ -41,13 +41,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             this.wasmExports = result.instance.exports;
             this.wasmEnginePtr = this.wasmExports.tritoncha_dsp_create(this.sampleRate);
 
-            const wasmMemory = this.wasmExports.memory;
-            this.outLeftView = new Float32Array(wasmMemory.buffer, this.outLeftPtr, 128);
-            this.outRightView = new Float32Array(wasmMemory.buffer, this.outRightPtr, 128);
-            this.instIdsBufferView = new Int16Array(wasmMemory.buffer, this.instIdsBufferPtr, 128);
-            this.notesBufferView = new Int16Array(wasmMemory.buffer, this.notesBufferPtr, 128);
-            this.velsBufferView = new Float32Array(wasmMemory.buffer, this.velsBufferPtr, 128);
-            this.dursBufferView = new Float32Array(wasmMemory.buffer, this.dursBufferPtr, 128);
+            this.ensureMemoryViews();
 
             this.useWasm = true;
             this.port.postMessage({ type: 'ready' });
@@ -71,6 +65,23 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
     };
   }
 
+  ensureMemoryViews() {
+    if (!this.wasmExports || !this.wasmExports.memory) return;
+    const wasmMemory = this.wasmExports.memory;
+    if (
+      !this.outLeftView ||
+      this.outLeftView.buffer !== wasmMemory.buffer ||
+      this.outLeftView.buffer.byteLength === 0
+    ) {
+      this.outLeftView = new Float32Array(wasmMemory.buffer, this.outLeftPtr, 128);
+      this.outRightView = new Float32Array(wasmMemory.buffer, this.outRightPtr, 128);
+      this.instIdsBufferView = new Int16Array(wasmMemory.buffer, this.instIdsBufferPtr, 128);
+      this.notesBufferView = new Int16Array(wasmMemory.buffer, this.notesBufferPtr, 128);
+      this.velsBufferView = new Float32Array(wasmMemory.buffer, this.velsBufferPtr, 128);
+      this.dursBufferView = new Float32Array(wasmMemory.buffer, this.dursBufferPtr, 128);
+    }
+  }
+
   handleMessage(data) {
     switch (data.type) {
 
@@ -88,6 +99,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
 
         case 'setTrack':
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr && data.notes && data.vels) {
+            this.ensureMemoryViews();
             const len = Math.min(128, data.notes.length);
             for (let i = 0; i < len; i++) {
               this.instIdsBufferView[i] = data.instIds ? data.instIds[i] : (data.instId || 4);
@@ -155,7 +167,144 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
           }
           break;
 
+        case 'setBusChain':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
+            const busIdx = data.busIdx !== undefined ? data.busIdx : 0;
+            this.wasmExports.tritoncha_dsp_clear_bus_chain(this.wasmEnginePtr, busIdx);
+            this.wasmExports.tritoncha_dsp_set_bus_target_out(
+              this.wasmEnginePtr,
+              busIdx,
+              data.targetOut ? 1 : 0
+            );
+            if (Array.isArray(data.inserts)) {
+              for (const ins of data.inserts) {
+                switch (ins.type) {
+                  case 'filter':
+                    this.wasmExports.tritoncha_dsp_add_bus_filter(
+                      this.wasmEnginePtr,
+                      busIdx,
+                      ins.cutoffHz !== undefined ? ins.cutoffHz : 18000.0,
+                      ins.resonance !== undefined ? ins.resonance : 0.0
+                    );
+                    break;
+                  case 'delay':
+                    this.wasmExports.tritoncha_dsp_add_bus_delay(
+                      this.wasmEnginePtr,
+                      busIdx,
+                      ins.timeS !== undefined ? ins.timeS : 0.35,
+                      ins.feedback !== undefined ? ins.feedback : 0.4,
+                      ins.wet !== undefined ? ins.wet : 0.3
+                    );
+                    break;
+                  case 'distort':
+                    this.wasmExports.tritoncha_dsp_add_bus_distort(
+                      this.wasmEnginePtr,
+                      busIdx,
+                      ins.drive !== undefined ? ins.drive : 0.0,
+                      ins.bits !== undefined ? ins.bits : 16.0,
+                      ins.sampleHold !== undefined ? ins.sampleHold : 1.0
+                    );
+                    break;
+                  case 'chorus':
+                    this.wasmExports.tritoncha_dsp_add_bus_chorus(
+                      this.wasmEnginePtr,
+                      busIdx,
+                      ins.rateHz !== undefined ? ins.rateHz : 0.8,
+                      ins.depth !== undefined ? ins.depth : 0.4,
+                      ins.mix !== undefined ? ins.mix : 0.3
+                    );
+                    break;
+                  case 'reverb':
+                    this.wasmExports.tritoncha_dsp_add_bus_reverb(
+                      this.wasmEnginePtr,
+                      busIdx,
+                      ins.roomSize !== undefined ? ins.roomSize : 0.7,
+                      ins.wet !== undefined ? ins.wet : 0.3
+                    );
+                    break;
+                  case 'compressor':
+                    this.wasmExports.tritoncha_dsp_add_bus_compressor(
+                      this.wasmEnginePtr,
+                      busIdx,
+                      ins.thresholdDb !== undefined ? ins.thresholdDb : -12.0,
+                      ins.ratio !== undefined ? ins.ratio : 4.0,
+                      ins.attackS !== undefined ? ins.attackS : 0.010,
+                      ins.releaseS !== undefined ? ins.releaseS : 0.100,
+                      ins.makeupDb !== undefined ? ins.makeupDb : 2.5,
+                      ins.mix !== undefined ? ins.mix : 1.0
+                    );
+                    break;
+                }
+              }
+            }
+          }
+          break;
+
+        case 'updateBusProcessor':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
+            const busIdx = data.busIdx !== undefined ? data.busIdx : -1;
+            switch (data.processor) {
+              case 'filter':
+                this.wasmExports.tritoncha_dsp_update_bus_filter(
+                  this.wasmEnginePtr,
+                  busIdx,
+                  data.cutoffHz !== undefined ? data.cutoffHz : 18000.0,
+                  data.resonance !== undefined ? data.resonance : 0.0
+                );
+                break;
+              case 'delay':
+                this.wasmExports.tritoncha_dsp_update_bus_delay(
+                  this.wasmEnginePtr,
+                  busIdx,
+                  data.timeS !== undefined ? data.timeS : 0.35,
+                  data.feedback !== undefined ? data.feedback : 0.4,
+                  data.wet !== undefined ? data.wet : 0.3
+                );
+                break;
+              case 'distort':
+                this.wasmExports.tritoncha_dsp_update_bus_distort(
+                  this.wasmEnginePtr,
+                  busIdx,
+                  data.drive !== undefined ? data.drive : 0.0,
+                  data.bits !== undefined ? data.bits : 16.0,
+                  data.sampleHold !== undefined ? data.sampleHold : 1.0
+                );
+                break;
+              case 'chorus':
+                this.wasmExports.tritoncha_dsp_update_bus_chorus(
+                  this.wasmEnginePtr,
+                  busIdx,
+                  data.rateHz !== undefined ? data.rateHz : 0.8,
+                  data.depth !== undefined ? data.depth : 0.4,
+                  data.mix !== undefined ? data.mix : 0.3
+                );
+                break;
+              case 'reverb':
+                this.wasmExports.tritoncha_dsp_update_bus_reverb(
+                  this.wasmEnginePtr,
+                  busIdx,
+                  data.roomSize !== undefined ? data.roomSize : 0.7,
+                  data.wet !== undefined ? data.wet : 0.3
+                );
+                break;
+              case 'compressor':
+                this.wasmExports.tritoncha_dsp_update_bus_compressor(
+                  this.wasmEnginePtr,
+                  busIdx,
+                  data.thresholdDb !== undefined ? data.thresholdDb : -12.0,
+                  data.ratio !== undefined ? data.ratio : 4.0,
+                  data.attackS !== undefined ? data.attackS : 0.010,
+                  data.releaseS !== undefined ? data.releaseS : 0.100,
+                  data.makeupDb !== undefined ? data.makeupDb : 2.5,
+                  data.mix !== undefined ? data.mix : 1.0
+                );
+                break;
+            }
+          }
+          break;
+
         case 'noteOn':
+
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
             this.wasmExports.tritoncha_dsp_note_on(
               this.wasmEnginePtr,
@@ -349,23 +498,31 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
     const blockSize = channelLeft.length; // 128 samples
 
     if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-      this.wasmExports.tritoncha_dsp_process(
-        this.wasmEnginePtr,
-        this.outLeftPtr,
-        this.outRightPtr,
-        blockSize
-      );
+      try {
+        this.ensureMemoryViews();
 
-      channelLeft.set(this.outLeftView);
-      if (channelRight) {
-        channelRight.set(this.outRightView);
-      }
+        this.wasmExports.tritoncha_dsp_process(
+          this.wasmEnginePtr,
+          this.outLeftPtr,
+          this.outRightPtr,
+          blockSize
+        );
 
-      if (this.wasmExports.tritoncha_dsp_take_trigger_mask) {
-        const triggerMask = this.wasmExports.tritoncha_dsp_take_trigger_mask(this.wasmEnginePtr);
-        if (triggerMask > 0) {
-          this.port.postMessage({ type: 'triggers', mask: triggerMask });
+        this.ensureMemoryViews();
+
+        channelLeft.set(this.outLeftView);
+        if (channelRight) {
+          channelRight.set(this.outRightView);
         }
+
+        if (this.wasmExports.tritoncha_dsp_take_trigger_mask) {
+          const triggerMask = this.wasmExports.tritoncha_dsp_take_trigger_mask(this.wasmEnginePtr);
+          if (triggerMask > 0) {
+            this.port.postMessage({ type: 'triggers', mask: triggerMask });
+          }
+        }
+      } catch (err) {
+        console.error('Error in TritonchaDSPProcessor process():', err);
       }
     } else {
       channelLeft.fill(0);
