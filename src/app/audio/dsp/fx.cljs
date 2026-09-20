@@ -24,6 +24,16 @@
   []
   @filter-state)
 
+(defn get-delay-state
+  "Returns the current master delay state map {:time s :feedback fb :wet w}."
+  []
+  @delay-state)
+
+(defn get-reverb-state
+  "Returns the current master reverb state map {:room-size s :wet w}."
+  []
+  @reverb-state)
+
 (defn set-filter-cutoff!
   "Sets the master lowpass filter cutoff frequency in Hz (50 to 18000 Hz).
   Examples: (set-filter-cutoff! 3000), (f! 12000)."

@@ -138,6 +138,38 @@
     (is (= :custom-matrix (routing/set-routing! :custom-matrix)))
     (is (= :custom-matrix (:current-routing @audio-state))))
 
+  (testing "bus sends are cleanly reset to defaults when switching from liminal-prison to default"
+    (routing/set-routing! :liminal-prison)
+    (is (= 0.28 (get-in @audio-state [:bus-sends :bus/drums :delay])))
+    (is (= 0.42 (get-in @audio-state [:bus-sends :bus/drums :reverb])))
+    (routing/set-routing! :default)
+    (is (= 0.02 (get-in @audio-state [:bus-sends :bus/drums :delay])))
+    (is (= 0.06 (get-in @audio-state [:bus-sends :bus/drums :reverb]))))
+
+  (testing "neutral processors set delay and reverb wet to 0.0 when not declared"
+    (routing/register-routing! :dry-matrix
+                               {:busses     {:bus/drums  {}
+                                             :bus/master {}}
+                                :processors {}
+                                :routes     {:bus/drums  :out
+                                             :bus/master :out}})
+    (routing/set-routing! :dry-matrix)
+    (is (= 0.0 (:wet (fx/get-delay-state))))
+    (is (= 0.0 (:wet (fx/get-reverb-state))))
+    (routing/set-routing! :default))
+
+  (testing "reset-fx! restores active topology processors and sends after live tweaks"
+    (routing/set-routing! :dub-echo)
+    (is (= 4200.0 (:cutoff (fx/get-filter-state))))
+    (fx/set-filter-cutoff! 1200.0)
+    (fx/set-delay-feedback! 0.90)
+    (is (= 1200.0 (:cutoff (fx/get-filter-state))))
+    (is (= 0.90 (:feedback (fx/get-delay-state))))
+    (routing/reset-fx!)
+    (is (= 4200.0 (:cutoff (fx/get-filter-state))))
+    (is (= 0.44 (:feedback (fx/get-delay-state))))
+    (routing/set-routing! :default))
+
   (testing "all built-in and user custom topologies switch cleanly and have valid termination"
     (let [all (routing/all-routings)]
       (doseq [[rk spec] all]

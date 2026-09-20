@@ -155,6 +155,9 @@
 (def set-compressor! fx/set-compressor!)
 (def comp-state fx/get-compressor-state)
 (def compressor-state fx/get-compressor-state)
+(def reset-fx! routing/reset-fx!)
+(def rfx! routing/reset-fx!)
+(def reset-routing! routing/reset-fx!)
 
 ;; SFX Drops + Dub One-Shots
 (def s! fx/trigger-dub-siren!)
