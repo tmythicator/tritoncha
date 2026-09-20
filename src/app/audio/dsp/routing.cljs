@@ -54,11 +54,9 @@
       (not (contains? base :bus/direct)) (assoc :bus/direct {:inserts [] :target :out}))))
 
 (defn- resolve-filter-frequency
-  "Resolves the cutoff frequency in Hz: declared topology frequency, active track cutoff, or 18000 Hz."
+  "Resolves the cutoff frequency in Hz: declared topology frequency or 18000 Hz."
   [spec]
-  (or (:frequency spec)
-      (:track-cutoff @audio-state)
-      18000.0))
+  (or (:frequency spec) 18000.0))
 
 (defn- apply-processor!
   "Applies a declared DSP processor configuration map into the Rust WASM engine."

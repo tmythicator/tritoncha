@@ -79,11 +79,11 @@
                      (keyword? target-key) target-key
                      (keyword? preset-spec) preset-spec
                      :else :custom)
-        {:keys [bpm scale geom figures colors cutoff tracks mod kit routing]} preset-map
+        {:keys [bpm scale geom figures colors tracks mod kit routing]} preset-map
         [bg-c mesh-c]  (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])
         target-routing (or routing (:current-routing @audio-state) :default)]
 
-    (swap! audio-state assoc :current-jam preset-key :active? true :track-cutoff cutoff)
+    (swap! audio-state assoc :current-jam preset-key :active? true)
     (when-let [drum-m (or mod (when (keyword? kit) kit) (:mod kit))]
       (set-drum-mode! drum-m))
     (when scale

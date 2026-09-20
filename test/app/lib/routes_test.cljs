@@ -113,8 +113,7 @@
     (routing/set-routing! :default)
     (is (false? (get-in @audio-state [:bus-bypass-master-fx :bus/drums]))))
 
-  (testing "switching across routings and back to default completely resets state without active track cutoff"
-    (swap! audio-state dissoc :track-cutoff)
+  (testing "switching across routings and back to default completely resets state"
     (routing/set-routing! :cyber-glitch)
     (is (= 5000.0 (:cutoff (fx/get-filter-state))))
     (routing/set-routing! :default)
@@ -122,12 +121,11 @@
     (is (= 0.0 (:resonance (fx/get-filter-state))))
     (is (= :fdn (:reverb-mode @audio-state))))
 
-  (testing "switching to dub-echo and back to default restores active track cutoff"
-    (swap! audio-state assoc :track-cutoff 5000.0)
+  (testing "switching to dub-echo applies dub-echo parameters and switching back resets to default"
     (routing/set-routing! :dub-echo)
     (is (= 4200.0 (:cutoff (fx/get-filter-state))))
     (routing/set-routing! :default)
-    (is (= 5000.0 (:cutoff (fx/get-filter-state)))))
+    (is (= 18000.0 (:cutoff (fx/get-filter-state)))))
 
   (testing "custom dynamic routing registration and switching"
     (routing/register-routing! :custom-matrix

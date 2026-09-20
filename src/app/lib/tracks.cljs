@@ -5,13 +5,13 @@
 
 (def core-tracks-catalog
   [[:orbital-roller
-    {:name   "Facing Moons"
-     :mod    :natural
-     :bpm    160
-     :scale  [:e :minor 1]
-     :geom   :dodecahedron
-     :colors ["#030514" "#00e5ff"]
-     :cutoff 5200
+    {:name    "Facing Moons"
+     :mod     :natural
+     :bpm     160
+     :scale   [:e :minor 1]
+     :geom    :dodecahedron
+     :colors  ["#030514" "#00e5ff"]
+     :routing :studio-master
      :tracks
      {:kick      {:notes (pat "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
       :snare     {:notes (pat ". . . .  s . . .  . . . .  s . g_ .") :step "16n"}
@@ -27,13 +27,13 @@
                   :step "2n" :dur "2n" :vel 0.23}}}]
 
    [:street-roller
-    {:name   "Messenger On A Fixie"
-     :mod    :natural
-     :bpm    172
-     :scale  [:f :minor 1]
-     :geom   :icosahedron
-     :colors ["#030814" "#00e5ff"]
-     :cutoff 4400
+    {:name    "Messenger On A Fixie"
+     :mod     :natural
+     :bpm     172
+     :scale   [:f :minor 1]
+     :geom    :icosahedron
+     :colors  ["#030814" "#00e5ff"]
+     :routing :liminal-prison
      :tracks
      {:kick    {:notes (pat "k . . .  . . k .  . . k .  . . . .") :step "16n"}
       :snare   {:notes (pat ". . . .  s! . . .  . . . .  s! g_ g_ g_") :step "16n"}
@@ -49,12 +49,12 @@
                 :step "1m" :dur "1m" :vel 0.26}}}]
 
    [:orbital-matrix
-    {:name   "Orbital Breaking Bits"
-     :mod    :analog
-     :bpm    168
-     :scale  [:e :phrygian 1]
-     :colors ["#050410" "#00ffcc"]
-     :cutoff 5200
+    {:name    "Orbital Breaking Bits"
+     :mod     :analog
+     :bpm     168
+     :scale   [:e :phrygian 1]
+     :colors  ["#050410" "#00ffcc"]
+     :routing :default
      :figures
      {:core   {:geom :torus-knot  :pos [0 0 0]     :scale 1.05 :colors {:mesh "#ff007f" :wire "#00ffff"} :rot-speed [0.006 0.009 0.0]}
       :halo   {:geom :torus       :pos [0 2.8 0]   :rot [1.57 0 0] :scale 0.75 :colors {:mesh "#00ffff" :wire "#ffffff"} :rot-speed [0.002 0.010 0.0]}
@@ -86,13 +86,13 @@
                 :step "16n" :dur "16n" :vel 0.35}}}]
 
    [:industrial-techno
-    {:name   "Iron Foundry Assault"
-     :mod    :industrial
-     :bpm    138
-     :scale  [:b :phrygian 1]
-     :geom   :box
-     :colors ["#080808" "#ff1122"]
-     :cutoff 2800
+    {:name    "Iron Foundry Assault"
+     :mod     :industrial
+     :bpm     138
+     :scale   [:b :phrygian 1]
+     :geom    :box
+     :colors  ["#080808" "#ff1122"]
+     :routing :industrial-crush
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
@@ -108,13 +108,13 @@
               :step "16n" :dur "8n" :vel 0.4}}}]
 
    [:downtempo-chill
-    {:name   "Twilight Peaks"
-     :mod    :natural
-     :bpm    88
-     :scale  [:c :dorian 1]
-     :geom   :sphere
-     :colors ["#120c08" "#ffaa77"]
-     :cutoff 3200
+    {:name    "Twilight Peaks"
+     :mod     :natural
+     :bpm     88
+     :scale   [:c :dorian 1]
+     :geom    :sphere
+     :colors  ["#120c08" "#ffaa77"]
+     :routing :tape-lofi
      :tracks
      {:drums   {:notes [[:kick 0.95 "C1"] [:hh-clk 0.3] [:hh-c 0.35] [:hh-clk 0.25]
                         [:snare 0.85 "C3"] [:sn-gh 0.25] [:hh-c 0.35] [:hh-o 0.45]
@@ -135,13 +135,13 @@
                 :step "16n" :dur "8n" :vel 0.3}}}]
 
    [:acid-roller
-    {:name   "Deck 2016"
-     :mod    :analog
-     :bpm    130
-     :scale  [:a :aeolian 1]
-     :geom   :octahedron
-     :colors ["#140404" "#ff3300"]
-     :cutoff 3800
+    {:name    "Deck 2016"
+     :mod     :analog
+     :bpm     130
+     :scale   [:a :aeolian 1]
+     :geom    :octahedron
+     :colors  ["#140404" "#ff3300"]
+     :routing :crematorium
      :tracks
      {:kick  {:notes (pat "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
       :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
@@ -160,7 +160,7 @@
      :scale  [:d :phrygian 1]
      :geom   :sphere
      :colors ["#0a0302" "#ff6600"]
-     :cutoff 4200
+     :routing :liminal-prison
      :tracks
      {:kick    {:notes (pat "k_ . . .  . . . .  k_ . . .  . . k_ .") :step "16n"}
       :snare   {:notes (pat ". . s! .  ck_ . . .  . . sp_ .  s! . g_ .") :step "16n"}
@@ -184,7 +184,7 @@
      :scale  [:f :phrygian 1]
      :geom   :box
      :colors ["#020402" "#00ff33"]
-     :cutoff 3200
+     :routing :void-chamber
      :tracks
      {:drums {:notes [[:kick 1.0 "F1"] nil [:hh-c 0.45] nil
                       [:sn-crack 1.0 "F3"] nil nil [:hh-c 0.4]
@@ -208,7 +208,7 @@
      :scale  [:c :minor 1]
      :geom   :icosahedron
      :colors ["#05080c" "#00e5a3"]
-     :cutoff 2600
+     :routing :dub-echo
      :tracks
      {:kick   {:notes (pat "k . . .  . . . .  k . . .  . . . .") :step "16n"}
       :snare  {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
@@ -231,7 +231,7 @@
      :scale  [:d :dorian 1]
      :geom   :octahedron
      :colors ["#0a0b0d" "#e2e8f0"]
-     :cutoff 3000
+     :routing :cyber-glitch
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
@@ -249,7 +249,7 @@
      :scale  [:a :minor 1]
      :geom   :torus-knot
      :colors ["#12031a" "#ff00aa"]
-     :cutoff 5500
+     :routing :ambient-prism
      :tracks
      {:drums   {:notes [[:kick 1.0 "A1"] [:hh-c 0.4] [:hh-c 0.4] [:hh-c 0.4]
                         [:clap 0.95] [:hh-c 0.4] [:kick 0.85 "A1"] [:hh-c 0.4]
@@ -276,7 +276,7 @@
      :scale  [:e :phrygian 1]
      :geom   :dodecahedron
      :colors ["#040a18" "#00aaff"]
-     :cutoff 4000
+     :routing :liminal-prison
      :tracks
      {:kick  {:notes (pat "k! . . .  . . k_ .  . . k! .  k . . .") :step "16n"}
       :snare {:notes (pat ". . . .  cp! . . .  . . . .  cp! . clk_ .") :step "16n"}
@@ -298,7 +298,7 @@
      :scale  [:c :dorian 1]
      :geom   :box
      :colors ["#050505" "#ffee00"]
-     :cutoff 6000
+     :routing :void-chamber
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :snare {:notes (pat ". . . .  s! . . .  . . . .  s! . . s_") :step "16n"}
@@ -317,7 +317,7 @@
      :scale  [:d :minor 1]
      :geom   :octahedron
      :colors ["#0a0212" "#bb00ff"]
-     :cutoff 3200
+     :routing :dub-echo
      :tracks
      {:drums   {:notes [[:kick 1.0 "D1"] [:hh-c 0.4] [:hh-c 0.35] [:hh-clk 0.3]
                         [:sn-crack 1.0 "D3"] [:hh-c 0.4] [:hh-o 0.6] [:hh-c 0.35]
@@ -342,7 +342,7 @@
      :scale  [:e :in-sen 2]
      :geom   :sphere
      :colors ["#030a08" "#d4af37"]
-     :cutoff 4000
+     :routing :ambient-prism
      :tracks
      {:drums   {:notes [[:tom-low 0.75 "E2"] [:ride-bell 0.6] nil [:hh-clk 0.3]
                         [:sn-gh 0.25] nil [:hh-c 0.3] [:splash 0.55]
@@ -366,7 +366,7 @@
      :scale  [:g :blues 1]
      :geom   :torus-knot
      :colors ["#120814" "#00ffb7"]
-     :cutoff 4200
+     :routing :cyber-glitch
      :tracks
      {:drums   {:notes (pat "k! hc_ cb k_  s! hc_ h g_  sp k_ ck clk_  s! o_ roll clk!")
                 :step "16n"}
@@ -387,7 +387,7 @@
      :scale  [:c :major 1]
      :geom   :octahedron
      :colors ["#020b08" "#00ff66"]
-     :cutoff 7000
+     :routing :default
      :tracks
      {:kick  {:notes (pat "k . . .  . . . .  k . . .  . . . .") :step "16n"}
       :snare {:notes (pat ". . . .  s . . .  . . . .  s . . .") :step "16n"}
@@ -406,7 +406,7 @@
      :scale  [:f :phrygian 1]
      :geom   :icosahedron
      :colors ["#050014" "#ff00d4"]
-     :cutoff 4800
+     :routing :liminal-prison
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
       :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! ck") :step "16n"}
@@ -424,7 +424,7 @@
      :scale  [:f :minor 1]
      :geom   :dodecahedron
      :colors ["#080c14" "#88aacc"]
-     :cutoff 3600
+     :routing :vintage-schroeder
      :tracks
      {:kick  {:notes (pat "k . . .  . . . .  . . k .  . . . .") :step "16n"}
       :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}

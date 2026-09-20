@@ -31,8 +31,6 @@
   (let [hz (if (<= hz-or-norm 1.0) (* hz-or-norm 18000.0) hz-or-norm)
         clamped-hz (clamp hz 50.0 18000.0)]
     (swap! filter-state assoc :cutoff clamped-hz)
-    (when (= (:current-routing @audio-state :default) :default)
-      (swap! audio-state assoc :track-cutoff clamped-hz))
     (worklet/set-worklet-filter! clamped-hz (:resonance @filter-state))))
 
 (defn set-filter-q!

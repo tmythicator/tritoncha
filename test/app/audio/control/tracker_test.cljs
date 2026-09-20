@@ -39,17 +39,19 @@
       (is (= (nth keys-list 1) (nth (tracker/track-keys) 1)))
       (is (nil? (tracker/play-track-at! 9999))))))
 
-(deftest tracker-play-preset-preserves-active-routing-test
-  (testing "play-preset! preserves active routing and its specific filter parameters"
-    (routing/set-routing! :crematorium)
-    (is (= 2800.0 (:cutoff (fx/get-filter-state))))
-    (is (true? (get-in @audio-state [:bus-bypass-master-fx :bus/drums])))
-    ;; Launch track which has a different default cutoff (e.g. 5200)
-    (tracker/play-preset! :orbital-roller)
-    ;; Active routing remains :crematorium and filter frequency remains 2800.0 (not overridden to 5200)
+(deftest tracker-play-preset-routing-test
+  (testing "play-preset! activates declared track routing"
+    (routing/set-routing! :default)
+    (tracker/play-preset! :acid-roller)
     (is (= :crematorium (:current-routing @audio-state)))
     (is (= 2800.0 (:cutoff (fx/get-filter-state))))
     (is (true? (get-in @audio-state [:bus-bypass-master-fx :bus/drums])))
+    (looper/stop!))
+
+  (testing "play-preset! preserves active routing when preset has no explicit routing"
+    (routing/set-routing! :crematorium)
+    (tracker/play-preset! {:bpm 140 :tracks {}})
+    (is (= :crematorium (:current-routing @audio-state)))
+    (is (= 2800.0 (:cutoff (fx/get-filter-state))))
     (looper/stop!)
-    ;; Reset back to default
     (routing/set-routing! :default)))
