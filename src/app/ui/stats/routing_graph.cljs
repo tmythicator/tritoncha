@@ -8,9 +8,6 @@
    [app.state :refer [audio-state engine-ctx]]
    [clojure.string :as str]))
 
-(def ^:private canonical-bus-order
-  [:bus/drums :bus/bass :bus/lead :bus/space :bus/direct :bus/master])
-
 (defn- bus-badge-info [bus-key]
   (case (busses/normalize-bus-key bus-key)
     :bus/drums  {:label "DRUMS"  :class "bus-drums"}
@@ -21,10 +18,6 @@
     :bus/master {:label "MASTER" :class "bus-master"}
     (let [clean (-> (name bus-key) (str/replace #"-bus$" "") str/upper-case)]
       {:label clean :class "bus-direct"})))
-
-(defn- sort-busses [b-keys]
-  (let [idx-map (into {} (map-indexed (fn [i k] [k i]) canonical-bus-order))]
-    (sort-by #(get idx-map % 99) b-keys)))
 
 (defn- format-route-title [rk spec]
   (or (:title spec)
@@ -41,6 +34,7 @@
     :bus/master  "MASTER"
     :thru        "THRU"
     :direct      "THRU"
+    :bypass      "BYPASS"
     (let [{:keys [type frequency cutoff ratio enabled time]} (get processors node-key)]
       (case type
         :filter
@@ -65,28 +59,49 @@
         :freeverb   "FREEVERB"
         :distortion "DISTORTION"
         :bitcrusher "BITCRUSHER"
-        :limiter    "LIMITER"
+        (:limiter :limitter) "LIMITER"
         :volume     "VOLUME"
         (-> (name node-key) (str/replace #"-" " ") str/upper-case)))))
 
-(defn- display-nodes [route-entry]
-  (let [{:keys [inserts target]} route-entry]
-    (if (empty? inserts)
-      [:thru (or target :bus/master)]
-      (conj (vec inserts) (or target :bus/master)))))
+(defn- bus-sends-summary [sends]
+  (let [d (when-let [v (:delay sends)] (when (pos? v) (str "DLY " (Math/round (* v 100)) "%")))
+        r (when-let [v (:reverb sends)] (when (pos? v) (str "RVB " (Math/round (* v 100)) "%")))
+        parts (keep identity [d r])]
+    (when (seq parts)
+      (str "SENDS (" (str/join " " parts) ")"))))
+
+(defn- display-nodes [route-entry sends]
+  (let [{:keys [inserts target]} route-entry
+        sends-str (bus-sends-summary sends)]
+    (cond
+      (= target :out)
+      (if (empty? inserts)
+        [:bypass :out]
+        (conj (vec inserts) :out))
+
+      (seq inserts)
+      (conj (vec inserts) (or target :bus/master))
+
+      sends-str
+      [sends-str (or target :bus/master)]
+
+      :else
+      [:thru (or target :bus/master)])))
 
 (defn- node-view [node-key processors live-ctx terminal?]
-  (let [lbl (format-node-label node-key processors live-ctx)]
+  (let [lbl (if (string? node-key)
+              node-key
+              (format-node-label node-key processors live-ctx))]
     (if terminal?
       [:span {:class (if (= node-key :bus/master) "neo-master-dest" "neo-dest")} lbl]
       [:<>
        [:span.neo-node lbl]
        [:span.neo-arrow " > "]])))
 
-(defn- route-row [bus-key route-entry processors live-ctx]
+(defn- route-row [bus-key route-entry sends processors live-ctx]
   (let [{:keys [label class]} (bus-badge-info bus-key)
         master?               (= bus-key :bus/master)
-        chain                 (display-nodes route-entry)]
+        chain                 (display-nodes route-entry sends)]
     [:div.neo-route-row {:class (when master? "master-row")}
      [:span.neo-bus-tag {:class class} label]
      [:div.neo-route-chain
@@ -119,14 +134,19 @@
                         (get routings :default)
                         default-graph)
         routes-map  (routing/normalize-routes (:routes active-spec))
-        bus-order   (sort-busses (or (seq (keys (:busses active-spec))) canonical-bus-order))
+        busses-map  (:busses active-spec)
         processors  (:processors active-spec)
-        live-ctx    (:tone @engine-ctx)]
+        live-ctx    (:tone @engine-ctx)
+        inst-busses [:bus/drums :bus/bass :bus/lead :bus/space]]
     [:div.neo-section
      [:div.neo-section-header
       [:div.neo-section-label (str "$ routing_topology [" (str/upper-case (name cur-route-k)) "]")]
       [route-tabs cur-route-k routings]]
      [:div.neo-routing-box
-      (for [bk bus-order]
+      ;; 1. Instrument Input Busses
+      (for [bk inst-busses]
         ^{:key (str bk)}
-        [route-row bk (get routes-map bk) processors live-ctx])]]))
+        [route-row bk (get routes-map bk) (get busses-map bk) processors live-ctx])
+
+      ;; 2. Master Mix Bus
+      [route-row :bus/master (get routes-map :bus/master) nil processors live-ctx]]]))

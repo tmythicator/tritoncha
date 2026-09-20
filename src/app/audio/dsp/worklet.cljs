@@ -319,3 +319,24 @@
                              :releaseS (float (or release-s 0.100))
                              :makeupDb (float (or makeup-db 2.5))
                              :mix (float (or mix 1.0))})))
+
+(defn set-worklet-bus-chain!
+  "Configures the modular insert effects chain and output routing for an audio bus in the Rust WASM engine.
+  Examples: (set-worklet-bus-chain! 0 false [{:type \"filter\" :cutoffHz 3500 :resonance 0.0}])."
+  [bus-idx target-out? inserts]
+  (let [inserts-js (clj->js (or inserts []))]
+    (transport/send-msg! #js {:type "setBusChain"
+                              :busIdx (int (or bus-idx 0))
+                              :targetOut (boolean target-out?)
+                              :inserts inserts-js})))
+
+(defn update-worklet-bus-processor!
+  "Updates parameters for a specific processor type on a bus (or globally if bus-idx is -1).
+  Examples: (update-worklet-bus-processor! -1 :filter {:cutoffHz 3000 :resonance 0.5})."
+  [bus-idx processor params]
+  (let [msg (clj->js (merge {:type "updateBusProcessor"
+                             :busIdx (int (or bus-idx -1))
+                             :processor (name processor)}
+                            params))]
+    (transport/send-msg! msg)))
+

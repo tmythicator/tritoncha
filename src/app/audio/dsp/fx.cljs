@@ -16,6 +16,9 @@
 (defonce ^:private reverb-state
   (atom {:room-size 0.70 :wet 0.35}))
 
+(defonce ^:private chorus-state
+  (atom {:rate 0.8 :depth 0.4 :wet 0.0}))
+
 (defonce ^:private compressor-state
   (atom {:enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 1.0}))
 
@@ -33,6 +36,16 @@
   "Returns the current master reverb state map {:room-size s :wet w}."
   []
   @reverb-state)
+
+(defn get-drive-state
+  "Returns the current overdrive and bitcrusher state map {:drive d :bits b :sample-hold sh}."
+  []
+  @drive-state)
+
+(defn get-chorus-state
+  "Returns the current chorus state map {:rate r :depth d :wet w}."
+  []
+  @chorus-state)
 
 (defn set-filter-cutoff!
   "Sets the master lowpass filter cutoff frequency in Hz (50 to 18000 Hz).
@@ -88,7 +101,11 @@
   ([mix] (set-chorus! 0.8 mix))
   ([rate-hz mix] (set-chorus! rate-hz 0.4 mix))
   ([rate-hz depth mix]
-   (worklet/set-worklet-chorus! (clamp rate-hz 0.1 10.0) (clamp depth 0.0 1.0) (clamp mix 0.0 1.0))))
+   (let [r (clamp rate-hz 0.1 10.0)
+         d (clamp depth 0.0 1.0)
+         w (clamp mix 0.0 1.0)]
+     (swap! chorus-state assoc :rate r :depth d :wet w)
+     (worklet/set-worklet-chorus! r d w))))
 
 (defn set-sidechain!
   "Sets kick sidechain ducking pump amount (0.0 to 1.0).
@@ -104,7 +121,10 @@
     (swap! delay-state assoc :feedback clamped-fb)
     (worklet/set-worklet-delay! (:time @delay-state) clamped-fb (:wet @delay-state))))
 
-(defn- parse-delay-time-s [t]
+(defn parse-delay-time-s
+  "Converts note duration strings or numeric seconds to delay time in seconds.
+  Examples: (parse-delay-time-s \"8n.\") -> 0.27, (parse-delay-time-s 0.35) -> 0.35."
+  [t]
   (cond
     (number? t)  (float t)
     (= t "16n")  0.09

@@ -160,6 +160,7 @@
     (:bus/space :space) 2
     (:bus/lead :lead) 3
     (:bus/direct :direct :click) 4
+    (:bus/master :master) 5
     4))
 
 (defn osc-type->id
