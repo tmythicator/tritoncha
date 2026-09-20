@@ -64,15 +64,15 @@
      :tracks
      {:kick    {:figure :core
                 :notes (pat "k_ . . .  . . k_ .  . . . .  . . k_ .
-                                k_ . . .  . . k_ .  . . k_ .  . . . k_")
+                             k_ . . .  . . k_ .  . . k_ .  . . . k_")
                 :step "16n"}
       :snare   {:figure :halo
                 :notes (pat ". . . .  s . . .  . . . .  s . g_ .
-                                . . . .  s . . g_  . . . .  s . clk_ .")
+                             . . . .  s . . g_  . . . .  s . clk_ .")
                 :step "16n"}
       :hats    {:figure :ring
                 :notes (pat "hc_ . h_ .  hc_ . o_ .  hc_ . h_ hc_  hc_ . o_ .
-                                hc_ . h_ .  hc_ . o_ .  hc_ hc_ h_ .  hc_ . o_ .")
+                             hc_ . h_ .  hc_ . o_ .  hc_ hc_ h_ .  hc_ . o_ .")
                 :step "16n"}
       :bass    {:figure :pillar
                 :inst :bass-liquid
@@ -80,10 +80,10 @@
                              1 _ _ 2  _ 1 :b5 _  1 _ 4 3  _ 2 1 _] 1)
                 :step "16n" :dur "8n" :vel 0.70}
       :echo    {:figure :sat
-                :inst :pad-glass
-                :bus  :bus/space
-                :notes (deg [nil nil 1 nil  nil 3 nil nil  nil :b5 nil 5  nil 4 nil 2] 3)
-                :step "16n" :dur "16n" :vel 0.35}}}]
+                :inst :pad-strings
+                :bus  :bus/lead
+                :notes (deg [_ _ 1 _  _ 3 _ _  _ :b5 _ 5  _ 4 _ 2] 3)
+                :step "16n" :dur "8n" :vel 0.35}}}]
 
    [:industrial-techno
     {:name    "Iron Foundry Assault"
@@ -258,16 +258,16 @@
                 :step "16n"}
       :bass    {:inst :bass-moog
                 :notes (deg [1 1 1 1 1 1 1 1 7 7 7 7 6 6 6 6] 1)
-                :step "16n" :dur "16n" :vel 0.9}
-      :strings {:inst :lead-blade
+                :step "16n" :dur "16n" :vel 0.60}
+      :strings {:inst :pad-strings
                 :notes (prog [[1 :min7]
                               [6 :maj7]
                               [3 :maj7]
                               [7 :dom7]] 3)
-                :step "1m" :dur "1m" :vel 0.15}
+                :step "1m" :dur "1m" :vel 0.25}
       :arp     {:inst :lead-supersaw
                 :notes (deg [1 3 5 8 5 3 1 3] 3)
-                :step "16n" :dur "8n" :vel 0.19}}}]
+                :step "16n" :dur "8n" :vel 0.35}}}]
 
    [:electro-break
     {:name   "Cyborg Factory"
