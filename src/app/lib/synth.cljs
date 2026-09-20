@@ -17,7 +17,7 @@
 (def core-synths
   {;; Basses
    :bass-analog
-   {:title     "Analog Saw"
+   {:title     "Analog Saw Bass"
     :category  :bass
     :type      :mono
     :bus       :bus/bass
@@ -28,7 +28,7 @@
     :mod-env   {:attack 0.005 :decay 0.18}}
 
    :bass-303
-   {:title    "Acid 303"
+   {:title    "Acid 303 Bass"
     :category :bass
     :type     :mono
     :bus      :bus/bass
@@ -84,7 +84,7 @@
     :glide     0.06}
 
    :bass-liquid
-   {:title     "Liquid Organ"
+   {:title     "Liquid Organ Bass"
     :category  :bass
     :type      :mono
     :bus       :bus/bass
@@ -96,7 +96,7 @@
     :glide     0.045}
 
    :bass-slap
-   {:title     "Slap Pulse"
+   {:title     "Slap Pulse Bass"
     :category  :bass
     :type      :mono
     :bus       :bus/bass
@@ -107,7 +107,7 @@
     :mod-env   {:attack 0.002 :decay 0.14}}
 
    :bass-neuro
-   {:title    "Neuro Notch"
+   {:title    "Neuro Notch Bass"
     :category :bass
     :type     :mono
     :bus      :bus/bass
@@ -117,7 +117,7 @@
     :mod-env  {:attack 0.005 :decay 0.22}}
 
    :bass-organ
-   {:title    "Slap Organ"
+   {:title    "Slap Organ Bass"
     :category :bass
     :type     :mono
     :bus      :bus/bass
@@ -127,7 +127,7 @@
     :mod-env  {:attack 0.002 :decay 0.18}}
 
    :acid-beast
-   {:title    "Acid 303 Beast"
+   {:title    "Acid 303 Beast Bass"
     :category :bass
     :type     :mono
     :bus      :bus/bass
@@ -138,7 +138,7 @@
     :glide    0.045}
 
    :liquid-reese
-   {:title    "Liquid Reese"
+   {:title    "Liquid Reese Bass"
     :category :bass
     :type     :mono
     :bus      :bus/bass
@@ -150,7 +150,7 @@
 
    ;; Pads and Atmospheres
    :pad-cinema
-   {:title         "Cinema"
+   {:title         "Cinema Pad"
     :category      :pads
     :type          :poly
     :bus           :bus/space
@@ -161,7 +161,7 @@
     :mod-env       {:attack 0.08 :decay 0.45}}
 
    :pad-strings
-   {:title         "Strings Supersaw"
+   {:title         "Strings Supersaw Pad"
     :category      :pads
     :type          :poly
     :bus           :bus/space
@@ -172,7 +172,7 @@
     :mod-env       {:attack 0.07 :decay 0.45}}
 
    :pad-vocal
-   {:title         "Vocal Choir"
+   {:title         "Vocal Choir Pad"
     :category      :pads
     :type          :poly
     :bus           :bus/space
@@ -185,7 +185,7 @@
     :glide         0.275}
 
    :pad-glass
-   {:title         "Glass Sine"
+   {:title         "Glass Sine Pad"
     :category      :pads
     :type          :poly
     :bus           :bus/space
@@ -196,7 +196,7 @@
     :mod-env       {:attack 0.01 :decay 0.25}}
 
    :pad-drone
-   {:title         "Deep Drone"
+   {:title         "Deep Drone Pad"
     :category      :pads
     :type          :poly
     :bus           :bus/space
@@ -207,7 +207,7 @@
     :mod-env       {:attack 0.12 :decay 0.6}}
 
    :pad-dreamy
-   {:title        "Dreamy Noisy Chorus"
+   {:title        "Dreamy Noisy Pad"
     :category     :pads
     :type         :poly
     :bus          :bus/space
@@ -220,7 +220,7 @@
     :glide        0.315}
 
    :blade-runner
-   {:title        "Blade Runner"
+   {:title        "Blade Runner Pad"
     :category     :pads
     :type         :poly
     :bus          :bus/space
@@ -253,7 +253,7 @@
     :mod-env  {:attack 0.004 :decay 0.22}}
 
    :lead-fm
-   {:title     "FM Metallic Pluck"
+   {:title     "FM Metallic Lead"
     :category  :leads
     :type      :poly
     :bus       :bus/lead
@@ -284,7 +284,7 @@
     :mod-env  {:attack 0.004 :decay 0.25}}
 
    :lead-string
-   {:title    "Karplus Acoustic Pluck"
+   {:title    "Karplus Acoustic Lead"
     :category :leads
     :type     :poly
     :bus      :bus/lead
@@ -329,11 +329,12 @@
     :category  :leads
     :type      :poly
     :bus       :bus/lead
-    :osc       {:type :fm :noise 0.015}
-    :pitch-env {:amount 14 :decay 0.012}
-    :filter    {:type :lowpass :cutoff 2800 :q 0.45 :drive 0.32 :env-amount 3500 :key-track 2.0}
-    :amp-env   {:attack 0.003 :decay 0.22 :sustain 0.25 :release 0.18}
-    :mod-env   {:attack 0.003 :decay 0.22}}
+    :glide     0.155
+    :osc       {:type :click :sub-level 0.20 :noise 0.04 :drift 0.65}
+    :pitch-env {:amount 5 :decay 0.015}
+    :filter    {:type :ladder :cutoff 4240 :q 0.46 :drive 0.85 :env-amount 6500 :key-track 2.0}
+    :amp-env   {:attack 0.003 :decay 0.220 :sustain 0.25 :release 0.180}
+    :mod-env   {:attack 0.003 :decay 0.220}}
 
    :glass-mallet
    {:title        "Glass Mallet Lead"
@@ -341,11 +342,12 @@
     :type         :poly
     :bus          :bus/lead
     :maxPolyphony 12
-    :osc          {:type :sine :sub-level 0.15 :drift 0.12}
+    :glide        0.030
+    :osc          {:type :tri :sub-level 0.15}
     :pitch-env    {:amount 18 :decay 0.008}
-    :filter       {:type :lowpass :cutoff 3400 :q 0.30 :drive 0.10 :env-amount 2400 :key-track 2.0}
-    :amp-env      {:attack 0.002 :decay 0.28 :sustain 0.05 :release 0.35}
-    :mod-env      {:attack 0.002 :decay 0.28}}
+    :filter       {:type :lowpass :cutoff 7440 :q 0.40 :drive 0.15 :env-amount 5200}
+    :amp-env      {:attack 0.002 :decay 0.280 :sustain 0.06 :release 0.230}
+    :mod-env      {:attack 0.361 :decay 0.010}}
 
    ;; Sound Effects and Utilities
    :click
@@ -380,7 +382,7 @@
     :mod-env   {:attack 0.002 :decay 0.12}}
 
    :fx-subdrop
-   {:title     "Seismic Sub Drop"
+   {:title     "Sub Drop"
     :category  :fx
     :type      :mono
     :bus       :bus/direct

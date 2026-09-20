@@ -5,7 +5,8 @@
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.components :as comps]
    [app.ui.instrument-browser.formatters :as fmt]
-   [app.ui.instrument-browser.state :as state]))
+   [app.ui.instrument-browser.state :as state]
+   [reagent.core :as r]))
 
 (defn patch-slider
   "Render a parameter slider declaratively bound to an instrument patch property.
@@ -62,12 +63,25 @@
   ([cur-sel-key cur-spec]
    (code-spec-section cur-sel-key cur-spec (busses/drum? (or cur-spec cur-sel-key))))
   ([cur-sel-key cur-spec drum?]
-   [:div.inst-box.code-preview-box
-    [:div.inst-box-header
-     [:span.inst-box-title (if drum? "DRUM DEFINITION (CLOJURE)" "SYNTH SPECIFICATION (CLOJURE)")]
-     [:div.inst-code-actions
-      [:span.inst-slider-label (if drum? "Ready for custom/drums.cljs" "Ready for custom/synth.cljs")]]]
-    [:pre.inst-spec-pre
-     (fmt/format-spec-map cur-sel-key cur-spec)]]))
+   (r/with-let [copied? (r/atom false)]
+     (let [code (fmt/format-spec-map cur-sel-key cur-spec)]
+       [:div.inst-box.code-preview-box
+        [:div.inst-box-header
+         [:span.inst-box-title (if drum? "DRUM DEFINITION (CLOJURE)" "SYNTH SPECIFICATION (CLOJURE)")]
+         [:div.inst-code-actions
+          [:button.inst-copy-btn
+           {:class    (when @copied? "copied")
+            :title    "Copy specification to clipboard"
+            :on-click (fn [e]
+                        (.stopPropagation e)
+                        (when (and js/navigator js/navigator.clipboard)
+                          (.writeText js/navigator.clipboard code)
+                          (reset! copied? true)
+                          (js/setTimeout #(reset! copied? false) 1500)))}
+           (if @copied? "[COPIED!]" "[COPY]")]
+          [:span.inst-slider-label (if drum? "Ready for custom/drums.cljs" "Ready for custom/synth.cljs")]]]
+        [:pre.inst-spec-pre
+         {:title "Click and drag to select code"}
+         code]]))))
 
 (def code-preview-block code-spec-section)
