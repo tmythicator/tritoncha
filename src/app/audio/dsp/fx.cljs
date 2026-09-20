@@ -1,7 +1,6 @@
 (ns app.audio.dsp.fx
   "Audio effects automations, drive, chorus, bitcrush, sidechain, smooth filter sweeps, dub sirens, and sub-bass drops via Rust WASM DSP engine."
-  (:require [app.audio.dsp.engine :refer [init-audio!]]
-            [app.audio.dsp.worklet :as worklet]
+  (:require [app.audio.dsp.worklet :as worklet]
             [app.state :refer [audio-state pulse!]]
             [app.utils.math :refer [clamp]]))
 
@@ -223,14 +222,12 @@
 (defn trigger-dub-siren!
   "Triggers a classic one-shot dub laser siren FX."
   []
-  (init-audio!)
   (worklet/trigger-worklet-note! :lead "E5" 0.9)
   (pulse! 2.8))
 
 (defn trigger-sub-drop!
   "Triggers a seismic sub-bass drop."
   []
-  (init-audio!)
   (worklet/trigger-worklet-note! :sub-sine "F1" 1.0)
   (pulse! 3.0))
 
@@ -238,7 +235,6 @@
   "Triggers a dark minor 9th pad chord stab."
   ([] (trigger-dark-chord! ["E3" "G3" "B3" "D4" "F#4"]))
   ([chord]
-   (init-audio!)
    (doseq [n chord]
      (worklet/trigger-worklet-note! :pad n 0.6))
    (pulse! 1.8)))

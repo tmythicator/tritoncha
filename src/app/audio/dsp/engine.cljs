@@ -1,8 +1,17 @@
 (ns app.audio.dsp.engine
   "Native WebAudio context lifecycle and AudioWorklet engine initialization."
-  (:require [app.audio.dsp.instruments :refer [reload-instruments!]]
+  (:require [app.audio.control.mixer :as mixer]
+            [app.audio.dsp.instruments :refer [reload-instruments!]]
+            [app.audio.dsp.routing :as routing]
             [app.audio.dsp.worklet :as worklet]
             [app.state :refer [audio-state]]))
+
+(defn- boot-dsp-graph!
+  "Boot sequence executed once the Rust WASM DSP AudioWorklet is fully initialized."
+  []
+  (reload-instruments!)
+  (mixer/sync-all-busses!)
+  (routing/init-routing!))
 
 (defn resume-audio-context!
   "Resumes the WebAudio context if currently suspended."
@@ -39,7 +48,7 @@
                      (attach-state-auto-resume! ctx)
                      (when (= (.-state ctx) "suspended")
                        (.resume ctx)))
-                   (reload-instruments!)
+                   (worklet/on-worklet-ready! boot-dsp-graph!)
                    (swap! audio-state assoc :initialized? true))))
         (catch js/Object e
           (println "Failed to start WebAudio engine:" e))))

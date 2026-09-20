@@ -4,8 +4,8 @@
             [app.audio.control.session :as session]
             [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
-            [app.audio.dsp.fx :refer [set-filter-cutoff!]]
             [app.audio.dsp.instruments :refer [reload-instruments!]]
+            [app.audio.dsp.routing :as routing]
             [app.audio.theory.harmony :as harmony :refer [chord]]
             [app.audio.theory.patterns :refer [pattern]]
             [app.config :as cfg]
@@ -79,8 +79,9 @@
                      (keyword? target-key) target-key
                      (keyword? preset-spec) preset-spec
                      :else :custom)
-        {:keys [bpm scale geom figures colors cutoff tracks mod kit]} preset-map
-        [bg-c mesh-c] (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])]
+        {:keys [bpm scale geom figures colors cutoff tracks mod kit routing]} preset-map
+        [bg-c mesh-c]  (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])
+        target-routing (or routing (:current-routing @audio-state) :default)]
 
     (swap! audio-state assoc :current-jam preset-key :active? true :track-cutoff cutoff)
     (when-let [drum-m (or mod (when (keyword? kit) kit) (:mod kit))]
@@ -95,7 +96,7 @@
         (clear-figures!)
         (when geom (set-geometry! geom))))
     (when colors (set-colors! bg-c mesh-c))
-    (when cutoff (set-filter-cutoff! cutoff))
+    (routing/set-routing! target-routing)
 
     (doseq [[track-name track-opts] tracks]
       (loop! track-name (resolve-track-scale-notes track-opts scale)))))

@@ -131,3 +131,8 @@
       (doseq [[p-type p-spec] dsp]
         (apply-processor! p-type p-spec))
       routing-key)))
+
+(defn init-routing!
+  "Applies the active routing topology to the Rust WASM engine."
+  []
+  (set-routing! (or (:current-routing @audio-state) :default)))

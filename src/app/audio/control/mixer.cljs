@@ -36,8 +36,6 @@
   (doseq [b-key (keys default-bus-levels)]
     (sync-bus-to-worklet! b-key)))
 
-(worklet/on-worklet-ready! sync-all-busses!)
-
 (defn set-volume!
   "Sets the gain volume of a specific audio bus in decibels.
   Examples: (set-volume! :bus/drums -3), (set-volume! :bus/bass 0)."

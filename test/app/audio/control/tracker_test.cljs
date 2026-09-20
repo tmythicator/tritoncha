@@ -1,5 +1,9 @@
 (ns app.audio.control.tracker-test
-  (:require [app.audio.control.tracker :as tracker]
+  (:require [app.audio.control.looper :as looper]
+            [app.audio.control.tracker :as tracker]
+            [app.audio.dsp.fx :as fx]
+            [app.audio.dsp.routing :as routing]
+            [app.state :refer [audio-state]]
             [cljs.test :refer [deftest is testing]]))
 
 (deftest tracker-default-track-test
@@ -34,3 +38,18 @@
       (is (= (nth keys-list 0) (tracker/default-track-key)))
       (is (= (nth keys-list 1) (nth (tracker/track-keys) 1)))
       (is (nil? (tracker/play-track-at! 9999))))))
+
+(deftest tracker-play-preset-preserves-active-routing-test
+  (testing "play-preset! preserves active routing and its specific filter parameters"
+    (routing/set-routing! :crematorium)
+    (is (= 2800.0 (:cutoff (fx/get-filter-state))))
+    (is (true? (get-in @audio-state [:bus-bypass-master-fx :bus/drums])))
+    ;; Launch track which has a different default cutoff (e.g. 5200)
+    (tracker/play-preset! :orbital-roller)
+    ;; Active routing remains :crematorium and filter frequency remains 2800.0 (not overridden to 5200)
+    (is (= :crematorium (:current-routing @audio-state)))
+    (is (= 2800.0 (:cutoff (fx/get-filter-state))))
+    (is (true? (get-in @audio-state [:bus-bypass-master-fx :bus/drums])))
+    (looper/stop!)
+    ;; Reset back to default
+    (routing/set-routing! :default)))

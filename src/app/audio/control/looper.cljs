@@ -68,8 +68,6 @@
     (when (and (:active? @audio-state) (seq active))
       (worklet/set-playing! true))))
 
-(worklet/on-worklet-ready! sync-all-active-tracks!)
-
 (defn- handle-sequencer-triggers!
   "Dispatches hardware sequencer step triggers strictly to bound visual figures."
   [mask]
