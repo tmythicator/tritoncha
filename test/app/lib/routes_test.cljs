@@ -26,23 +26,23 @@
           routes     (:routes default-graph)
           norm       (routing/normalize-routes routes)]
 
-      (testing "All standard busses exist"
+      (testing "All musical busses exist"
         (is (contains? busses :bus/drums) "Must contain :bus/drums")
         (is (contains? busses :bus/bass) "Must contain :bus/bass")
+        (is (contains? busses :bus/lead) "Must contain :bus/lead")
         (is (contains? busses :bus/space) "Must contain :bus/space")
-        (is (contains? busses :bus/direct) "Must contain :bus/direct")
         (is (contains? busses :bus/master) "Must contain :bus/master"))
 
       (testing "All routes reference declared busses, processors or :out"
         (doseq [[bus {:keys [inserts target]}] norm]
-          (is (contains? busses bus) (str "Bus " bus " must be a declared bus"))
+          (is (or (contains? busses bus) (= bus :bus/direct)) (str "Bus " bus " must be a declared bus or internal direct"))
           (is (contains? #{:out :bus/master} target) (str "Target " target " must be :out or :bus/master"))
           (doseq [proc inserts]
             (is (contains? processors proc)
                 (str "Insert processor " proc " on bus " bus " must be a declared processor")))))
 
       (testing "Every bus has a path towards :out"
-        (doseq [b (keys busses)]
+        (doseq [b (conj (keys busses) :bus/direct)]
           (let [terminates? (loop [curr b visited #{} depth 0]
                               (cond
                                 (= curr :out) true
@@ -71,10 +71,9 @@
         (is (= custom-key (:current-routing @audio-state)) "audio-state must reflect loaded routing key")))))
 
 (deftest normalize-routes-test
-  (testing "normalize-routes handles map syntax with :out"
+  (testing "normalize-routes handles map syntax and automatically adds internal :bus/direct to :out"
     (let [spec {:bus/drums  []
                 :bus/lead   [:chorus :delay :reverb]
-                :bus/direct :out
                 :bus/master [:filter :limiter]}
           norm (routing/normalize-routes spec)]
       (is (= {:inserts [] :target :bus/master} (:bus/drums norm)))
@@ -107,6 +106,13 @@
     (is (= :default (:current-routing @audio-state)))
     (is (= :fdn (:reverb-mode @audio-state))))
 
+  (testing "crematorium routes drums to :out and sets bus-bypass-master-fx"
+    (routing/set-routing! :crematorium)
+    (is (true? (get-in @audio-state [:bus-bypass-master-fx :bus/drums])))
+    (is (false? (get-in @audio-state [:bus-bypass-master-fx :bus/bass])))
+    (routing/set-routing! :default)
+    (is (false? (get-in @audio-state [:bus-bypass-master-fx :bus/drums]))))
+
   (testing "switching across routings and back to default completely resets state without active track cutoff"
     (swap! audio-state dissoc :track-cutoff)
     (routing/set-routing! :cyber-glitch)
@@ -125,10 +131,10 @@
 
   (testing "custom dynamic routing registration and switching"
     (routing/register-routing! :custom-matrix
-                               {:busses     {:bus/direct {}
+                               {:busses     {:bus/drums  {}
                                              :bus/master {}}
                                 :processors {}
-                                :routes     {:bus/direct :out
+                                :routes     {:bus/drums  :out
                                              :bus/master :out}})
     (is (contains? (routing/all-routings) :custom-matrix) "Dynamic custom matrix must be present")
     (is (= :custom-matrix (routing/set-routing! :custom-matrix)))
@@ -149,7 +155,7 @@
         (let [busses (:busses spec)
               norm   (routing/normalize-routes (:routes spec))]
           (is (contains? busses :bus/master) (str "Routing " rk " must declare :bus/master"))
-          (doseq [b (keys busses)]
+          (doseq [b (conj (keys busses) :bus/direct)]
             (let [terminates? (loop [curr b visited #{} depth 0]
                                 (cond
                                   (= curr :out) true

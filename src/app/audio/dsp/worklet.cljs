@@ -167,16 +167,19 @@
 
 ;; Mixer Bus and Patch Routing Commands
 (defn set-bus-params!
-  "Configures gain and FX send routing for a specific audio bus.
-  Examples: (set-bus-params! :bus/drums -3.0 false 0.05 0.10)."
-  [bus-key gain-db muted? send-delay send-reverb]
-  (let [idx (protocol/bus-key->id bus-key)]
-    (transport/send-msg! #js {:type "setBusParams"
-                              :busIdx (int idx)
-                              :gainDb (float (or gain-db 0.0))
-                              :muted (boolean muted?)
-                              :sendDelay (float (or send-delay 0.0))
-                              :sendReverb (float (or send-reverb 0.0))})))
+  "Configures gain, FX send routing, and master FX bypass status for a specific audio bus.
+  Examples: (set-bus-params! :bus/drums -3.0 false 0.05 0.10 false)."
+  ([bus-key gain-db muted? send-delay send-reverb]
+   (set-bus-params! bus-key gain-db muted? send-delay send-reverb false))
+  ([bus-key gain-db muted? send-delay send-reverb bypass-master-fx?]
+   (let [idx (protocol/bus-key->id bus-key)]
+     (transport/send-msg! #js {:type "setBusParams"
+                               :busIdx (int idx)
+                               :gainDb (float (or gain-db 0.0))
+                               :muted (boolean muted?)
+                               :sendDelay (float (or send-delay 0.0))
+                               :sendReverb (float (or send-reverb 0.0))
+                               :bypassMasterFx (boolean bypass-master-fx?)}))))
 
 (defn set-worklet-master-volume!
   "Adjusts master output volume in decibels (-60.0 dB to +6.0 dB) in Rust WASM.

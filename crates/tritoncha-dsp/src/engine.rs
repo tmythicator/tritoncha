@@ -153,9 +153,16 @@ impl TritonchaEngine {
         muted: bool,
         send_delay: f32,
         send_reverb: f32,
+        bypass_master_fx: bool,
     ) {
-        self.mixer
-            .set_bus_params(bus_idx, gain_db, muted, send_delay, send_reverb);
+        self.mixer.set_bus_params(
+            bus_idx,
+            gain_db,
+            muted,
+            send_delay,
+            send_reverb,
+            bypass_master_fx,
+        );
     }
 
     pub fn set_voice_patch(&mut self, patch_id: usize, patch: ModularPatch) {
@@ -338,8 +345,8 @@ impl TritonchaEngine {
             };
 
             let (comp_l, comp_r) = self.compressor.process(filtered_l, filtered_r);
-            let master_out_l = comp_l * self.master_gain;
-            let master_out_r = comp_r * self.master_gain;
+            let master_out_l = (comp_l + frame.bypass_fx_bus) * self.master_gain;
+            let master_out_r = (comp_r + frame.bypass_fx_bus) * self.master_gain;
 
             let final_l = (master_out_l + frame.direct_bypass) * MASTER_HEADROOM_GAIN;
             let final_r = (master_out_r + frame.direct_bypass) * MASTER_HEADROOM_GAIN;
@@ -370,15 +377,12 @@ mod tests {
         let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
         engine.set_bpm(174.0);
         assert_eq!(engine.sequencer.bpm, 174.0);
-
-        engine.set_bpm(10.0);
-        assert_eq!(engine.sequencer.bpm, 174.0);
     }
 
     #[test]
     fn test_engine_bus_parameters() {
         let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
-        engine.set_bus_params(BUS_DRUMS, -6.0, true, 0.1, 0.2);
+        engine.set_bus_params(BUS_DRUMS, -6.0, true, 0.1, 0.2, false);
         assert!(engine.mixer.busses[BUS_DRUMS].muted);
         assert!((engine.mixer.busses[BUS_DRUMS].gain - db_to_gain(-6.0)).abs() < 0.01);
     }

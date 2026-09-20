@@ -149,7 +149,8 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
               data.gainDb !== undefined ? data.gainDb : 0.0,
               data.muted ? 1 : 0,
               data.sendDelay !== undefined ? data.sendDelay : 0.0,
-              data.sendReverb !== undefined ? data.sendReverb : 0.0
+              data.sendReverb !== undefined ? data.sendReverb : 0.0,
+              data.bypassMasterFx ? 1 : 0
             );
           }
           break;

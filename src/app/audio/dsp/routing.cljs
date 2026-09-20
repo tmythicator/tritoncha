@@ -19,36 +19,39 @@
 (defn normalize-routes
   "Normalizes route specifications into a standard map:
   {bus-key {:inserts [fx ...] :target (:bus/master or :out)}}.
+  Internal :bus/direct is automatically added with target :out.
   Examples:
-    (normalize-routes {:bus/drums [] :bus/direct :out})
+    (normalize-routes {:bus/drums []})
     -> {:bus/drums {:inserts [] :target :bus/master}
         :bus/direct {:inserts [] :target :out}}"
   [routes]
-  (if (map? routes)
-    (into {}
-          (map (fn [[bus val]]
-                 (let [master? (= bus :bus/master)]
-                   (cond
-                     (= val :out)
-                     [bus {:inserts [] :target :out}]
+  (let [base (if (map? routes)
+               (into {}
+                     (map (fn [[bus val]]
+                            (let [master? (= bus :bus/master)]
+                              (cond
+                                (= val :out)
+                                [bus {:inserts [] :target :out}]
 
-                     (vector? val)
-                     (let [last-item   (last val)
-                           target-out? (= last-item :out)
-                           target      (cond
-                                         target-out?               :out
-                                         master?                   :out
-                                         (= last-item :bus/master) :bus/master
-                                         :else                     :bus/master)
-                           inserts     (if (or target-out? (= last-item :bus/master))
-                                         (vec (butlast val))
-                                         val)]
-                       [bus {:inserts inserts :target target}])
+                                (vector? val)
+                                (let [last-item   (last val)
+                                      target-out? (= last-item :out)
+                                      target      (cond
+                                                    target-out?               :out
+                                                    master?                   :out
+                                                    (= last-item :bus/master) :bus/master
+                                                    :else                     :bus/master)
+                                      inserts     (if (or target-out? (= last-item :bus/master))
+                                                    (vec (butlast val))
+                                                    val)]
+                                  [bus {:inserts inserts :target target}])
 
-                     :else
-                     [bus {:inserts [] :target (if master? :out :bus/master)}]))))
-          routes)
-    {}))
+                                :else
+                                [bus {:inserts [] :target (if master? :out :bus/master)}]))))
+                     routes)
+               {})]
+    (cond-> base
+      (not (contains? base :bus/direct)) (assoc :bus/direct {:inserts [] :target :out}))))
 
 (defn- resolve-filter-frequency
   "Resolves the cutoff frequency in Hz: declared topology frequency, active track cutoff, or 18000 Hz."
@@ -120,6 +123,10 @@
   (when-let [spec (get (all-routings) routing-key)]
     (swap! audio-state assoc :current-routing routing-key)
     (apply-bus-sends! (:busses spec))
+    (let [norm (normalize-routes (:routes spec))]
+      (doseq [b-key [:bus/drums :bus/bass :bus/space :bus/lead]]
+        (let [bypass? (= (:target (get norm b-key)) :out)]
+          (mixer/set-bus-bypass-master-fx! b-key bypass?))))
     (let [dsp (merge-with merge neutral-processors (:processors spec))]
       (doseq [[p-type p-spec] dsp]
         (apply-processor! p-type p-spec))

@@ -7,7 +7,7 @@
             [app.state :refer [repl-registry]]))
 
 (def valid-busses
-  #{:bus/master :bus/direct :bus/drums :bus/bass :bus/space :bus/lead})
+  #{:bus/master :bus/direct :bus/click :bus/drums :bus/bass :bus/space :bus/lead})
 
 (def category-default-busses
   {:drums :bus/drums
@@ -83,14 +83,15 @@
                 (keys user-drums))))
 
 (defn normalize-bus-key
-  "Ensures a keyword is in the :bus/<name> format.
-  Examples: (normalize-bus-key :drums) -> :bus/drums, (normalize-bus-key :bus/bass) -> :bus/bass."
+  "Ensures a keyword is in the :bus/<name> format and maps :bus/click to :bus/direct.
+  Examples: (normalize-bus-key :drums) -> :bus/drums, (normalize-bus-key :click) -> :bus/direct."
   [k]
   (when k
-    (if (keyword? k)
-      (if (= (namespace k) "bus") k (keyword "bus" (name k)))
-      (let [s (str k)]
-        (if (.startsWith s "bus/") (keyword s) (keyword "bus" (name s)))))))
+    (let [norm (if (keyword? k)
+                 (if (= (namespace k) "bus") k (keyword "bus" (name k)))
+                 (let [s (str k)]
+                   (if (.startsWith s "bus/") (keyword s) (keyword "bus" (name s)))))]
+      (if (= norm :bus/click) :bus/direct norm))))
 
 (defn valid-bus?
   "Checks if a keyword represents a valid registered audio bus."

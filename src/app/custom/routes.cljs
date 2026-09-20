@@ -3,9 +3,9 @@
 
 ;; Custom Routing Topologies
 ;;
-;; Busses:     :bus/drums, :bus/bass, :bus/lead, :bus/space, :bus/direct, :bus/master
+;; Busses:     :bus/drums, :bus/bass, :bus/lead, :bus/space, :bus/master
 ;; Processors: :filter, :distort, :delay, :reverb, :limiter, :crusher, :chorus, :compressor
-;; Routes:     Map of bus routes {:bus/drums [] :bus/direct :out ...}
+;; Routes:     Map of bus routes {:bus/drums [] :bus/bass [:distort] ...}
 
 (def void-chamber
   "Deep cosmic void routing with vast modulated FDN diffusion and stereo chorus wash."
@@ -15,7 +15,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -31,7 +30,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:chorus :delay :reverb]
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :limiter]}})
 
 (def user-routes

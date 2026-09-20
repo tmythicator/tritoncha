@@ -446,3 +446,35 @@ fn test_direct_bus_bypasses_master_gain() {
         "Direct bus signal must pass through even when master volume is silent"
     );
 }
+
+#[test]
+fn test_bus_bypass_master_fx_respects_master_volume() {
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
+    // Severe lowpass filter on master (200 Hz)
+    engine.set_master_filter(200.0, 0.0);
+
+    // Set DRUMS bus to bypass master FX (out)
+    engine.set_bus_params(0, 0.0, false, 0.0, 0.0, true);
+
+    // Trigger snare (high frequency noise)
+    engine.trigger_note(1, 400.0, 1.0, 0.1);
+
+    let mut out_l = [0.0; 128];
+    let mut out_r = [0.0; 128];
+    engine.process_block(&mut out_l, &mut out_r);
+
+    let amp_open = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+    assert!(
+        amp_open > 0.05,
+        "Drums in bypass_master_fx mode must sound bright despite 200 Hz master filter"
+    );
+
+    // When master volume is turned down, drums MUST be silenced!
+    engine.set_master_volume(-60.0);
+    engine.process_block(&mut out_l, &mut out_r);
+    let amp_silent = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+    assert!(
+        amp_silent < 0.001,
+        "Drums in bypass_master_fx mode must respect master volume fader"
+    );
+}

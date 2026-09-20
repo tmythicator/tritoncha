@@ -17,7 +17,7 @@
     :bus/bass   {:label "BASS"   :class "bus-bass"}
     :bus/lead   {:label "LEAD"   :class "bus-lead"}
     :bus/space  {:label "SPACE"  :class "bus-space"}
-    :bus/direct {:label "DIRECT" :class "bus-direct"}
+    :bus/direct {:label "CLICK"  :class "bus-direct"}
     :bus/master {:label "MASTER" :class "bus-master"}
     (let [clean (-> (name bus-key) (str/replace #"-bus$" "") str/upper-case)]
       {:label clean :class "bus-direct"})))
@@ -39,7 +39,8 @@
   (case node-key
     :out         "OUT"
     :bus/master  "MASTER"
-    :direct      "DIRECT"
+    :thru        "THRU"
+    :direct      "THRU"
     (let [{:keys [type frequency cutoff ratio enabled time]} (get processors node-key)]
       (case type
         :filter
@@ -71,7 +72,7 @@
 (defn- display-nodes [route-entry]
   (let [{:keys [inserts target]} route-entry]
     (if (empty? inserts)
-      [:direct (or target :bus/master)]
+      [:thru (or target :bus/master)]
       (conj (vec inserts) (or target :bus/master)))))
 
 (defn- node-view [node-key processors live-ctx terminal?]

@@ -165,6 +165,7 @@ pub unsafe extern "C" fn tritoncha_dsp_set_bus_params(
     muted: i32,
     send_delay: f32,
     send_reverb: f32,
+    bypass_master_fx: i32,
 ) {
     if let Some(engine) = ptr.as_mut() {
         engine.set_bus_params(
@@ -173,6 +174,7 @@ pub unsafe extern "C" fn tritoncha_dsp_set_bus_params(
             muted != 0,
             send_delay,
             send_reverb,
+            bypass_master_fx != 0,
         );
     }
 }

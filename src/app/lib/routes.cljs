@@ -9,7 +9,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -24,7 +23,6 @@
     :bus/bass   []
     :bus/lead   [:delay]
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
 (def studio-master
@@ -35,7 +33,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -50,7 +47,6 @@
     :bus/bass   []
     :bus/lead   []
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
 (def liminal-prison
@@ -61,7 +57,6 @@
     :bus/bass   {:delay 0.05 :reverb 0.15}
     :bus/lead   {:delay 0.42 :reverb 0.65}
     :bus/space  {:delay 0.55 :reverb 0.85}
-    :bus/direct {:delay 0.0  :reverb 0.0}
     :bus/master {}}
 
    :processors
@@ -76,7 +71,6 @@
     :bus/bass   []
     :bus/lead   [:chorus :delay :reverb]
     :bus/space  [:chorus :delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :limiter]}})
 
 (def dub-echo-chamber
@@ -87,7 +81,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -104,7 +97,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:chorus]
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
 (def tape-lofi
@@ -115,7 +107,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -132,7 +123,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:chorus :distort]
     :bus/space  [:crusher :delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :limiter]}})
 
 (def crematorium
@@ -143,7 +133,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -158,7 +147,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:delay]
     :bus/space  [:reverb]
-    :bus/direct :out
     :bus/master [:filter :limiter]}})
 
 (def ambient-prism
@@ -169,7 +157,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -184,7 +171,6 @@
     :bus/bass   []
     :bus/lead   [:chorus :delay :reverb]
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :limiter]}})
 
 (def industrial-crush
@@ -195,7 +181,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -212,7 +197,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:distort :delay]
     :bus/space  [:crusher :reverb]
-    :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
 (def cyber-glitch
@@ -223,7 +207,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -241,7 +224,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:chorus]
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :compressor :limiter]}})
 
 (def vintage-schroeder
@@ -252,7 +234,6 @@
     :bus/bass   {}
     :bus/lead   {}
     :bus/space  {}
-    :bus/direct {}
     :bus/master {}}
 
    :processors
@@ -268,7 +249,6 @@
     :bus/bass   [:distort]
     :bus/lead   [:chorus]
     :bus/space  [:delay :reverb]
-    :bus/direct :out
     :bus/master [:filter :limiter]}})
 
 (def core-routes
