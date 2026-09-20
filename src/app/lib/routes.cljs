@@ -19,13 +19,13 @@
 ;;            :compressor - Map {:threshold -14.0 :ratio 4.0} or boolean
 
 (def default-graph
-  "Transparent reference routing with uncolored busses, gentle bus compression, and open dynamics."
+  "Transparent reference routing."
   {:title "DEFAULT"
    :graph {:master [:compressor :limiter]}
    :processors {:compressor {:threshold -14.0 :ratio 3.0 :attack 0.012 :release 0.100 :makeup 2.0 :mix 1.0}}})
 
 (def studio-master
-  "Studio mix bus with VCA glue compression, clean delay and natural room reverb on master."
+  "Studio mix routing."
   {:title "STUDIO MASTER"
    :graph {:space  [:reverb :out]
            :lead   [:delay]
@@ -35,7 +35,7 @@
                 :reverb     {:algo :fdn :size 0.75 :wet 0.35}}})
 
 (def liminal-prison
-  "Spacious atmospheric chain with isolated lead and space busses, long dotted delay, and slow chorus."
+  "Spacious atmospheric chain with isolated lead and space busses."
   {:title "LIMINAL PRISON"
    :graph {:drums  [:filter :delay]
            :space  [:reverb :delay :out]
@@ -48,7 +48,7 @@
                 :compressor {:threshold -14.0 :ratio 3.0 :attack 0.015 :release 0.100 :makeup 1.5 :mix 0.95}}})
 
 (def dub-echo-chamber
-  "Classic dub setup with warm delay feedback, dark lowpass filtering, and tape drive."
+  "Classic dub setup."
   {:title "DUB ECHO"
    :graph {:drums  [:compressor]
            :lead   [:filter :delay :reverb]
@@ -61,7 +61,7 @@
                 :reverb     {:algo :freeverb :size 0.85 :wet 0.38}}})
 
 (def tape-lofi
-  "Warm cassette and vinyl routing with slow tape wow flutter, dusty vinyl noise bed, vintage Schroeder reverb, and magnetic master saturation."
+  "Warm cassette and vinyl routing."
   {:title "TAPE LO-FI"
    :graph {:drums  [:crusher]
            :space  [:chorus :delay :reverb]
@@ -76,7 +76,7 @@
                 :compressor {:threshold -14.0 :ratio 3.0 :attack 0.015 :release 0.120 :makeup 2.0 :mix 0.95}}})
 
 (def crematorium
-  "Blistering industrial routing with crushed, compressed, and limited drums, heavily saturated acid bass, and glued master dynamics."
+  "Distorted, blistering industrial routing."
   {:title "CREMATORIUM"
    :graph {:drums  [:crusher :compressor :limiter :out]
            :bass   [:distort :filter]
@@ -91,19 +91,21 @@
                 :compressor {:threshold -14.0 :ratio 4.0 :attack 0.010 :release 0.090 :makeup 2.0 :mix 1.0}}})
 
 (def ambient-prism
-  "Pristine ambient space with wide FDN reverb, shimmering chorus, and ping-pong delay."
+  "Ambient routing with wide FDN diffusion."
   {:title "AMBIENT PRISM"
    :graph {:drums  [:filter]
-           :lead   [:delay :reverb]
-           :space  [:reverb :out]
-           :master [:chorus :compressor :limiter]}
-   :processors {:filter 14000
-                :chorus {:rate 0.32 :depth 0.65 :wet 0.40}
-                :delay  ["8n." 0.48 0.38]
-                :reverb {:algo :fdn :size 0.90 :wet 0.50}}})
+           :lead   [:delay :reverb :out]
+           :space  [:chorus :reverb :out]
+           :master [:compressor :limiter]}
+   :processors {:filter     15000
+                :chorus     {:rate 0.32 :depth 0.70 :wet 0.45}
+                :delay      ["8n." 0.48 0.38]
+                :reverb     {:algo :fdn :size 0.92 :wet 0.52}
+                :compressor {:threshold -14.0 :ratio 3.0 :attack 0.015 :release 0.120 :makeup 1.8 :mix 1.0}}})
+
 
 (def industrial-crush
-  "Heavy industrial bus with 5-bit decimation, hard clipping overdrive, and punchy compression."
+  "Heavy industrial routing."
   {:title "INDUSTRIAL CRUSH"
    :graph {:drums  [:crusher]
            :bass   [:distort]
@@ -117,7 +119,7 @@
                 :reverb     {:algo :freeverb :size 0.48 :wet 0.20}}})
 
 (def cyber-glitch
-  "Glitch-hop and IDM routing with 6-bit aliasing drum decimation, fast 16th stutter delay, flutter chorus, and FDN cyber chamber."
+  "Glitch-hop and IDM routing."
   {:title "CYBER GLITCH"
    :graph {:drums  [:crusher :filter]
            :lead   [:chorus :delay]
@@ -131,7 +133,7 @@
                 :compressor {:threshold -13.0 :ratio 3.5 :attack 0.008 :release 0.075 :makeup 1.5 :mix 1.0}}})
 
 (def vintage-schroeder
-  "Early digital audio character with Schroeder reverb, warm overdrive and 3.4 kHz lowpass rolloff."
+  "Early digital audio routing."
   {:title "VINTAGE SCHROEDER"
    :graph {:drums  [:distort]
            :space  [:reverb :out]
@@ -144,7 +146,7 @@
                 :reverb  {:algo :freeverb :size 0.75 :wet 0.35}}})
 
 (def void-chamber
-  "Deep cosmic void routing with vast modulated FDN diffusion and stereo chorus wash."
+  "Spacious cosmic routing with FDN reverb and chorus wash."
   {:title "VOID CHAMBER"
    :graph {:drums  [:filter]
            :space  [:reverb :out]

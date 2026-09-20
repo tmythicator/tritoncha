@@ -16,5 +16,3 @@
     :amp-env       {:attack 0.002 :decay 0.20 :sustain 0.0 :release 0.15}
     :mod-env       {:attack 0.002 :decay 0.20}
     :bus           :bus/lead}})
-
-(def user-instruments user-synths)

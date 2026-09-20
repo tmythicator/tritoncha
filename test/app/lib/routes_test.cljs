@@ -185,9 +185,9 @@
   (testing "default routing strictly leaves all fx dry and open except compressor"
     (routing/set-routing! :ambient-prism)
     (is (= 0.38 (:wet (fx/get-delay-state))))
-    (is (= 0.50 (:wet (fx/get-reverb-state))))
-    (is (= 14000.0 (:cutoff (fx/get-filter-state))))
-    (is (= 0.40 (:wet (fx/get-chorus-state))))
+    (is (= 0.52 (:wet (fx/get-reverb-state))))
+    (is (= 15000.0 (:cutoff (fx/get-filter-state))))
+    (is (= 0.45 (:wet (fx/get-chorus-state))))
 
     (routing/set-routing! :default)
     (is (= 0.0 (:wet (fx/get-delay-state))) "Default must have 0.0 delay wet")
