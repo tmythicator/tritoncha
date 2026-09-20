@@ -1,12 +1,13 @@
 (ns app.audio.dsp.worklet
   "Unified public facade for the WebAudio AudioWorklet processor and Rust WASM DSP."
-  (:require [app.audio.dsp.worklet.compiler :as compiler]
+  (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.audio.dsp.worklet.slots :as slots]
             [app.audio.dsp.worklet.transport :as transport]
             [app.audio.theory.harmony :as harmony]
             [app.config :as cfg]
-            [app.state :refer [audio-state]]
+            [app.state :refer [audio-state repl-registry]]
             [app.utils.audio :as audio-utils]))
 
 ;; Low-level WebAudio Transport and Lifecycle
@@ -129,12 +130,39 @@
         (deactivate-track! sub-slot)
         (swap! slots/track-slot-assignments dissoc sub-tk)))))
 
+(defn set-worklet-voice-patch!
+  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP.
+  Examples: (set-worklet-voice-patch! 4 {:osc {:type :saw} :filter {:cutoff 2000}})."
+  [patch-id patch-spec]
+  (transport/send-msg! (compiler/compile-voice-patch-msg patch-id patch-spec)))
+
+(defn resolve-track-inst
+  "Resolves the effective instrument key for a track, dynamically creating and compiling
+  a derived DSP voice patch when the track specifies a custom audio bus override for a synth.
+  Examples: (resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass}) -> :lead-8bit--bass."
+  [tk pat-data]
+  (let [inst-k      (or (:inst pat-data) (:synth pat-data) tk)
+        custom-bus  (when-let [b (:bus pat-data)] (busses/normalize-bus-key b))
+        default-bus (busses/instrument-bus inst-k)]
+    (if (and custom-bus
+             (busses/valid-bus? custom-bus)
+             (not (busses/drum? inst-k))
+             (not= custom-bus default-bus))
+      (let [derived-k (keyword (str (name inst-k) "--" (name custom-bus)))]
+        (when-let [base (busses/find-instrument-spec inst-k)]
+          (let [derived-spec (assoc base :bus custom-bus)
+                patch-id     (protocol/register-custom-patch-id! derived-k)]
+            (swap! repl-registry assoc-in [:instruments derived-k] derived-spec)
+            (set-worklet-voice-patch! patch-id derived-spec)))
+        derived-k)
+      inst-k)))
+
 (defn sync-track-to-worklet!
   "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords.
   Resolves scale degrees against the active musical key if not already resolved.
   Examples: (sync-track-to-worklet! :bass {:notes ['C2' 'E2'] :step '16n'})."
   [tk pat-data]
-  (let [inst-k   (or (:inst pat-data) (:synth pat-data) tk)
+  (let [inst-k   (resolve-track-inst tk pat-data)
         raw-hits (or (:notes pat-data) (:hits-vec pat-data) [true])
         key-ctx  (get @audio-state :key cfg/default-key)
         track-o  (or (:oct pat-data) (:octave pat-data))
@@ -187,12 +215,6 @@
   [^number gain-db]
   (transport/send-msg! #js {:type "setVolume"
                             :gainDb (float (or gain-db 0.0))}))
-
-(defn set-worklet-voice-patch!
-  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP.
-  Examples: (set-worklet-voice-patch! 4 {:osc {:type :saw} :filter {:cutoff 2000}})."
-  [patch-id patch-spec]
-  (transport/send-msg! (compiler/compile-voice-patch-msg patch-id patch-spec)))
 
 (defn set-drum-mode!
   "Configures character synthesis mode across all drum voices in Rust WASM.

@@ -1,5 +1,5 @@
 (ns app.audio.dsp.worklet-test
-  (:require [app.audio.dsp.busses :refer [drum-keywords]]
+  (:require [app.audio.dsp.busses :as busses :refer [drum-keywords find-instrument-spec]]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.lib.synth :as synths]
@@ -110,4 +110,28 @@
         (is (<= 44 custom-id 63))
         (is (not (contains? drum-ids custom-id)))
         (is (not (contains? synth-ids custom-id)))))))
+
+(deftest test-resolve-track-inst-bus-override
+  (testing "Resolves instrument without bus override"
+    (is (= :lead-8bit (worklet/resolve-track-inst :lead {:inst :lead-8bit}))))
+
+  (testing "Resolves instrument with matching default bus without generating custom patch"
+    (is (= :lead-8bit (worklet/resolve-track-inst :lead {:inst :lead-8bit :bus :bus/lead}))))
+
+  (testing "Generates derived patch with custom bus override for synth"
+    (let [res (worklet/resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass})]
+      (is (= :lead-8bit--bass res))
+      (is (= :bus/bass (:bus (find-instrument-spec res))))
+      (is (= :bus/bass (busses/instrument-bus res)))
+      (let [patch-id (protocol/inst-keyword->id res)]
+        (is (<= 44 patch-id 63)))))
+
+  (testing "Generates derived patch with custom bus override for pads"
+    (let [res (worklet/resolve-track-inst :echo {:inst :pad-strings :bus :bus/lead})]
+      (is (= :pad-strings--lead res))
+      (is (= :bus/lead (:bus (find-instrument-spec res))))
+      (is (= :bus/lead (busses/instrument-bus res)))))
+
+  (testing "Does not create custom synth patch for drums with bus specified"
+    (is (= :kick (worklet/resolve-track-inst :kick {:inst :kick :bus :bus/direct})))))
 
