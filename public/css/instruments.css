@@ -1,24 +1,7 @@
 /* Instrument studio and audition lab */
 
 .instrument-browser-modal {
-    position: fixed;
-    top: var(--modal-top);
-    bottom: var(--modal-bottom);
-    left: 50%;
-    transform: translateX(-50%);
     width: var(--modal-inst-width);
-    max-height: var(--modal-max-height);
-    background: var(--bg-surface);
-    backdrop-filter: var(--blur-glass);
-    border: 1px solid var(--border-strong);
-    padding: var(--modal-card-padding);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-modal);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    z-index: var(--z-modal);
-    pointer-events: auto;
 }
 
 .inst-filter-bar {
@@ -168,7 +151,7 @@
 .inst-card-badges {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--space-2xs);
     flex-shrink: 0;
     flex-wrap: wrap;
     justify-content: flex-end;
@@ -195,7 +178,7 @@
 
 .inst-audition-btn-group {
     display: flex;
-    gap: 2px;
+    gap: var(--space-2xs);
     flex-shrink: 0;
 }
 
@@ -210,35 +193,30 @@
     }
 }
 
-.neo-badge.badge-custom {
-    font-size: 9px;
-    padding: 1px var(--space-xs);
-    background: var(--bg-secondary-subtle);
-    color: var(--color-secondary);
-    border-color: var(--border-secondary-subtle);
-    letter-spacing: 0.5px;
-}
+.neo-badge {
+    &.badge-custom {
+        font-size: var(--font-size-2xs);
+        padding: var(--space-2xs) var(--space-xs);
+        background: var(--bg-secondary-subtle);
+        color: var(--color-secondary);
+        border-color: var(--border-secondary-subtle);
+        letter-spacing: 0.5px;
+    }
 
-.neo-badge.badge-session {
-    font-size: 9px;
-    padding: 1px var(--space-xs);
-    background: var(--bg-warning-subtle);
-    color: var(--color-warning);
-    border-color: var(--border-warning-subtle);
-    letter-spacing: 0.5px;
-}
+    &.badge-session {
+        font-size: var(--font-size-2xs);
+        padding: var(--space-2xs) var(--space-xs);
+        background: var(--bg-warning-subtle);
+        color: var(--color-warning);
+        border-color: var(--border-warning-subtle);
+        letter-spacing: 0.5px;
+    }
 
-.neo-badge.mini {
-    font-size: 9px;
-    padding: 1px 3px;
-    letter-spacing: 0.2px;
-}
-
-.neo-bus-tag.mini {
-    font-size: 9px;
-    padding: 1px 3px;
-    min-width: auto;
-    letter-spacing: 0.2px;
+    &.mini {
+        font-size: var(--font-size-2xs);
+        padding: var(--space-2xs) var(--space-xs);
+        letter-spacing: 0.2px;
+    }
 }
 
 .neo-bus-tag.inspector-bus {
@@ -325,12 +303,6 @@
     align-items: center;
     gap: var(--space-xs);
     flex-shrink: 0;
-}
-
-.inst-inspector-subtitle {
-    color: var(--text-tertiary);
-    font-size: var(--font-size-base);
-    margin-top: var(--space-xs);
 }
 
 .inst-audition-bar {
@@ -508,22 +480,22 @@
     font-family: var(--font-mono);
     font-size: var(--font-size-xs);
     font-weight: 600;
-    padding: 2px var(--space-xs);
+    padding: var(--space-2xs) var(--space-xs);
     border-radius: var(--radius-xs);
     cursor: pointer;
     transition: all var(--transition-fast);
-}
 
-.inst-copy-btn:hover {
-    background: var(--palette-cyan);
-    color: var(--palette-midnight);
-    border-color: var(--palette-cyan);
-}
+    &:hover {
+        background: var(--palette-cyan);
+        color: var(--palette-midnight);
+        border-color: var(--palette-cyan);
+    }
 
-.inst-copy-btn.copied {
-    background: var(--palette-green);
-    color: var(--palette-midnight);
-    border-color: var(--palette-green);
+    &.copied {
+        background: var(--palette-green);
+        color: var(--palette-midnight);
+        border-color: var(--palette-green);
+    }
 }
 
 .inst-drum-notice {
