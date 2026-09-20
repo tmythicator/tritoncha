@@ -393,6 +393,7 @@
       :snare {:notes (pat ". . . .  s . . .  . . . .  s . . .") :step "16n"}
       :hats  {:notes (pat ". . h .  . . h .  . . h .  . . o .") :step "16n"}
       :bass  {:inst :lead-8bit
+              :bus :bus/bass
               :notes (deg [1 1 1 1 5 5 5 5 6 6 6 6 4 4 4 4] 1)
               :step "16n" :dur "16n" :vel 0.5}
       :lead  {:inst :lead-8bit
