@@ -18,6 +18,7 @@
    "th"   :tom-high
    "tm"   :tom-mid
    "tl"   :tom-low
+   "rd"   :ride
    "rb"   :ride-bell
    "cr16" :crash-16
    "cr17" :crash-17
@@ -31,9 +32,9 @@
    :kick          0
    :snare         1
    :sn-roll       1
-   :hat-closed    2 :hh-c 2 :hh-clk 2
+   :hat-closed    2 :hat 2 :hh-c 2 :hh-clk 2
    :hat-open      3 :hh-o 3
-   :util-click    11
+   :click         11 :util-click 11
    :clap          18
    :ride          20
    :tom           21
@@ -53,34 +54,38 @@
    :china         72
    :cowbell       73
 
-   ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..41)
+   ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..43)
    :bass-analog   4  :bass 4
-   :bass-303      5  :acid 5
+   :bass-303      5  :acid 5 :acid-beast 5
    :sub-pure      6  :sub 6
    :pad-cinema    7  :pad 7
    :lead-pluck    8  :lead 8 :pluck 8 :arp 8
    :lead-fm       9  :fm 9
    :bass-reese    10 :reese 10 :liquid-reese 10
    :lead-supersaw 12 :supersaw 12
-   :lead-blade    13
+   :lead-blade    13 :blade 13 :blade-runner 13
    :lead-hoover   14 :hoover 14
    :lead-string   15 :karplus 15
    :lead-organ    16 :organ 16
    :lead-8bit     17 :8bit 17
    :pad-glass     19 :glass 19
-   :sub-moog      42 :moog-sub 42
-   :bass-moog     43 :moog-bass 43
+   :pad-dreamy    27
+   :tokyo-drift   28
    :pad-strings   29 :strings 29
    :pad-vocal     30 :choir 30
    :pad-drone     31 :drone 31
+   :fx-subdrop    32 :subdrop 32
    :bass-neuro    33 :neuro 33
    :sub-808       34 :808 34
    :bass-slap     35 :slap 35
    :bass-organ    36
    :bass-liquid   37 :liquid 37
    :lead-bell     38 :bell 38
+   :glass-mallet  39
    :fx-siren      40 :siren 40
-   :fx-laser      41 :laser 41})
+   :fx-laser      41 :laser 41 :fx-zap 41
+   :sub-moog      42 :moog-sub 42
+   :bass-moog     43 :moog-bass 43})
 
 (def drum-id-set
   #{0 1 2 3 11 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73})

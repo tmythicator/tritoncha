@@ -103,7 +103,6 @@
                 :reverb     {:algo :fdn :size 0.92 :wet 0.52}
                 :compressor {:threshold -14.0 :ratio 3.0 :attack 0.015 :release 0.120 :makeup 1.8 :mix 1.0}}})
 
-
 (def industrial-crush
   "Heavy industrial routing."
   {:title "INDUSTRIAL CRUSH"

@@ -283,7 +283,7 @@ impl DrumMachine {
         match drum_id {
             DRUM_KICK => self.kick.set_params(params),
             DRUM_SNARE | DRUM_SNARE_CRACK | DRUM_SNARE_BODY | DRUM_SNARE_WIRE
-            | DRUM_SNARE_GHOST => self.snare.set_params(params),
+            | DRUM_SNARE_GHOST | DRUM_SNARE_RIM => self.snare.set_params(params),
             DRUM_HH_CLOSED | DRUM_HH_OPEN => self.hat.set_params(params),
             DRUM_TOM => self.tom.set_params(params),
             DRUM_TOM_HIGH => self.tom_high.set_params(params),
