@@ -6,7 +6,7 @@
                              inst! jam! jams! l! m! mod! mod-all! next-jam!
                              pat patch! prev-jam! prog pulse! q! rebass!
                              redrum! relead! repad! rev reverb-mode! rfx! rot
-                             route! s! scale scene! send! set-key! shift slow
+                             route! s! scale scene! set-key! shift slow
                              so! sometimes sometimes-by stack! stats! stop!
                              stop-loop! sw! take-steps toggle-bass!
                              toggle-click! toggle-drums! toggle-leads!
@@ -319,9 +319,6 @@
   ;; Bus volume control (in dB)
   (v! :bus/drums +2)
   (v! :bus/space -3)
-
-  ;; Aux bus sends
-  (send! :bass :space 0.35)
 
   ;; Dub FX One-Shots
   (s!)      ;; Dub laser siren
