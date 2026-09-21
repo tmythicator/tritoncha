@@ -118,6 +118,10 @@
    'set-drive-mode!     api/set-drive-mode!
    'reverb-mode!        api/reverb-mode!
    'set-reverb-mode!    api/set-reverb-mode!
+   'comp!               api/comp!
+   'set-compressor!     api/set-compressor!
+   'reset-fx!           api/reset-fx!
+   'rfx!                api/rfx!
 
    ;; SFX Drops + Dub One-Shots
    's!                  api/s!
@@ -135,6 +139,8 @@
    'reset-instrument!   api/reset-instrument!
    'routings            api/routings
    'defrouting!         api/defrouting!
+   'route!              api/route!
+   'set-routing!        api/set-routing!
    'demo!               api/demo!
    'demo-stop!          api/demo-stop!
    'refresh!            api/refresh!
