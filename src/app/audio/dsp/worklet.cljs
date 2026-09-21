@@ -1,9 +1,14 @@
 (ns app.audio.dsp.worklet
   "Unified public facade for the WebAudio AudioWorklet processor and Rust WASM DSP."
-  (:require [app.audio.dsp.worklet.compiler :as compiler]
+  (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.audio.dsp.worklet.slots :as slots]
-            [app.audio.dsp.worklet.transport :as transport]))
+            [app.audio.dsp.worklet.transport :as transport]
+            [app.audio.theory.harmony :as harmony]
+            [app.config :as cfg]
+            [app.state :refer [audio-state repl-registry]]
+            [app.utils.audio :as audio-utils]))
 
 ;; Low-level WebAudio Transport and Lifecycle
 (def init-audio-worklet! transport/init-audio-worklet!)
@@ -108,18 +113,101 @@
   [track-idx solo?]
   (transport/send-msg! #js {:type "soloTrack" :trackIdx (int track-idx) :solo (boolean solo?)}))
 
+(defn- chord-progression?
+  "Returns true if notes is a sequence of chords (vectors of pitch notes or frequencies)."
+  [notes]
+  (and (sequential? notes)
+       (seq notes)
+       (sequential? (first notes))
+       (not (keyword? (first (first notes))))))
+
+(defn- clear-voice-slots!
+  "Deactivates and unassigns hardware sequencer sub-slots for polyphonic voice indices."
+  [track-key voice-indices]
+  (doseq [v-idx voice-indices]
+    (let [sub-tk (keyword (str (name track-key) "-v" (inc v-idx)))]
+      (when-let [sub-slot (get @slots/track-slot-assignments sub-tk)]
+        (deactivate-track! sub-slot)
+        (swap! slots/track-slot-assignments dissoc sub-tk)))))
+
+(defn set-worklet-voice-patch!
+  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP.
+  Examples: (set-worklet-voice-patch! 4 {:osc {:type :saw} :filter {:cutoff 2000}})."
+  [patch-id patch-spec]
+  (transport/send-msg! (compiler/compile-voice-patch-msg patch-id patch-spec)))
+
+(defn resolve-track-inst
+  "Resolves the effective instrument key for a track, dynamically creating and compiling
+  a derived DSP voice patch when the track specifies a custom audio bus override for a synth.
+  Examples: (resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass}) -> :lead-8bit--bass."
+  [tk pat-data]
+  (let [inst-k      (or (:inst pat-data) (:synth pat-data) tk)
+        custom-bus  (when-let [b (:bus pat-data)] (busses/normalize-bus-key b))
+        default-bus (busses/instrument-bus inst-k)]
+    (if (and custom-bus
+             (busses/valid-bus? custom-bus)
+             (not (busses/drum? inst-k))
+             (not= custom-bus default-bus))
+      (let [derived-k (keyword (str (name inst-k) "--" (name custom-bus)))]
+        (when-let [base (busses/find-instrument-spec inst-k)]
+          (let [derived-spec (assoc base :bus custom-bus)
+                patch-id     (protocol/register-custom-patch-id! derived-k)]
+            (swap! repl-registry assoc-in [:instruments derived-k] derived-spec)
+            (set-worklet-voice-patch! patch-id derived-spec)))
+        derived-k)
+      inst-k)))
+
+(defn sync-track-to-worklet!
+  "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords.
+  Resolves scale degrees against the active musical key if not already resolved.
+  Examples: (sync-track-to-worklet! :bass {:notes ['C2' 'E2'] :step '16n'})."
+  [tk pat-data]
+  (let [inst-k   (resolve-track-inst tk pat-data)
+        raw-hits (or (:notes pat-data) (:hits-vec pat-data) [true])
+        key-ctx  (get @audio-state :key cfg/default-key)
+        track-o  (or (:oct pat-data) (:octave pat-data))
+        hits     (harmony/resolve-track-notes raw-hits
+                                              [(:root key-ctx) (:mode key-ctx) (or track-o (:octave key-ctx))]
+                                              track-o)
+        notes    (if (sequential? hits) hits [hits])
+        step-m   (audio-utils/step->mult (:step pat-data))
+        bpm      (:bpm @audio-state 168)
+        dur-raw  (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
+        dur-s    (audio-utils/dur->seconds dur-raw bpm)
+        base-vel (or (:vel pat-data) (:vel-vec pat-data) 0.9)]
+    (if (chord-progression? notes)
+      (let [max-voices   (min 4 (apply max 1 (map #(if (sequential? %) (count %) 1) notes)))
+            scale-factor (if (> max-voices 1) (/ 1.0 (js/Math.sqrt max-voices)) 1.0)
+            voice-vel    (if (number? base-vel)
+                           (* (float base-vel) scale-factor)
+                           (mapv #(* % scale-factor) (if (sequential? base-vel) base-vel [0.9])))]
+        (doseq [v-idx (range max-voices)]
+          (let [sub-tk      (keyword (str (name tk) "-v" (inc v-idx)))
+                voice-notes (mapv #(if (sequential? %) (nth % v-idx nil) (when (zero? v-idx) %)) notes)
+                slot        (slots/get-or-assign-track-slot! sub-tk)]
+            (set-track! slot inst-k voice-notes step-m dur-s voice-vel)))
+        (clear-voice-slots! tk (range max-voices 4)))
+      (let [slot (slots/get-or-assign-track-slot! tk)]
+        (set-track! slot inst-k (vec notes) step-m dur-s base-vel)
+        (clear-voice-slots! tk (range 1 4))))))
+
+(def sync-track! sync-track-to-worklet!)
+
 ;; Mixer Bus and Patch Routing Commands
 (defn set-bus-params!
-  "Configures gain and FX send routing for a specific audio bus.
-  Examples: (set-bus-params! :bus/drums -3.0 false 0.05 0.10)."
-  [bus-key gain-db muted? send-delay send-reverb]
-  (let [idx (protocol/bus-key->id bus-key)]
-    (transport/send-msg! #js {:type "setBusParams"
-                              :busIdx (int idx)
-                              :gainDb (float (or gain-db 0.0))
-                              :muted (boolean muted?)
-                              :sendDelay (float (or send-delay 0.0))
-                              :sendReverb (float (or send-reverb 0.0))})))
+  "Configures gain, FX send routing, and master FX bypass status for a specific audio bus.
+  Examples: (set-bus-params! :bus/drums -3.0 false 0.05 0.10 false)."
+  ([bus-key gain-db muted? send-delay send-reverb]
+   (set-bus-params! bus-key gain-db muted? send-delay send-reverb false))
+  ([bus-key gain-db muted? send-delay send-reverb bypass-master-fx?]
+   (let [idx (protocol/bus-key->id bus-key)]
+     (transport/send-msg! #js {:type "setBusParams"
+                               :busIdx (int idx)
+                               :gainDb (float (or gain-db 0.0))
+                               :muted (boolean muted?)
+                               :sendDelay (float (or send-delay 0.0))
+                               :sendReverb (float (or send-reverb 0.0))
+                               :bypassMasterFx (boolean bypass-master-fx?)}))))
 
 (defn set-worklet-master-volume!
   "Adjusts master output volume in decibels (-60.0 dB to +6.0 dB) in Rust WASM.
@@ -127,12 +215,6 @@
   [^number gain-db]
   (transport/send-msg! #js {:type "setVolume"
                             :gainDb (float (or gain-db 0.0))}))
-
-(defn set-worklet-voice-patch!
-  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP.
-  Examples: (set-worklet-voice-patch! 4 {:osc {:type :saw} :filter {:cutoff 2000}})."
-  [patch-id patch-spec]
-  (transport/send-msg! (compiler/compile-voice-patch-msg patch-id patch-spec)))
 
 (defn set-drum-mode!
   "Configures character synthesis mode across all drum voices in Rust WASM.
@@ -259,3 +341,24 @@
                              :releaseS (float (or release-s 0.100))
                              :makeupDb (float (or makeup-db 2.5))
                              :mix (float (or mix 1.0))})))
+
+(defn set-worklet-bus-chain!
+  "Configures the modular insert effects chain and output routing for an audio bus in the Rust WASM engine.
+  Examples: (set-worklet-bus-chain! 0 false [{:type \"filter\" :cutoffHz 3500 :resonance 0.0}])."
+  [bus-idx target-out? inserts]
+  (let [inserts-js (clj->js (or inserts []))]
+    (transport/send-msg! #js {:type "setBusChain"
+                              :busIdx (int (or bus-idx 0))
+                              :targetOut (boolean target-out?)
+                              :inserts inserts-js})))
+
+(defn update-worklet-bus-processor!
+  "Updates parameters for a specific processor type on a bus (or globally if bus-idx is -1).
+  Examples: (update-worklet-bus-processor! -1 :filter {:cutoffHz 3000 :resonance 0.5})."
+  [bus-idx processor params]
+  (let [msg (clj->js (merge {:type "updateBusProcessor"
+                             :busIdx (int (or bus-idx -1))
+                             :processor (name processor)}
+                            params))]
+    (transport/send-msg! msg)))
+

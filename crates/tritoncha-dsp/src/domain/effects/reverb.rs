@@ -5,7 +5,7 @@ use crate::core::math::lerp;
 pub const NUM_COMB_FILTERS: usize = 8;
 pub const NUM_ALLPASS_FILTERS: usize = 4;
 
-pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
+pub use crate::engine::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_REVERB_WET: f32 = 0.35;
 pub const MIN_WET_THRESHOLD: f32 = 0.001;
 pub const COMB_FEEDBACK_DEFAULT: f32 = 0.85;

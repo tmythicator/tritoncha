@@ -53,10 +53,10 @@
   Examples: [filter-section :saw-bass cur-spec]."
   [cur-sel-key cur-spec]
   [:div.inst-box
-   [:div.inst-section-label "STATE-VARIABLE FILTER (:filter)"]
+   [:div.inst-section-label "FILTER (:filter)"]
    [comps/pill-selector
     {:label    "FILTER TOPOLOGY:"
-     :items    [:lowpass :highpass :bandpass :notch]
+     :items    [:lowpass :highpass :bandpass :notch :ladder]
      :current  (or (get-in cur-spec [:filter :type]) :lowpass)
      :on-select #(state/patch-param! cur-sel-key :filter :type % cur-spec)}]
 

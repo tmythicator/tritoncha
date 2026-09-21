@@ -1,6 +1,6 @@
 (ns app.audio.theory.patterns
   "Algorithmic rhythm generators, mini-notation parser, and temporal pattern combinators."
-  (:require [app.lib.drums :refer [mini-notation-aliases]]
+  (:require [app.audio.dsp.worklet.protocol :refer [drum-remaps]]
             [app.utils.coll :as coll]
             [clojure.string :as str]))
 
@@ -34,7 +34,7 @@
            (vec (build-pattern init-ones init-zeros))))))))
 
 (def ^:private mini-alias-pattern
-  (let [aliases (sort-by (comp - count) (keys mini-notation-aliases))
+  (let [aliases (sort-by (comp - count) (keys drum-remaps))
         escaped (map #(str/replace % #"([.*+?^${}()|\[\]/\\])" "\\\\$1") aliases)]
     (re-pattern (str "(?:" (str/join "|" escaped) "|[a-zA-Z0-9.-])[!_]?"))))
 
@@ -47,7 +47,7 @@
                 (subs tok 0 (dec (count tok)))
 
                 :else tok)]
-    (or (contains? mini-notation-aliases clean)
+    (or (contains? drum-remaps clean)
         (contains? #{"" "." "_" "-" "0" "x" "1" "b"} clean))))
 
 (defn- expand-mini-tokens [tokens]
@@ -93,10 +93,15 @@
                   (= clean "1") (if (seq suffix) (keyword (str "1" suffix)) true)
                   (= clean "b") (keyword (str "bass" suffix))
                   :else
-                  (if-let [alias-kw (get mini-notation-aliases clean)]
+                  (if-let [alias-kw (get drum-remaps clean)]
                     (keyword (str (name alias-kw) suffix))
                     (keyword tok)))))
             tokens))))
+
+(def pat
+  "Shortcut alias for pattern mini-notation parser.
+  Examples: (pat \"k . . .  s . . .\")."
+  pattern)
 
 (defn fast
   "Speeds up and compresses a pattern by repeating it factor times within the same grid duration.
@@ -174,3 +179,54 @@
   (if (and (number? n) (pos? n))
     (f pat)
     pat))
+
+(defn apply-mask
+  "Combines a sequence of hits with a boolean or truthy mask sequence.
+  Falsy or nil mask values become rests (nil).
+  Examples: (apply-mask [:c4 :e4] [true false true]) -> [:c4 nil :e4]."
+  [hits-vec mask-vec]
+  (let [h-cnt (count hits-vec)
+        m-cnt (count mask-vec)
+        total (max h-cnt m-cnt)]
+    (mapv (fn [i]
+            (let [m (nth mask-vec (rem i m-cnt))]
+              (when (and (some? m) (not (false? m)))
+                (nth hits-vec (rem i h-cnt)))))
+          (range total))))
+
+(defn extract-pattern-degs
+  "Extracts scale degrees from a pattern map or notes vector metadata.
+  Examples: (extract-pattern-degs {:deg [1 3 5]} nil) -> [1 3 5]."
+  [pat notes]
+  (or (:deg pat)
+      (:degrees pat)
+      (when (vector? notes) (:degrees (meta notes)))))
+
+(defn extract-pattern-prog
+  "Extracts chord progression template from a pattern map or notes vector metadata.
+  Examples: (extract-pattern-prog {:progression [[1 :min9]]} nil) -> [[1 :min9]]."
+  [pat notes]
+  (or (:progression pat)
+      (when (and (vector? notes) (:progression (meta notes))) notes)
+      (when (vector? notes) (:template (meta notes)))
+      (when (and (vector? notes)
+                 (seq notes)
+                 (vector? (first notes))
+                 (number? (first (first notes))))
+        notes)))
+
+(defn extract-pattern-octave
+  "Extracts base octave from pattern map, notes metadata, progression, or degree metadata.
+  Falls back to fallback-oct when not specified.
+  Examples: (extract-pattern-octave {:octave 2} nil nil nil 3) -> 2."
+  [pat notes degs prog fallback-oct]
+  (or (:oct pat)
+      (:octave pat)
+      (when (and prog (meta prog)) (:octave (meta prog)))
+      (when (and prog (map? prog)) (:octave prog))
+      (when (vector? notes) (:octave (meta notes)))
+      (when (vector? notes) (let [sc (:scale (meta notes))] (when (vector? sc) (last sc))))
+      (when (and degs (meta degs)) (:octave (:opts (meta degs))))
+      (when (and degs (meta degs)) (:octave (meta degs)))
+      fallback-oct))
+

@@ -2,16 +2,13 @@
   "Instrument lifecycle, node factory, bus routing, and audio trigger dispatcher."
   (:require [app.audio.dsp.busses :as busses]
             [app.audio.dsp.worklet :as worklet]
-            [app.custom.instruments :refer [user-instruments]]
-            [app.lib.drums :refer [core-drum-instruments core-drum-voices]]
-            [app.lib.instruments :refer [core-instruments]]
+            [app.audio.dsp.worklet.protocol :as protocol]
+            [app.custom.drums :refer [user-drums]]
+            [app.custom.synth :refer [user-synths]]
+            [app.lib.drums :refer [core-drums]]
+            [app.lib.synth :refer [core-synths]]
             [app.state :refer [audio-state pulse! repl-registry]]
             [app.utils.audio :as audio-utils]))
-
-(defn all-drum-keys
-  "Returns a set of all valid drum voice keywords."
-  []
-  (set (keys core-drum-voices)))
 
 (defn register-instrument!
   "Registers or updates a dynamic user instrument preset in the REPL registry.
@@ -20,11 +17,23 @@
   (swap! repl-registry assoc-in [:instruments inst-key] spec)
   inst-key)
 
+(defn all-drums
+  "Returns a merged map of core built-in drums, user custom drums, and REPL drums.
+  Examples: (all-drums)."
+  []
+  (merge core-drums user-drums (:instruments @repl-registry)))
+
+(defn all-synths
+  "Returns a merged map of core built-in synthesizers, user custom synths, and REPL synths.
+  Examples: (all-synths)."
+  []
+  (merge core-synths user-synths (:instruments @repl-registry)))
+
 (defn all-instruments
   "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments.
   Examples: (all-instruments)."
   []
-  (merge core-instruments core-drum-instruments user-instruments (:instruments @repl-registry)))
+  (merge core-synths user-synths core-drums user-drums (:instruments @repl-registry)))
 
 (def instrument-aliases
   {;; Generic shortcuts
@@ -35,11 +44,10 @@
    :strings      :pad-strings
    :acid         :bass-303
    :tb303        :bass-303
-   :reese        :bass-reese
+   :reese        :liquid-reese
    :slap         :bass-slap
    :neuro        :bass-neuro
    :808          :sub-808
-   :shimmer      :pad-shimmer
    :choir        :pad-vocal
    :glass        :pad-glass
    :drone        :pad-drone
@@ -57,84 +65,54 @@
    :siren        :fx-siren
    :util-click   :click})
 
-(defn resolve-instrument-spec
+(defn find-instrument-spec
+  "Looks up an instrument specification map across REPL, custom, and core catalogs.
+  Examples: (find-instrument-spec :bass) -> {:type :mono ...}."
+  [spec]
+  (busses/find-instrument-spec spec))
+
+(def resolve-instrument-spec
   "Resolves an instrument keyword or map, expanding canonical aliases (:bass, :sub, :pad).
   Examples: (resolve-instrument-spec :bass) -> {:type :mono ...}."
-  [spec]
-  (cond
-    (map? spec) spec
-    (keyword? spec)
-    (let [canonical  (get instrument-aliases spec spec)
-          repl-insts (:instruments @repl-registry)
-          all        (all-instruments)]
-      (or (get repl-insts spec)
-          (get repl-insts canonical)
-          (get all canonical)
-          (get all spec)))
-    :else spec))
+  find-instrument-spec)
 
-(defn defdrum!
-  "Declares a drum preset in ClojureScript and immediately syncs it with the Rust WASM drum synthesis engine.
-  Examples: (defdrum! :kick {:base-pitch 48 :pitch-drop 180 :decay 0.28 :click 0.35 :drive 1.6})."
-  [drum-name spec]
-  (let [dk (keyword drum-name)]
-    (register-instrument! dk spec)
-    (worklet/set-worklet-drum-patch! dk spec)
-    dk))
+(defn sync-instrument-dsp!
+  "Transmits instrument DSP configuration to Rust WASM engine without touching REPL registry.
+  Examples: (sync-instrument-dsp! :kick spec)."
+  [inst-name spec]
+  (let [ik (keyword inst-name)]
+    (if (or (busses/drum? ik) (busses/drum? spec) (= (:category spec) :drums))
+      (let [dtype (or (:type spec) :kick)
+            did   (get protocol/drum-type->id dtype 0)]
+        (protocol/register-custom-drum-id! ik did)
+        (worklet/set-worklet-drum-patch! ik spec))
+      (let [patch-id (worklet/register-custom-patch-id! ik)]
+        (worklet/set-worklet-voice-patch! patch-id spec)))
+    ik))
 
-(defn patch-drum!
-  "Tweaks a parameter on an existing drum sound design live in REPL.
-  Examples: (patch-drum! :kick :base-pitch 50), (patch-drum! :kick {:pitch-drop 200 :drive 1.8})."
-  ([drum-name param-key val]
-   (let [dk       (keyword drum-name)
-         old-spec (resolve-instrument-spec dk)
-         new-spec (assoc old-spec param-key val)]
-     (defdrum! dk new-spec)
-     new-spec))
-  ([drum-name spec-map]
-   (let [dk       (keyword drum-name)
-         old-spec (resolve-instrument-spec dk)
-         new-spec (merge old-spec spec-map)]
-     (defdrum! dk new-spec)
-     new-spec)))
-
-(defn defsynth!
-  "Declares a synthesizer or drum preset in ClojureScript and immediately syncs it with the Rust WASM modular voice engine.
-  Examples: (defsynth! :fat-saw {:osc {:type :saw :sub-level 0.4} :filter {:cutoff 1800 :q 0.75} :amp-env {:attack 0.01 :decay 0.2}})."
-  [synth-name spec]
-  (let [sk (keyword synth-name)]
-    (if (or (busses/drum? sk) (= (:category spec) :drums))
-      (defdrum! sk spec)
-      (let [patch-id (worklet/register-custom-patch-id! sk)]
-        (register-instrument! sk spec)
-        (worklet/set-worklet-voice-patch! patch-id spec)
-        sk))))
+(defn definst!
+  "Declares an instrument preset (synth voice or drum model) and syncs it with the Rust WASM audio engine.
+  Examples: (definst! :fat-kick {:category :drums :type :kick :base-pitch 42}),
+            (definst! :fat-saw {:osc {:type :saw}})."
+  [inst-name spec]
+  (let [ik (keyword inst-name)]
+    (register-instrument! ik spec)
+    (sync-instrument-dsp! ik spec)))
 
 (defn patch!
-  "Tweaks a parameter on an existing synthesizer or drum sound design live in REPL.
-  Examples: (patch! :bass :cutoff 2400), (patch! :kick :base-pitch 48), (patch! :lead :q 0.85)."
-  ([synth-name param-key val]
-   (let [sk        (keyword synth-name)
-         canonical (get instrument-aliases sk sk)
-         old-spec  (resolve-instrument-spec sk)]
-     (if (or (busses/drum? sk) (busses/drum? old-spec) (= (:category old-spec) :drums))
-       (patch-drum! sk param-key val)
-       (let [new-spec (assoc old-spec param-key val)]
-         (defsynth! sk new-spec)
-         (when (not= sk canonical)
-           (defsynth! canonical new-spec))
-         new-spec))))
-  ([synth-name spec-map]
-   (let [sk        (keyword synth-name)
-         canonical (get instrument-aliases sk sk)
-         old-spec  (resolve-instrument-spec sk)]
-     (if (or (busses/drum? sk) (busses/drum? old-spec) (= (:category old-spec) :drums))
-       (patch-drum! sk spec-map)
-       (let [new-spec (merge old-spec spec-map)]
-         (defsynth! sk new-spec)
-         (when (not= sk canonical)
-           (defsynth! canonical new-spec))
-         new-spec)))))
+  "Tweaks a parameter on an existing synthesizer or drum live in REPL.
+  Examples: (patch! :bass :cutoff 2400), (patch! :kick :base-pitch 48)."
+  ([inst-name param-key val]
+   (patch! inst-name {param-key val}))
+  ([inst-name spec-map]
+   (let [ik        (keyword inst-name)
+         canonical (get instrument-aliases ik ik)
+         old-spec  (resolve-instrument-spec ik)
+         new-spec  (merge old-spec (if (map? spec-map) spec-map {}))]
+     (definst! ik new-spec)
+     (when (not= ik canonical)
+       (definst! canonical new-spec))
+     new-spec)))
 
 (defn reset-instrument!
   "Resets an instrument's parameters back to its original baseline catalog definition.
@@ -142,41 +120,35 @@
   [synth-name]
   (let [sk        (keyword synth-name)
         canonical (get instrument-aliases sk sk)
-        orig-spec (or (get core-instruments canonical)
-                      (get core-drum-instruments canonical)
-                      (get user-instruments canonical))]
+        orig-spec (or (get core-synths canonical)
+                      (get core-drums canonical)
+                      (get user-synths canonical)
+                      (get user-drums canonical))]
     (when orig-spec
-      ;; Dissoc user overrides from the REPL registry
       (swap! repl-registry update :instruments dissoc sk canonical)
-      ;; Re-sync WASM voice or drum patch with the original definition
-      (if (busses/drum? orig-spec)
-        (worklet/set-worklet-drum-patch! canonical orig-spec)
-        (let [pid (worklet/inst-keyword->id canonical)]
-          (when (number? pid)
-            (worklet/set-worklet-voice-patch! pid orig-spec))))
+      (sync-instrument-dsp! canonical orig-spec)
       orig-spec)))
 
 (defn reload-instruments!
-  "Recompiles and replaces all instruments in the active audio engine context."
+  "Recompiles and syncs all instruments in the active audio engine context."
   []
+  (swap! repl-registry update :instruments
+         (fn [insts]
+           (into {}
+                 (remove (fn [[k spec]]
+                           (let [canonical (get instrument-aliases k k)]
+                             (= spec (or (get core-synths k)
+                                         (get core-drums k)
+                                         (get user-synths k)
+                                         (get user-drums k)
+                                         (get core-synths canonical)
+                                         (get core-drums canonical)
+                                         (get user-synths canonical)
+                                         (get user-drums canonical)))))
+                         insts))))
   (doseq [[inst-key spec] (all-instruments)]
-    (if (busses/drum? spec)
-      (worklet/set-worklet-drum-patch! inst-key spec)
-      (let [pid (worklet/inst-keyword->id inst-key)]
-        (when (and (map? spec)
-                   (number? pid))
-          (worklet/set-worklet-voice-patch! pid spec)))))
+    (sync-instrument-dsp! inst-key spec))
   :reloaded)
-
-(defn trigger-drum!
-  "Triggers an analog drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.)."
-  ([drum-key] (trigger-drum! drum-key 0.9))
-  ([drum-key vel]
-   (let [v (or vel 0.9)]
-     (worklet/trigger-worklet-note! drum-key "C3" v)
-     (pulse! (keyword drum-key) (* 2.2 v))))
-  ([drum-key _pitch _dur _time vel]
-   (trigger-drum! drum-key vel)))
 
 (defn trigger-note!
   "Triggers a note or chord on an instrument with velocity, duration, and visual pulse."
@@ -199,3 +171,9 @@
      (pulse! kw (* 1.8 v))))
   ([_synth-node note-val dur _time vel inst-key]
    (trigger-note! inst-key note-val dur vel)))
+
+(defn trigger-drum!
+  "Triggers a drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.)."
+  ([drum-key] (trigger-drum! drum-key 0.9))
+  ([drum-key vel] (trigger-note! drum-key "C3" "16n" vel))
+  ([drum-key _pitch _dur _time vel] (trigger-drum! drum-key vel)))

@@ -22,7 +22,7 @@
   (jam! :orbital-roller)
   (jam! :street-roller)
   (jam! :acid-roller)
-  (jam! :ambient-drift)
+  (jam! :martian-drift)
 
   ;; Live tempo control
   (b! 174)
@@ -278,7 +278,7 @@
 
   ;; Custom Track Architecture (deftrack! -> jam!)
   (deftrack! :cyber-roller-cus
-    {:name   "Cyber Roller In D Dorian (174 BPM)"
+    {:name   "Custom Cyber Roller"
      :bpm    174
      :scale  [:d :dorian 1]
      :geom   :torus-knot

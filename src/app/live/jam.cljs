@@ -18,9 +18,7 @@
   (click!)
   (jam! :street-roller)
   (jam! :orbital-roller)
-  (jam! :downtempo-chill)
-  (jam! :cyber-dub)
-  (jam! :hardcore-rave)
+  (jam! :neuro-tech)
   (jam! :synthwave-run)
 
   ;; Bus Volume and FX Send Controls

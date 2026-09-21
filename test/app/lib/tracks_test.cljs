@@ -1,5 +1,6 @@
 (ns app.lib.tracks-test
-  (:require [app.lib.tracks :refer [core-track-order core-tracks]]
+  (:require [app.audio.dsp.routing :as routing]
+            [app.lib.tracks :refer [core-track-order core-tracks]]
             [cljs.test :refer [deftest is testing]]))
 
 (deftest core-tracks-catalog-test
@@ -13,6 +14,13 @@
           (is (<= 60 (:bpm track) 240) (str "Preset " preset-kw " BPM must be in valid range"))
           (is (map? (:tracks track)) (str "Preset " preset-kw " must contain a :tracks map"))
           (is (seq (:tracks track)) (str "Preset " preset-kw " tracks map must not be empty")))))))
+
+(deftest core-tracks-routing-test
+  (testing "All core tracks specify a valid routing topology"
+    (let [available (routing/all-routings)]
+      (doseq [[track-kw track] core-tracks]
+        (is (contains? available (:routing track))
+            (str "Track " track-kw " must specify a valid routing topology, got: " (:routing track)))))))
 
 (deftest core-tracks-drum-structure-test
   (testing "Drum tracks preserve their hit keywords"

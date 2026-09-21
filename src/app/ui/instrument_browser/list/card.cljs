@@ -14,7 +14,7 @@
   [:<>
    (when custom?
      [:span.neo-badge.badge-custom
-      {:title "User custom instrument defined in custom/instruments.cljs (persisted on disk)"}
+      {:title "User custom instrument defined in custom/synth.cljs or custom/drums.cljs"}
       "CUSTOM"])
    (when session?
      [:span.neo-badge.badge-session
@@ -36,7 +36,9 @@
   [:div.inst-card-header
    [:div.inst-card-title-group
     [:span.inst-card-title {:class (when selected? "selected")}
-     (str inst-key)]
+     (or (:title spec) (name inst-key))]
+    (when (:title spec)
+      [:span.inst-card-keyword (str inst-key)])
     [card-origin-badges custom? session?]]
    [card-routing-and-poly-badges spec]])
 

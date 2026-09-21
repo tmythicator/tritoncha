@@ -4,9 +4,9 @@
             [app.audio.control.session :as session]
             [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
-            [app.audio.dsp.fx :refer [set-filter-cutoff!]]
             [app.audio.dsp.instruments :refer [reload-instruments!]]
-            [app.audio.theory.harmony :refer [chord]]
+            [app.audio.dsp.routing :as routing]
+            [app.audio.theory.harmony :as harmony :refer [chord]]
             [app.audio.theory.patterns :refer [pattern]]
             [app.config :as cfg]
             [app.custom.tracks :refer [user-tracks]]
@@ -52,6 +52,16 @@
     (keyword? preset-spec)  (get track-aliases preset-spec preset-spec)
     :else preset-spec))
 
+(defn- resolve-track-scale-notes
+  "Resolves deferred scale degrees or raw degree vectors against preset track scale."
+  [track-opts scale]
+  (let [orig-notes (:notes track-opts)
+        resolved   (harmony/resolve-track-notes orig-notes scale (or (:oct track-opts) (:octave track-opts)))]
+    (cond-> (assoc track-opts :notes resolved)
+      (or (:progression (meta resolved))
+          (:progression (meta orig-notes)))
+      (assoc :progression (or (:template (meta resolved)) orig-notes)))))
+
 (defn play-preset!
   "Launches a track by keyword (from all-tracks), 0-based catalog index, or custom data map.
   Examples: (play-preset! 0), (play-preset! :roller), (play-preset! {:bpm 165 :scale [:f :phrygian 1] ...})."
@@ -69,10 +79,11 @@
                      (keyword? target-key) target-key
                      (keyword? preset-spec) preset-spec
                      :else :custom)
-        {:keys [bpm scale geom figures colors cutoff tracks mod kit]} preset-map
-        [bg-c mesh-c] (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])]
+        {:keys [bpm scale geom figures colors tracks mod kit routing]} preset-map
+        [bg-c mesh-c]  (or colors [(:bg cfg/default-scene-colors) (:mesh cfg/default-scene-colors)])
+        target-routing (or routing (:current-routing @audio-state) :default)]
 
-    (swap! audio-state assoc :current-jam preset-key :active? true :track-cutoff cutoff)
+    (swap! audio-state assoc :current-jam preset-key :active? true)
     (when-let [drum-m (or mod (when (keyword? kit) kit) (:mod kit))]
       (set-drum-mode! drum-m))
     (when scale
@@ -85,10 +96,10 @@
         (clear-figures!)
         (when geom (set-geometry! geom))))
     (when colors (set-colors! bg-c mesh-c))
-    (when cutoff (set-filter-cutoff! cutoff))
+    (routing/set-routing! target-routing)
 
     (doseq [[track-name track-opts] tracks]
-      (loop! track-name track-opts))))
+      (loop! track-name (resolve-track-scale-notes track-opts scale)))))
 
 (defn play-track-at!
   "Launches the track preset at the specified 0-based index from the catalog.

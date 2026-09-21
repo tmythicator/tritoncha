@@ -10,7 +10,7 @@
 ;;   :geom    - Single 3D visual geometry fallback (:torus-knot, :icosahedron, etc.)
 ;;   :figures - Map of named 3D figures in scene: {:core {:geom ... :pos [...] :scale ... :colors ...}}
 ;;   :colors  - Vector of [background-hex mesh-hex]
-;;   :cutoff  - Master filter cutoff frequency in Hz (e.g. 4200)
+;;   :routing - Audio routing topology key (e.g. :studio-master, :crematorium)
 ;;   :tracks  - Map of loops to launch simultaneously (bind :figure :core to react to loop pulses)
 
 (def user-tracks

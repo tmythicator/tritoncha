@@ -265,22 +265,16 @@
     align-items: center;
     gap: var(--space-xs);
     pointer-events: auto;
-}
 
-.neo-title {
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-    letter-spacing: 1.5px;
-}
-
-.neo-prompt {
-    color: var(--text-brand);
+    .neo-title {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        letter-spacing: 1.5px;
+    }
 }
 
 /* Badges, stats and action buttons */
 
-.neo-badge,
-.neo-btn-stats,
 .neo-link-btn,
 .neo-action-btn,
 .loop-tag {
@@ -307,11 +301,6 @@
     cursor: default;
 }
 
-.neo-badge.badge-jam {
-    color: var(--text-primary);
-    border-color: var(--border-strong);
-}
-
 .neo-btn-stats,
 .neo-link-btn,
 .neo-action-btn {
@@ -329,17 +318,7 @@
     }
 }
 
-.neo-btn-stats.btn-engine {
-    &.active {
-        color: var(--text-success);
-        border-color: var(--border-success);
-        background: var(--bg-success-subtle);
-        box-shadow: var(--glow-success);
-    }
-}
-
 .neo-action-btn {
-    font-family: inherit;
     font-size: var(--font-size-xs);
     font-weight: 600;
     letter-spacing: 0.8px;
@@ -347,11 +326,6 @@
     border: 1px solid var(--border-strong);
     background: var(--bg-surface);
     color: var(--text-secondary);
-    border-radius: var(--radius-sm);
-    white-space: nowrap;
-    transition: all var(--transition-fast);
-    cursor: pointer;
-    pointer-events: auto;
 
     &:hover {
         color: var(--text-brand);
@@ -365,13 +339,6 @@
         border-color: var(--border-primary);
         background: var(--bg-primary-subtle);
         box-shadow: var(--glow-primary);
-    }
-
-    &.active-success {
-        color: var(--text-success);
-        border-color: var(--border-success);
-        background: var(--bg-success-subtle);
-        box-shadow: var(--glow-success);
     }
 
     &.active-danger {

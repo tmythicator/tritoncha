@@ -1,7 +1,8 @@
 (ns app.audio.control.session-test
   "Unit tests for stateful session key management, degree resolution, modulation, and transposition."
-  (:require [app.audio.control.session :as session]
-            [app.audio.theory.harmony :as harmony :refer [_ chord deg]]
+  (:require [app.audio.control.scheduler :as sched]
+            [app.audio.control.session :as session]
+            [app.audio.theory.harmony :as harmony :refer [_ chord deg prog]]
             [app.state :refer [audio-state]]
             [cljs.test :refer [deftest is testing]]))
 
@@ -16,6 +17,9 @@
     (session/set-key! :e :phrygian 1)
     (is (= "E1" (session/d 1)))
     (is (= "E2" (session/d 1 2)))
+    (is (= ["E1" nil "E1" "F1"] (session/d [1 _ 1 2])))
+    (is (= ["E2" nil "E2" "F2"] (session/d [1 _ 1 2] 2)))
+    (is (= ["E2" nil "E2" "F2"] (session/d [1 _ 1 2] {:octave 2})))
     (is (= ["E1" nil "E1" "F1"]
            (->> [1 _ 1 2]
                 (session/d 1))))))
@@ -48,6 +52,35 @@
       (is (= ["E1" nil "E1" nil] (:notes @sub-pat)) "Sub returns to E1")
       (is (= ["E3" "G3" "B3" "D4"] (:notes @lead-pat)) "Lead returns to E3")
       (is (= [["E3" "G3" "B3" "D4"]] (:notes @strings-pat)) "Chords return to E min7")
+
+      (swap! audio-state assoc :active-tracks {}))))
+
+(deftest modulate-all-progression-custom-octave-test
+  (testing "modulate-all! preserves custom progression octave and respects relative octave shifts"
+    (session/set-key! :e :minor 1)
+    (let [pad-prog (prog [[1 :min9] [6 :maj9] [4 :min7] [7 :dom7]] 3)
+          pad-norm (sched/normalize-pattern-data :pad {:inst :pad-dreamy :notes pad-prog :step "2n" :dur "2n"})
+          pad-pat  (atom pad-norm)
+          sub-deg  (deg [1 _ _ _ 6 _ _ _] 1)
+          sub-norm (sched/normalize-pattern-data :sub {:inst :sub-pure :notes sub-deg :step "16n"})
+          sub-pat  (atom sub-norm)]
+      (swap! audio-state assoc :active-tracks
+             {:pad {:pattern pad-pat}
+              :sub {:pattern sub-pat}})
+
+      ;; Modulate to D Dorian (2-arg call without octave override)
+      (session/modulate-all! :d :dorian)
+      (is (= 3 (:oct @pad-pat)) "Pad track pattern preserves custom octave 3")
+      (is (= 1 (:oct @sub-pat)) "Sub track pattern preserves custom octave 1")
+      (is (= ["D3" "F3" "A3" "C4" "E4"] (first (:notes @pad-pat)))
+          "Pad chords stay rooted at D3, not dropped to D1")
+
+      ;; Modulate with explicit octave shift (+1 octave: 1 -> 2)
+      (session/modulate-all! :f :minor 2)
+      (is (= 4 (:oct @pad-pat)) "Pad shifts by +1 octave to octave 4")
+      (is (= 2 (:oct @sub-pat)) "Sub shifts by +1 octave to octave 2")
+      (is (= ["F4" "G#4" "C5" "D#5" "G5"] (first (:notes @pad-pat)))
+          "Pad chords shift to F4, maintaining relative register")
 
       (swap! audio-state assoc :active-tracks {}))))
 

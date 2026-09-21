@@ -3,8 +3,9 @@ pub mod domain;
 pub mod engine;
 pub mod services;
 
+use crate::domain::effects::CompressorConfig;
 use crate::domain::synth::ModularPatch;
-pub use engine::TritonchaEngine;
+pub use engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
 
@@ -165,6 +166,7 @@ pub unsafe extern "C" fn tritoncha_dsp_set_bus_params(
     muted: i32,
     send_delay: f32,
     send_reverb: f32,
+    bypass_master_fx: i32,
 ) {
     if let Some(engine) = ptr.as_mut() {
         engine.set_bus_params(
@@ -173,6 +175,7 @@ pub unsafe extern "C" fn tritoncha_dsp_set_bus_params(
             muted != 0,
             send_delay,
             send_reverb,
+            bypass_master_fx != 0,
         );
     }
 }
@@ -326,7 +329,6 @@ pub unsafe extern "C" fn tritoncha_dsp_set_reverb_mode(ptr: *mut TritonchaEngine
 /// # Safety
 /// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn tritoncha_dsp_set_master_compressor(
     ptr: *mut TritonchaEngine,
     enabled: i32,
@@ -426,7 +428,6 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch(
 /// # Safety
 /// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn tritoncha_dsp_set_drum_patch(
     ptr: *mut TritonchaEngine,
     drum_id: i32,
@@ -471,5 +472,285 @@ pub unsafe extern "C" fn tritoncha_dsp_process(
         let out_l = std::slice::from_raw_parts_mut(out_left_ptr, n);
         let out_r = std::slice::from_raw_parts_mut(out_right_ptr, n);
         engine.process_block(out_l, out_r);
+    }
+}
+
+/// Clears all effect inserts and resets target_out for a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_clear_bus_chain(ptr: *mut TritonchaEngine, bus_idx: i32) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.clear_bus_chain(bus_idx as usize);
+    }
+}
+
+/// Sets whether a bus terminates in direct out (bypassing master chain) or master.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_bus_target_out(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    target_out: i32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.set_bus_target_out(bus_idx as usize, target_out != 0);
+    }
+}
+
+/// Appends a lowpass filter insert to a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_add_bus_filter(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    cutoff_hz: f32,
+    resonance: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.add_bus_filter(bus_idx as usize, cutoff_hz, resonance);
+    }
+}
+
+/// Appends a stereo delay insert to a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_add_bus_delay(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    time_s: f32,
+    feedback: f32,
+    wet: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.add_bus_delay(bus_idx as usize, time_s, feedback, wet);
+    }
+}
+
+/// Appends an overdrive/bitcrusher insert to a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_add_bus_distort(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    drive: f32,
+    bits: f32,
+    sample_hold: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.add_bus_distort(bus_idx as usize, drive, bits, sample_hold);
+    }
+}
+
+/// Appends a stereo chorus insert to a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_add_bus_chorus(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    rate_hz: f32,
+    depth: f32,
+    mix: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.add_bus_chorus(bus_idx as usize, rate_hz, depth, mix);
+    }
+}
+
+/// Appends a stereo reverb insert to a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_add_bus_reverb(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    room_size: f32,
+    wet: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        engine.add_bus_reverb(bus_idx as usize, room_size, wet);
+    }
+}
+
+/// Appends a bus compressor insert to a bus chain.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_add_bus_compressor(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    threshold_db: f32,
+    ratio: f32,
+    attack_s: f32,
+    release_s: f32,
+    makeup_db: f32,
+    mix: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let config = CompressorConfig {
+            enabled: true,
+            threshold_db,
+            ratio,
+            attack_sec: attack_s,
+            release_sec: release_s,
+            makeup_gain_db: makeup_db,
+            mix,
+        };
+        engine.add_bus_compressor(bus_idx as usize, config);
+    }
+}
+
+/// Updates parameters for a filter on a bus or globally if bus_idx < 0.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_update_bus_filter(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    cutoff_hz: f32,
+    resonance: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let b = if bus_idx < 0 {
+            usize::MAX
+        } else {
+            bus_idx as usize
+        };
+        engine.update_bus_filter(b, cutoff_hz, resonance);
+    }
+}
+
+/// Updates parameters for a delay on a bus or globally if bus_idx < 0.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_update_bus_delay(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    time_s: f32,
+    feedback: f32,
+    wet: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let b = if bus_idx < 0 {
+            usize::MAX
+        } else {
+            bus_idx as usize
+        };
+        engine.update_bus_delay(b, time_s, feedback, wet);
+    }
+}
+
+/// Updates parameters for an overdrive/bitcrusher on a bus or globally if bus_idx < 0.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_update_bus_distort(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    drive: f32,
+    bits: f32,
+    sample_hold: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let b = if bus_idx < 0 {
+            usize::MAX
+        } else {
+            bus_idx as usize
+        };
+        engine.update_bus_distort(b, drive, bits, sample_hold);
+    }
+}
+
+/// Updates parameters for a chorus on a bus or globally if bus_idx < 0.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_update_bus_chorus(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    rate_hz: f32,
+    depth: f32,
+    mix: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let b = if bus_idx < 0 {
+            usize::MAX
+        } else {
+            bus_idx as usize
+        };
+        engine.update_bus_chorus(b, rate_hz, depth, mix);
+    }
+}
+
+/// Updates parameters for a reverb on a bus or globally if bus_idx < 0.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_update_bus_reverb(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    room_size: f32,
+    wet: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let b = if bus_idx < 0 {
+            usize::MAX
+        } else {
+            bus_idx as usize
+        };
+        engine.update_bus_reverb(b, room_size, wet);
+    }
+}
+
+/// Updates parameters for a compressor on a bus or globally if bus_idx < 0.
+///
+/// # Safety
+/// `ptr` must be a valid non-null pointer to an initialized `TritonchaEngine`.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_update_bus_compressor(
+    ptr: *mut TritonchaEngine,
+    bus_idx: i32,
+    threshold_db: f32,
+    ratio: f32,
+    attack_s: f32,
+    release_s: f32,
+    makeup_db: f32,
+    mix: f32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        let b = if bus_idx < 0 {
+            usize::MAX
+        } else {
+            bus_idx as usize
+        };
+        let config = CompressorConfig {
+            enabled: true,
+            threshold_db,
+            ratio,
+            attack_sec: attack_s,
+            release_sec: release_s,
+            makeup_gain_db: makeup_db,
+            mix,
+        };
+        engine.update_bus_compressor(b, config);
     }
 }

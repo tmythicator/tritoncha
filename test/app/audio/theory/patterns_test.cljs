@@ -18,7 +18,7 @@
   (testing "Mini-notation string parsing into keyword vectors"
     (is (= [:kick nil nil nil :snare nil nil nil]
            (pat/pattern "k . . .  s . . .")))
-    (is (= [:hh-c :hh-o :hh-clk :sn-rs]
+    (is (= [:hat-closed :hat-open :hh-clk :sn-rs]
            (pat/pattern "h o hc rs")))
     (is (= [true nil true nil]
            (pat/pattern "x . 1 0"))))
@@ -33,7 +33,11 @@
     (is (= [:crash-16! nil :ride-bell_ nil :tom-high! :tom-mid_ :tom-low! :cowbell_]
            (pat/pattern "cr16! . rb_ . th! tm_ tl! cb_")))
     (is (= [:splash! nil :china_ nil :crash-17! :crash-18_]
-           (pat/pattern "sp! . ch_ . cr17! cr18_")))))
+           (pat/pattern "sp! . ch_ . cr17! cr18_"))))
+
+  (testing "pat shortcut alias behaves identically to pattern"
+    (is (= (pat/pattern "k . . .  s . . .")
+           (pat/pat "k . . .  s . . .")))))
 
 (deftest fast-and-slow-combinators-test
   (testing "fast repeats sequence"
@@ -80,3 +84,12 @@
                    (pat/fast 2)
                    (pat/shift 1))]
       (is (= ["E4" "C4" "E4" "C4"] res)))))
+
+(deftest apply-mask-test
+  (testing "Mask applies boolean pattern with rests"
+    (is (= [:hh-c nil :hh-c nil]
+           (pat/apply-mask [:hh-c] [true false true nil])))
+    (is (= ["C4" nil]
+           (pat/apply-mask ["C4" "E4"] [true false])))
+    (is (= ["A1" "B1" nil "D1"]
+           (pat/apply-mask ["A1" "B1" "C1" "D1"] [true true nil true])))))

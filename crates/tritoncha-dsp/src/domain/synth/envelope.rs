@@ -177,7 +177,7 @@ mod tests {
         assert_eq!(env.stage, EnvelopeStage::Idle);
         assert_eq!(env.level, 0.0);
 
-        let sr = 48000.0;
+        let sr = crate::engine::DEFAULT_SAMPLE_RATE;
         let attack_s = 10.0 / sr;
         let decay_s = 10.0 / sr;
         let sustain = 0.5;

@@ -32,7 +32,7 @@
         step     (or (:step pat) "16n")
         dur      (or (:dur pat) step)
         inst     (or (:inst pat) kw)
-        bus      (busses/instrument-bus inst)
+        bus      (or (busses/instrument-bus pat) (busses/instrument-bus inst))
         events   (or (:notes pat) (:hits pat) (:pattern pat))
         len      (if (sequential? events) (count events) 1)
         raw-vel  (:vel pat 0.9)

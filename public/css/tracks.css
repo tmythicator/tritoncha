@@ -1,24 +1,7 @@
 /* Track library modal */
 
 .track-browser-modal {
-    position: fixed;
-    top: var(--modal-top);
-    bottom: var(--modal-bottom);
-    left: 50%;
-    transform: translateX(-50%);
     width: var(--modal-track-width);
-    max-height: var(--modal-max-height);
-    background: var(--bg-surface);
-    backdrop-filter: var(--blur-glass);
-    border: 1px solid var(--border-strong);
-    padding: var(--modal-card-padding);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-modal);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    z-index: var(--z-modal);
-    pointer-events: auto;
 }
 
 .track-browser-list {

@@ -245,7 +245,7 @@ impl SynthVoice {
 
         let total_mod_st = pitch_snap_st + drift_st;
         let eff_freq = if total_mod_st.abs() > PITCH_MOD_ACTIVE_THRESHOLD {
-            self.freq * (2.0f32).powf(total_mod_st / SEMITONES_PER_OCTAVE)
+            self.freq * (total_mod_st / SEMITONES_PER_OCTAVE).exp2()
         } else {
             self.freq
         };
@@ -309,8 +309,6 @@ impl SynthVoice {
         self.phase = wrap_phase(self.phase + dt);
         self.sub_phase = wrap_phase(self.sub_phase + dt * 0.5);
 
-        osc *= self.velocity * env_level;
-
         // Dynamic filter cutoff with base + key tracking + envelope modulation
         let cutoff = (patch.cutoff_base
             + self.freq * patch.cutoff_key_track
@@ -335,7 +333,9 @@ impl SynthVoice {
                 patch.filter_drive,
             )
         };
-        soft_clip(filtered)
+
+        // Post-filter VCA stage (amp envelope + velocity)
+        soft_clip(filtered * self.velocity * env_level)
     }
 }
 
@@ -348,6 +348,7 @@ impl Default for SynthVoice {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_voice_initial_state() {
@@ -361,7 +362,7 @@ mod tests {
     fn test_voice_trigger_and_envelope_progression() {
         let mut voice = SynthVoice::new();
         let patch = ModularPatch::default_lead();
-        let sr = 48000.0;
+        let sr = DEFAULT_SAMPLE_RATE;
 
         voice.trigger(440.0, 0.9, PATCH_LEAD, &patch, sr, 0.1);
         assert!(voice.active);
@@ -380,7 +381,7 @@ mod tests {
     fn test_voice_portamento_glide() {
         let mut voice = SynthVoice::new();
         let patch = ModularPatch::default_lead();
-        let sr = 48000.0;
+        let sr = DEFAULT_SAMPLE_RATE;
 
         voice.trigger(220.0, 0.8, PATCH_LEAD, &patch, sr, 0.5);
         voice.glide_to(440.0, 0.8, sr, 0.05, 0.5);
@@ -396,7 +397,7 @@ mod tests {
     #[test]
     fn test_all_oscillator_types_bounded_output() {
         let mut voice = SynthVoice::new();
-        let sr = 48000.0;
+        let sr = DEFAULT_SAMPLE_RATE;
 
         for osc_id in 0..12 {
             let mut patch = ModularPatch::default_lead();
@@ -421,7 +422,7 @@ mod tests {
         let mut voice = SynthVoice::new();
         let mut patch = ModularPatch::default_lead();
         patch.osc_type = OSC_KARPLUS;
-        let sr = 48000.0;
+        let sr = DEFAULT_SAMPLE_RATE;
 
         voice.trigger(330.0, 1.0, 0, &patch, sr, 0.2);
         assert!(voice.active);

@@ -24,7 +24,7 @@ pub const MIN_DELAY_LINE_LENGTH: usize = 64;
 pub const DELAY_LINE_SAFETY_HEADROOM: usize = 64;
 
 /// Reference standard audio sample rate in Hz.
-pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
+pub use crate::engine::DEFAULT_SAMPLE_RATE;
 
 /// Minimum valid audio sample rate in Hz.
 pub const MIN_VALID_SAMPLE_RATE: f32 = 1000.0;
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn test_fdn_impulse_response_stability() {
-        let mut fdn = FdnReverb::new(48000.0);
+        let mut fdn = FdnReverb::new(DEFAULT_SAMPLE_RATE);
         fdn.set_room_size(0.85);
         fdn.set_damping(0.2);
         fdn.set_wet(1.0);

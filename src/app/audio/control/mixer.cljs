@@ -21,21 +21,20 @@
    :bus/master  0.0})
 
 (defn- sync-bus-to-worklet! [b-key]
-  (let [db     (get-in @audio-state [:bus-levels b-key] (get default-bus-levels b-key 0.0))
-        muted? (get-in @audio-state [:bus-mutes b-key] false)
-        del    (get-in @audio-state [:bus-sends b-key :delay] (get-in default-bus-sends [b-key :delay] 0.15))
-        rev    (get-in @audio-state [:bus-sends b-key :reverb] (get-in default-bus-sends [b-key :reverb] 0.20))]
+  (let [db         (get-in @audio-state [:bus-levels b-key] (get default-bus-levels b-key 0.0))
+        muted?     (get-in @audio-state [:bus-mutes b-key] false)
+        del        (get-in @audio-state [:bus-sends b-key :delay] (get-in default-bus-sends [b-key :delay] 0.15))
+        rev        (get-in @audio-state [:bus-sends b-key :reverb] (get-in default-bus-sends [b-key :reverb] 0.20))
+        bypass-fx? (get-in @audio-state [:bus-bypass-master-fx b-key] false)]
     (if (= b-key :bus/master)
       (worklet/set-worklet-master-volume! (if muted? -60.0 db))
-      (worklet/set-bus-params! b-key db muted? del rev))))
+      (worklet/set-bus-params! b-key db muted? del rev bypass-fx?))))
 
 (defn sync-all-busses!
   "Synchronizes all bus volumes, mutes, and sends into the Rust WASM DSP engine."
   []
   (doseq [b-key (keys default-bus-levels)]
     (sync-bus-to-worklet! b-key)))
-
-(worklet/on-worklet-ready! sync-all-busses!)
 
 (defn set-volume!
   "Sets the gain volume of a specific audio bus in decibels.
@@ -61,6 +60,16 @@
   (let [b-key (busses/normalize-bus-key bus-key)]
     (when (busses/valid-bus? b-key)
       (swap! audio-state assoc-in [:bus-mutes b-key] false)
+      (sync-bus-to-worklet! b-key))))
+
+(defn set-bus-bypass-master-fx!
+  "Configures whether an audio bus bypasses master inserts (filter and compressor) directly to output.
+  Still affected by master volume fader.
+  Examples: (set-bus-bypass-master-fx! :bus/drums true)."
+  [bus-key bypass?]
+  (let [b-key (busses/normalize-bus-key bus-key)]
+    (when (busses/valid-bus? b-key)
+      (swap! audio-state assoc-in [:bus-bypass-master-fx b-key] (boolean bypass?))
       (sync-bus-to-worklet! b-key))))
 
 (defn set-send!

@@ -6,8 +6,8 @@ pub mod metallic;
 pub mod ride;
 
 pub use bell::RideBellVoice;
-pub use hats::NoiseHatVoice;
-pub use metallic::MetallicVoice;
+pub use hats::{HatParams, NoiseHatVoice};
+pub use metallic::{MetallicParams, MetallicVoice};
 pub use ride::RideVoice;
 
 // Inharmonic metallic frequency banks for cymbals and percussion (B20 bronze modal models)
@@ -25,3 +25,81 @@ pub const CRASH_18_CUTOFF_HZ: f32 = 1400.0;
 pub const SPLASH_CUTOFF_HZ: f32 = 3200.0;
 pub const CHINA_CUTOFF_HZ: f32 = 1800.0;
 pub const COWBELL_BANDPASS_HZ: f32 = 820.0;
+
+#[inline(always)]
+pub fn new_crash_16() -> MetallicVoice<6> {
+    MetallicVoice::new(
+        CRASH_16_FREQS,
+        CRASH_16_CUTOFF_HZ,
+        0.20,
+        0.99987,
+        false,
+        1.05,
+        0.74,
+    )
+}
+
+#[inline(always)]
+pub fn new_crash_17() -> MetallicVoice<6> {
+    MetallicVoice::new(
+        CRASH_17_FREQS,
+        CRASH_17_CUTOFF_HZ,
+        0.20,
+        0.99989,
+        false,
+        1.05,
+        0.76,
+    )
+}
+
+#[inline(always)]
+pub fn new_crash_18() -> MetallicVoice<6> {
+    MetallicVoice::new(
+        CRASH_18_FREQS,
+        CRASH_18_CUTOFF_HZ,
+        0.20,
+        0.99991,
+        false,
+        1.05,
+        0.78,
+    )
+}
+
+#[inline(always)]
+pub fn new_splash() -> MetallicVoice<6> {
+    MetallicVoice::new(
+        SPLASH_FREQS,
+        SPLASH_CUTOFF_HZ,
+        0.25,
+        0.99940,
+        false,
+        0.95,
+        0.82,
+    )
+}
+
+#[inline(always)]
+pub fn new_china() -> MetallicVoice<6> {
+    MetallicVoice::new(
+        CHINA_FREQS,
+        CHINA_CUTOFF_HZ,
+        0.45,
+        0.99984,
+        false,
+        1.35,
+        0.80,
+    )
+}
+
+#[inline(always)]
+pub fn new_cowbell() -> MetallicVoice<2> {
+    MetallicVoice::new(
+        COWBELL_FREQS,
+        COWBELL_BANDPASS_HZ,
+        0.85,
+        0.9985,
+        true,
+        1.4,
+        0.0,
+    )
+}

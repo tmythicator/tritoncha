@@ -25,7 +25,7 @@
   [shared/bus-section cur-sel-key cur-spec])
 
 (defn code-spec-section
-  "Render declarative code specification block ready for custom/instruments.cljs.
+  "Render declarative code specification block ready for custom/synth.cljs or custom/drums.cljs.
   Examples: [code-spec-section :saw-bass cur-spec]."
   [cur-sel-key cur-spec]
   [shared/code-spec-section cur-sel-key cur-spec])

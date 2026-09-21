@@ -1,47 +1,19 @@
 /* Diagnostics and telemetry modal */
 
 .neo-stats-card {
-    position: fixed;
-    top: var(--modal-top);
-    bottom: var(--modal-bottom);
     right: var(--stats-card-right);
     width: var(--modal-stats-width);
     max-width: calc(100vw - 16px);
-    background: var(--bg-surface);
-    backdrop-filter: var(--blur-glass);
-    border: 1px solid var(--border-strong);
-    padding: var(--modal-card-padding);
-    display: flex;
-    flex-direction: column;
     gap: var(--space-md);
-    z-index: var(--z-modal);
-    pointer-events: auto;
-    box-shadow: var(--shadow-modal);
-    border-radius: var(--radius-sm);
-    max-height: var(--modal-max-height);
-    overflow: hidden;
 
     @media (max-width: 640px) {
         left: var(--space-md);
         right: var(--space-md);
-        top: var(--modal-top);
-        bottom: var(--modal-bottom);
         gap: var(--space-sm);
     }
 }
 
-/* Header and connection status */
-
-.neo-header {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: var(--space-sm);
-    font-size: var(--font-size-base);
-    font-weight: 600;
-}
+/* Connection status */
 
 .neo-status-badge {
     display: flex;
@@ -69,13 +41,9 @@
 }
 
 .neo-body {
-    display: flex;
-    flex-direction: column;
     gap: var(--space-lg);
-    flex: 1;
-    min-height: 0;
     overflow-y: auto;
-    padding-right: 2px;
+    padding-right: var(--space-2xs);
 
     @media (max-width: 640px) {
         gap: var(--space-sm);
@@ -197,23 +165,6 @@
     flex-wrap: wrap;
 }
 
-.neo-bus-tag {
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
-    padding: var(--space-2xs) var(--space-xs);
-    border-radius: var(--radius-sm);
-    min-width: calc(var(--space-3xl) * 2);
-    text-align: center;
-    flex-shrink: 0;
-
-    &.bus-drums  { background: var(--bus-drums-bg); color: var(--bus-drums-color); border: 1px solid var(--bus-drums-border); }
-    &.bus-bass   { background: var(--bus-bass-bg); color: var(--bus-bass-color); border: 1px solid var(--bus-bass-border); }
-    &.bus-lead   { background: var(--bus-lead-bg); color: var(--bus-lead-color); border: 1px solid var(--bus-lead-border); }
-    &.bus-space  { background: var(--bus-space-bg); color: var(--bus-space-color); border: 1px solid var(--bus-space-border); }
-    &.bus-direct { background: var(--bus-direct-bg); color: var(--bus-direct-color); border: 1px solid var(--bus-direct-border); }
-    &.bus-master { background: var(--bus-master-bg); color: var(--bus-master-color); border: 1px solid var(--bus-master-border); }
-}
-
 /* Audio bus mixer strips and controls */
 
 .neo-bus-mixer-strip {
@@ -254,11 +205,7 @@
 }
 
 .neo-bus-tag.mini {
-    min-width: 0;
     width: 100%;
-    padding: 2px 4px;
-    font-size: 9px;
-    letter-spacing: 0.5px;
 }
 
 .neo-knob-container {

@@ -2,7 +2,7 @@
 
 <img src="public/favicon.svg" alt="Tritoncha" width="128" height="128" />
 
-**Live-coding WebDAW + audio-reactive 3D visuals in your browser.**  
+**Live-coding WebDAW + audio-reactive 3D visuals in your browser.**
 Shape algorithmic music with ClojureScript, driven by a real-time Rust WebAssembly audio engine and Three.js.
 
 [![CI Status](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml/badge.svg)](https://github.com/tmythicator/tritoncha/actions/workflows/ci.yml)
@@ -14,14 +14,13 @@ Shape algorithmic music with ClojureScript, driven by a real-time Rust WebAssemb
 
 ## WebDAW Features
 
-
-| Synth Studio |
-| :---: |
-| ![Visual Synth Studio](assets/synth_studio.png) |
+|                                                                    Synth Studio                                                                     |
+| :-------------------------------------------------------------------------------------------------------------------------------------------------: |
+|                                                   ![Visual Synth Studio](assets/synth_studio.png)                                                   |
 | Tweak oscillators, filters, and envelopes with live sliders. Audition sounds in real time and export ClojureScript code straight into your session. |
 
-| System Audio Status + Mixer Matrix | Track Presets Library |
-| :---: | :---: |
+|       System Audio Status + Mixer Matrix        |               Track Presets Library                |
+| :---------------------------------------------: | :------------------------------------------------: |
 | ![System Audio Status](assets/audio-status.png) | ![Track Presets Library](assets/track_presets.png) |
 
 ---
@@ -40,8 +39,8 @@ Tritoncha combines ClojureScript for interactive live-coding with Rust compiled 
 ## Features
 
 - **Algorithmic Composition:** Musical scales and modes, scale degrees (`deg`, `d`), chords, Euclidean rhythms (`euclid`, `euc`), and Tidal-style mini-notation (`pattern`, `pat`).
-- **Synthesis:** 16 polyphonic voices, analog drift, Karplus-Strong string modeling, state-variable filters, and 808/909-style drum synthesis.
-- **Mixer + Effects:** 5 stereo busses (`:drums`, `:bass`, `:lead`, `:space`, `:direct`) with delay, reverb, chorus, saturation, and sidechain compression.
+- **Synthesis:** 32 polyphonic voices, Moog 4-pole ladder and state-variable filters, supersaw, Karplus-Strong string modeling, and physical/analog drum synthesis.
+- **Mixer + Effects:** 5 stereo busses (`:drums`, `:bass`, `:lead`, `:space`, `:direct`) with stereo delay, FDN reverb, stereo bus compressor.
 - **Zero Setup:** Runs entirely in modern browsers. No DAWs, background daemons, or native plugins required.
 - **Emacs + CIDER:** First-class nREPL support for live performance.
 
@@ -84,10 +83,9 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
 ### 1. Playback and Preset Jams
 
 ```clojure
-(play!)                   ;; Start default Phrygian Roller (168 BPM)
-(jam! :acid-roller)       ;; Launch track preset (:roller, :sub-roller, :acid-roller, :ambient-drift)
-(b! 174)                  ;; Change tempo live
-(stop!)                   ;; Full audio stop
+(jam! :acid-roller)
+(b! 174)
+(stop!)
 ```
 
 ### 2. Live Drum Loops
@@ -113,9 +111,9 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
 (l! :bass  {:inst :bass :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95})
 
 ;; Euclidean arpeggiator over a 9th chord
-(l! :arp   {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.4})
+(l! :arp   {:inst :pad :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.22})
 
-;; Time transformation (fast 2x double-time, slow 2x halftime, rev)
+;; Time transformation (fast, rev)
 (l! :bass  {:notes (fast 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n"})
 (l! :bass  {:notes (rev (d [1 _ 1 2 _ 1 4 3])) :step "16n"})
 
@@ -143,8 +141,8 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
 (mod-all! :e :phrygian)
 
 ;; Transpose all active loops live (semitones)
-(tr-all! 2)                    ;; Pitch up +2 semitones
-(tr-all! -2)                   ;; Pitch down -2 semitones
+(tr-all! 2)
+(tr-all! -2)
 ```
 
 ### 5. Live Sound Design and Custom Tracks
@@ -168,7 +166,7 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
    :scale  [:d :dorian 1]
    :cutoff 3800
    :tracks
-   {:drums {:pattern (pat "k! . . .  s! . . .  . . k_ .  s! . . .") :step "16n"}
+   {:drums {:notes (pat "k! . . .  s! . . .  . . k_ .  s! . . .") :step "16n"}
     :hat   {:inst :hh-c :mask (euc 11 16) :step "16n" :dur "32n"}
     :bass  {:inst :bass :notes (d [1 _ 1 2 _ 1 4 3]) :step "16n"}
     :pad   {:inst :pad  :notes (arp (chord :d :min9 3) :up-down)}}})
@@ -179,29 +177,36 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
 ### 6. Mixer, Performance Transitions and Dub FX
 
 ```clojure
-;; Live mute and solo
-(m! :kick :snare)              ;; Mute drums
-(u! :kick :snare)              ;; Unmute drums
-(undrum!)                      ;; Mute all drums, keep melodic lines and click
-(click!)                       ;; Toggle metronome click in headphones
-(redrum!)                      ;; Drop all drums back in
+;; Track mutes, solo and drummer tools
+(m! :kick :snare)
+(u! :kick :snare)
+(undrum!)
+(redrum!)
+(click!)
 
-;; Filters and Dub FX
-(f! 450)                       ;; Set lowpass filter cutoff
-(sw! 400 5500 4)               ;; 4-second opening filter sweep into the drop
-(fb! 0.6)                      ;; Stereo delay feedback
-(wet! 0.45)                    ;; Reverb wet mix
-(s!)                           ;; Fire dub laser siren
-(drop!)                        ;; Seismic sub-bass drop
+;; Filters, delay, reverb and dub triggers
+(f! 450)
+(sw! 400 5500 4)
+(fb! 0.6)
+(wet! 0.45)
+(s!)
+(drop!)
 ```
 
 ### 7. Audio-Reactive 3D Visuals
 
 ```clojure
-(g! :torus-knot)               ;; Morph 3D geometry (:icosahedron, :torus-knot, :octahedron, :sphere)
-(scene! :synthwave-grid)       ;; Switch 3D scene (:synthwave-grid, :star-tunnel, :orbital-matrix)
-(w!)                           ;; Toggle wireframe mode
-(c! "#080412" "#00ffaa")   ;; Background and mesh shader colors
+;; Morph geometry: :torus-knot, :icosahedron, :octahedron, :sphere, :box, :dodecahedron
+(g! :torus-knot)
+
+;; Switch 3D scene: :cyber-torus, :quantum-polyhedron, :monolith-core, :crystal-octahedron, :acid-sphere
+(scene! :quantum-polyhedron)
+
+;; Toggle wireframe mode
+(w!)
+
+;; Background and mesh shader colors
+(c! "#080412" "#00ffaa")
 ```
 
 ---
@@ -221,5 +226,5 @@ Tritoncha is built for an interactive Emacs live-coding workflow:
 
 ## License
 
-Copyright © 2026 Alexandr Timchenko.  
+Copyright © 2026 Alexandr Timchenko.
 Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).

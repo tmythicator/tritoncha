@@ -1,5 +1,9 @@
 (ns app.audio.control.tracker-test
-  (:require [app.audio.control.tracker :as tracker]
+  (:require [app.audio.control.looper :as looper]
+            [app.audio.control.tracker :as tracker]
+            [app.audio.dsp.fx :as fx]
+            [app.audio.dsp.routing :as routing]
+            [app.state :refer [audio-state]]
             [cljs.test :refer [deftest is testing]]))
 
 (deftest tracker-default-track-test
@@ -34,3 +38,20 @@
       (is (= (nth keys-list 0) (tracker/default-track-key)))
       (is (= (nth keys-list 1) (nth (tracker/track-keys) 1)))
       (is (nil? (tracker/play-track-at! 9999))))))
+
+(deftest tracker-play-preset-routing-test
+  (testing "play-preset! activates declared track routing"
+    (routing/set-routing! :default)
+    (tracker/play-preset! :acid-roller)
+    (is (= :crematorium (:current-routing @audio-state)))
+    (is (= 2800.0 (:cutoff (fx/get-filter-state))))
+    (is (true? (get-in @audio-state [:bus-bypass-master-fx :bus/drums])))
+    (looper/stop!))
+
+  (testing "play-preset! preserves active routing when preset has no explicit routing"
+    (routing/set-routing! :crematorium)
+    (tracker/play-preset! {:bpm 140 :tracks {}})
+    (is (= :crematorium (:current-routing @audio-state)))
+    (is (= 2800.0 (:cutoff (fx/get-filter-state))))
+    (looper/stop!)
+    (routing/set-routing! :default)))

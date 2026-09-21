@@ -2,6 +2,7 @@
 
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
 use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase};
+use crate::engine::DEFAULT_SAMPLE_RATE;
 
 // Default Tuning and Acoustic Physical Modeling Constants
 pub const DEFAULT_KICK_PITCH_HZ: f32 = 48.0; // Deep sub fundamental
@@ -73,6 +74,47 @@ pub struct KickVoice {
     pub mode: DrumMode,
 }
 
+/// Parameter configuration for kick drum voice synthesis.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KickParams {
+    pub base_pitch_hz: f32,
+    pub pitch_drop: f32,
+    pub pitch_decay: f32,
+    pub decay_s: f32,
+    pub click_level: f32,
+    pub drive: f32,
+    pub mode: f32,
+}
+
+impl Default for KickParams {
+    fn default() -> Self {
+        Self {
+            base_pitch_hz: DEFAULT_KICK_PITCH_HZ,
+            pitch_drop: DEFAULT_KICK_PITCH_DROP_HZ,
+            pitch_decay: DEFAULT_KICK_PITCH_DECAY_COEFF,
+            decay_s: 0.25,
+            click_level: DEFAULT_KICK_CLICK_LEVEL,
+            drive: DEFAULT_KICK_DRIVE,
+            mode: 0.0,
+        }
+    }
+}
+
+impl From<[f32; 7]> for KickParams {
+    #[inline(always)]
+    fn from(p: [f32; 7]) -> Self {
+        Self {
+            base_pitch_hz: p[0],
+            pitch_drop: p[1],
+            pitch_decay: p[2],
+            decay_s: p[3],
+            click_level: p[4],
+            drive: p[5],
+            mode: p[6],
+        }
+    }
+}
+
 impl KickVoice {
     pub fn new() -> Self {
         Self {
@@ -96,42 +138,33 @@ impl KickVoice {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn set_params(
-        &mut self,
-        base_pitch: f32,
-        pitch_drop: f32,
-        pitch_decay: f32,
-        decay_s: f32,
-        click: f32,
-        drive: f32,
-        mode: f32,
-    ) {
-        if base_pitch > 0.0 {
-            self.base_pitch_hz = base_pitch.clamp(30.0, 120.0);
+    pub fn set_params(&mut self, params: impl Into<KickParams>) {
+        let p = params.into();
+        if p.base_pitch_hz > 0.0 {
+            self.base_pitch_hz = p.base_pitch_hz.clamp(30.0, 120.0);
         }
-        if pitch_drop >= 0.0 {
-            self.pitch_drop = pitch_drop.clamp(0.0, 500.0);
+        if p.pitch_drop >= 0.0 {
+            self.pitch_drop = p.pitch_drop.clamp(0.0, 500.0);
         }
-        if pitch_decay > 0.0 {
-            self.pitch_decay_coeff = pitch_decay.clamp(0.005, 0.20);
+        if p.pitch_decay > 0.0 {
+            self.pitch_decay_coeff = p.pitch_decay.clamp(0.005, 0.20);
         }
-        if decay_s > 0.0 {
-            self.body_decay =
-                t60_decay_coeff(decay_s.clamp(0.05, 1.5), 48000.0).clamp(0.990, 0.99995);
+        if p.decay_s > 0.0 {
+            self.body_decay = t60_decay_coeff(p.decay_s.clamp(0.05, 1.5), DEFAULT_SAMPLE_RATE)
+                .clamp(0.990, 0.99995);
         }
-        if click >= 0.0 {
-            self.click_level = click.clamp(0.0, 2.0);
+        if p.click_level >= 0.0 {
+            self.click_level = p.click_level.clamp(0.0, 2.0);
         }
-        if drive > 0.0 {
-            self.drive = drive.clamp(0.5, 4.0);
+        if p.drive > 0.0 {
+            self.drive = p.drive.clamp(0.5, 4.0);
         }
-        if mode >= 0.0 {
-            self.mode = DrumMode::from(mode);
+        if p.mode >= 0.0 {
+            self.mode = DrumMode::from(p.mode);
         }
     }
 
-    pub fn trigger(&mut self, vel: f32, sample_rate: f32) {
+    pub fn trigger(&mut self, vel: f32) {
         let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
         self.active = true;
         // Start oscillator slightly offset from zero for instant pressure wave
@@ -142,7 +175,6 @@ impl KickVoice {
         self.env_body = 1.0;
         self.env_click = 1.0;
         self.vel = v;
-        let _ = sample_rate;
     }
 
     #[inline(always)]

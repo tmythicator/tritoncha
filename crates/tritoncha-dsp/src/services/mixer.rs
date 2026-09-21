@@ -83,6 +83,7 @@ pub struct AudioBus {
     pub muted: bool,
     pub send_delay: f32,
     pub send_reverb: f32,
+    pub bypass_master_fx: bool,
 }
 
 impl AudioBus {
@@ -92,6 +93,7 @@ impl AudioBus {
             muted: false,
             send_delay,
             send_reverb,
+            bypass_master_fx: false,
         }
     }
 }
@@ -100,6 +102,7 @@ impl AudioBus {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct MixerFrame {
     pub master_bus: f32,
+    pub bypass_fx_bus: f32,
     pub delay_send: f32,
     pub reverb_send: f32,
     pub direct_bypass: f32,
@@ -132,6 +135,7 @@ impl Mixer {
         muted: bool,
         send_delay: f32,
         send_reverb: f32,
+        bypass_master_fx: bool,
     ) {
         if bus_idx < NUM_BUSSES {
             let linear_gain = db_to_gain(gain_db);
@@ -139,6 +143,7 @@ impl Mixer {
             self.busses[bus_idx].muted = muted;
             self.busses[bus_idx].send_delay = send_delay.clamp(0.0, 1.0);
             self.busses[bus_idx].send_reverb = send_reverb.clamp(0.0, 1.0);
+            self.busses[bus_idx].bypass_master_fx = bypass_master_fx;
         }
     }
 
@@ -157,6 +162,7 @@ impl Mixer {
     #[inline(always)]
     pub fn process_frame(&mut self, bus_accum: &[f32; NUM_BUSSES]) -> MixerFrame {
         let mut master_bus = 0.0;
+        let mut bypass_fx_bus = 0.0;
         let mut delay_send = 0.0;
         let mut reverb_send = 0.0;
         let mut direct_bypass = 0.0;
@@ -166,6 +172,10 @@ impl Mixer {
                 let mut bus_val = accum * bus.gain;
                 if b == BUS_DIRECT {
                     direct_bypass += bus_val;
+                } else if bus.bypass_master_fx {
+                    bypass_fx_bus += bus_val;
+                    delay_send += bus_val * bus.send_delay;
+                    reverb_send += bus_val * bus.send_reverb;
                 } else {
                     // Sidechain ducking is applied to bass and space/lead layers
                     if matches!(b, BUS_BASS..=BUS_LEAD) {
@@ -180,6 +190,7 @@ impl Mixer {
 
         MixerFrame {
             master_bus,
+            bypass_fx_bus,
             delay_send,
             reverb_send,
             direct_bypass,

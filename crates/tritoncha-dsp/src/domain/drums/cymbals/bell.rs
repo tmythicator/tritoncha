@@ -2,7 +2,8 @@
 //! Simulates non-linear strike deformation, stick tip contact transient,
 //! and five inharmonic modal plate resonances of B20 bronze.
 
-use crate::core::math::{soft_clip, xorshift32_norm};
+use super::ride::RideParams;
+use crate::core::math::{soft_clip, xorshift32_norm, LN_MIN_60DB};
 use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
@@ -40,7 +41,7 @@ impl ModalFilter {
         let f = (self.base_freq * pitch_ratio).clamp(40.0, sample_rate * 0.46);
         let theta = 2.0 * PI * f / sample_rate;
         let decay_samples = (self.decay_s * decay_scale * sample_rate).max(20.0);
-        let r = (-6.90775 / decay_samples).exp().clamp(0.85, 0.99995);
+        let r = (LN_MIN_60DB / decay_samples).exp().clamp(0.85, 0.99995);
 
         let a1 = 2.0 * r * theta.cos();
         let a2 = -(r * r);
@@ -102,30 +103,22 @@ impl RideBellVoice {
         }
     }
 
-    pub fn set_params(
-        &mut self,
-        cutoff_hz: f32,
-        resonance: f32,
-        decay_s: f32,
-        drive: f32,
-        mode: f32,
-    ) {
-        if cutoff_hz > 0.0 {
-            // Map cutoff around default 1385Hz center
-            self.tune_ratio = (cutoff_hz / 1385.0).clamp(0.6, 1.8);
+    pub fn set_params(&mut self, params: impl Into<RideParams>) {
+        let p = params.into();
+        if p.cutoff_hz > 0.0 {
+            self.tune_ratio = (p.cutoff_hz / 1385.0).clamp(0.6, 1.8);
         }
-        if resonance >= 0.0 {
-            // Resonance boosts drive and clarity
-            self.drive = (1.0 + resonance * 1.5).clamp(0.5, 3.5);
+        if p.resonance >= 0.0 {
+            self.drive = (1.0 + p.resonance * 1.5).clamp(0.5, 3.5);
         }
-        if decay_s > 0.0 {
-            self.decay_scale = (decay_s / 1.45).clamp(0.15, 3.5);
+        if p.decay_s > 0.0 {
+            self.decay_scale = (p.decay_s / 1.45).clamp(0.15, 3.5);
         }
-        if drive > 0.0 {
-            self.drive = drive.clamp(0.2, 4.0);
+        if p.drive > 0.0 {
+            self.drive = p.drive.clamp(0.2, 4.0);
         }
-        if mode >= 0.0 {
-            self.mode = DrumMode::from(mode);
+        if p.mode >= 0.0 {
+            self.mode = DrumMode::from(p.mode);
         }
     }
 

@@ -11,7 +11,7 @@
    {:key :bus/bass   :label "BASS"   :color "var(--bus-bass-color)"   :tag-class "bus-bass"   :default 0.0}
    {:key :bus/lead   :label "LEAD"   :color "var(--bus-lead-color)"   :tag-class "bus-lead"   :default 0.0}
    {:key :bus/space  :label "SPACE"  :color "var(--bus-space-color)"  :tag-class "bus-space"  :default 0.0}
-   {:key :bus/direct :label "DIRECT" :color "var(--bus-direct-color)" :tag-class "bus-direct" :default 0.0}
+   {:key :bus/direct :label "CLICK"  :color "var(--bus-direct-color)" :tag-class "bus-direct" :default 0.0}
    {:key :bus/master :label "MASTER" :color "var(--bus-master-color)" :tag-class "bus-master" :default 0.0}])
 
 (def ^:private min-db -24.0)

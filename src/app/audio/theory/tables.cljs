@@ -33,7 +33,18 @@
 
    :whole-tone        [0 2 4 6 8 10]
    :diminished        [0 2 3 5 6 8 9 11]
-   :bebop-dominant    [0 2 4 5 7 9 10 11]})
+   :bebop-dominant    [0 2 4 5 7 9 10 11]
+   :phrygian-dominant [0 1 4 5 7 8 10]
+   :phryg-dom         [0 1 4 5 7 8 10]
+
+   ;; Convenient shorthand aliases
+   :min               [0 2 3 5 7 8 10]
+   :maj               [0 2 4 5 7 9 11]
+   :phryg             [0 1 3 5 7 8 10]
+   :dor               [0 2 3 5 7 9 10]
+   :lyd               [0 2 4 6 7 9 11]
+   :mixo              [0 2 4 5 7 9 10]
+   :loc               [0 1 3 5 6 8 10]})
 
 (def chord-intervals
   "Mapping of chord quality names to pitch interval offsets relative to root."
@@ -58,6 +69,9 @@
    :min9        [0 3 7 10 14]
    :m9          [0 3 7 10 14]
    :m11         [0 3 7 10 14 17]
+   :m7b9        [0 3 7 10 13]
+   :min7b9      [0 3 7 10 13]
+   :phryg       [0 1 5 7 10]
 
    ;; Electronic chords
    :dark-m9     [0 3 7 10 14]

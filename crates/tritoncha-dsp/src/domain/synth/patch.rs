@@ -34,21 +34,6 @@ pub const PATCH_GLASS_KEYS: usize = 39;
 pub const PATCH_SIREN: usize = 40;
 pub const PATCH_LASER: usize = 41;
 
-// Oscillator Types
-pub const OSC_SAW: u8 = 0;
-pub const OSC_PULSE: u8 = 1;
-pub const OSC_TRIANGLE: u8 = 2;
-pub const OSC_SINE: u8 = 3;
-pub const OSC_SUPERSAW: u8 = 4;
-pub const OSC_KARPLUS: u8 = 5;
-pub const OSC_ORGAN: u8 = 6;
-pub const OSC_CHIPTUNE: u8 = 7;
-pub const OSC_FM: u8 = 8;
-pub const OSC_REESE: u8 = 9;
-pub const OSC_BLADE: u8 = 10;
-pub const OSC_HOOVER: u8 = 11;
-pub const OSC_CLICK: u8 = 12;
-
 /// Strongly typed oscillator waveform selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]
@@ -90,21 +75,38 @@ impl From<u8> for OscillatorType {
     }
 }
 
-// Filter Types
-pub const FILTER_LOWPASS: u8 = 0;
-pub const FILTER_HIGHPASS: u8 = 1;
-pub const FILTER_BANDPASS: u8 = 2;
-pub const FILTER_NOTCH: u8 = 3;
-pub const FILTER_LADDER_24DB: u8 = 4;
+// Oscillator Types
+pub const OSC_SAW: u8 = OscillatorType::Saw as u8;
+pub const OSC_PULSE: u8 = OscillatorType::Pulse as u8;
+pub const OSC_TRIANGLE: u8 = OscillatorType::Triangle as u8;
+pub const OSC_SINE: u8 = OscillatorType::Sine as u8;
+pub const OSC_SUPERSAW: u8 = OscillatorType::Supersaw as u8;
+pub const OSC_KARPLUS: u8 = OscillatorType::Karplus as u8;
+pub const OSC_ORGAN: u8 = OscillatorType::Organ as u8;
+pub const OSC_CHIPTUNE: u8 = OscillatorType::Chiptune as u8;
+pub const OSC_FM: u8 = OscillatorType::Fm as u8;
+pub const OSC_REESE: u8 = OscillatorType::Reese as u8;
+pub const OSC_BLADE: u8 = OscillatorType::Blade as u8;
+pub const OSC_HOOVER: u8 = OscillatorType::Hoover as u8;
+pub const OSC_CLICK: u8 = OscillatorType::Click as u8;
 
-// Bus IDs
-pub const BUS_DRUMS: u8 = 0;
-pub const BUS_BASS: u8 = 1;
-pub const BUS_SPACE: u8 = 2;
-pub const BUS_LEAD: u8 = 3;
-pub const BUS_DIRECT: u8 = 4;
+pub use crate::domain::effects::FilterMode;
+
+// Filter Types
+pub const FILTER_LOWPASS: u8 = FilterMode::Lowpass as u8;
+pub const FILTER_HIGHPASS: u8 = FilterMode::Highpass as u8;
+pub const FILTER_BANDPASS: u8 = FilterMode::Bandpass as u8;
+pub const FILTER_NOTCH: u8 = FilterMode::Notch as u8;
+pub const FILTER_LADDER_24DB: u8 = FilterMode::Ladder24 as u8;
 
 pub use crate::services::mixer::BusTarget;
+
+// Bus IDs
+pub const BUS_DRUMS: u8 = BusTarget::Drums as u8;
+pub const BUS_BASS: u8 = BusTarget::Bass as u8;
+pub const BUS_SPACE: u8 = BusTarget::Space as u8;
+pub const BUS_LEAD: u8 = BusTarget::Lead as u8;
+pub const BUS_DIRECT: u8 = BusTarget::Direct as u8;
 
 // Audio and Voice Timing Constants
 pub const MIN_FREQ_HZ: f32 = 20.0;
@@ -182,11 +184,11 @@ impl ModularPatch {
     /// Clamps and sanitizes all patch parameters to ensure numerical stability.
     pub fn sanitized(&self) -> Self {
         Self {
-            osc_type: self.osc_type.min(12),
+            osc_type: OscillatorType::from(self.osc_type) as u8,
             sub_level: self.sub_level.clamp(0.0, 1.0),
             pulse_width: self.pulse_width.clamp(0.05, 0.95),
-            filter_type: self.filter_type.min(3),
-            cutoff_base: self.cutoff_base.clamp(20.0, 20000.0),
+            filter_type: FilterMode::from(self.filter_type) as u8,
+            cutoff_base: self.cutoff_base.clamp(MIN_FREQ_HZ, 20000.0),
             cutoff_env_amt: self.cutoff_env_amt.clamp(-20000.0, 20000.0),
             cutoff_key_track: self.cutoff_key_track.clamp(0.0, 4.0),
             resonance: self.resonance.clamp(0.0, 0.98),
@@ -196,7 +198,7 @@ impl ModularPatch {
             release: self.release.clamp(MIN_RELEASE_SEC, 10.0),
             mod_attack: self.mod_attack.clamp(0.001, 10.0),
             mod_decay: self.mod_decay.clamp(0.005, 10.0),
-            bus_id: self.bus_id.min(4),
+            bus_id: BusTarget::from(self.bus_id) as u8,
             polyphony: self.polyphony.clamp(1, 16),
             glide: self.glide.clamp(0.0, 2.0),
             filter_drive: self.filter_drive.clamp(0.0, 1.0),

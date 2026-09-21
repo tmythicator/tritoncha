@@ -1,9 +1,8 @@
 (ns app.audio.dsp.worklet.compiler
   "Pure compilers and parsers for score notation, articulation, and DSP patches."
-  (:require [app.audio.dsp.busses :refer [find-instrument-spec]]
-            [app.audio.dsp.worklet.protocol :refer [bus-key->id drum-mod->id filter-type->id
+  (:require [app.audio.dsp.busses :refer [drum-keyword? find-instrument-spec]]
+            [app.audio.dsp.worklet.protocol :refer [bus-key->id drum-mod->id drum-remaps filter-type->id
                                                     inst-keyword->id osc-type->id]]
-            [app.lib.drums :refer [drum-keyword? mini-notation-aliases]]
             [app.utils.audio :refer [midi->freq note->midi]]
             [clojure.string :as str]))
 
@@ -46,73 +45,85 @@
        :else
        [s base-vel]))))
 
+(defn- inst-base-type
+  [k]
+  (when k
+    (or (:type (find-instrument-spec k))
+        (get drum-remaps (name k))
+        k)))
+
+(defn resolve-target-inst
+  "Resolves the actual instrument to trigger for a pattern hit.
+  If the hit matches the base drum type of default-inst-key, default-inst-key is used.
+  Examples: (resolve-target-inst :kick :fat-kick) -> :fat-kick,
+            (resolve-target-inst :clap :fat-kick) -> :clap."
+  [hit-kw default-inst-key]
+  (if (or (nil? default-inst-key) (= default-inst-key hit-kw))
+    hit-kw
+    (let [hit-type (inst-base-type hit-kw)
+          def-type (inst-base-type default-inst-key)]
+      (if (or (= hit-type def-type)
+              (not (drum-keyword? default-inst-key))
+              (contains? #{:drum :drums :hit :beat :x :1} hit-kw))
+        default-inst-key
+        hit-kw))))
+
 (defn parse-step-hit
   "Parses a step hit into {:inst-id :note :vel} map respecting default-vel.
   Examples: (parse-step-hit \"C3\" :bass 0.4) -> {:inst-id 4, :note 48, :vel 0.4}."
   ([hit default-inst-key] (parse-step-hit hit default-inst-key 0.9))
   ([hit default-inst-key default-vel]
-   (let [def-v (float (or default-vel 0.9))]
+   (let [def-v  (float (or default-vel 0.9))
+         def-id (inst-keyword->id default-inst-key (find-instrument-spec default-inst-key))]
      (cond
-       (nil? hit)
-       {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
+       (or (nil? hit) (false? hit))
+       {:inst-id def-id :note -1 :vel 0.0}
 
-       (boolean? hit)
-       (if hit
-         {:inst-id (inst-keyword->id default-inst-key) :note 60 :vel def-v}
-         {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0})
+       (true? hit)
+       {:inst-id def-id :note 60 :vel def-v}
+
+       (number? hit)
+       (if (neg? hit)
+         {:inst-id def-id :note -1 :vel 0.0}
+         {:inst-id def-id :note (int hit) :vel def-v})
 
        (and (vector? hit) (keyword? (first hit)))
        (let [[k v n]           hit
-             [clean-k art-vel] (extract-articulation k def-v)]
-         {:inst-id (inst-keyword->id (keyword clean-k))
+             [clean-k art-vel] (extract-articulation k def-v)
+             target-inst       (resolve-target-inst (keyword clean-k) default-inst-key)]
+         {:inst-id (inst-keyword->id target-inst (find-instrument-spec target-inst))
           :note    (if n (parse-midi-note n) 60)
           :vel     (float (or v art-vel def-v))})
 
        (vector? hit)
-       {:inst-id (inst-keyword->id default-inst-key)
+       {:inst-id def-id
         :note    (if (seq hit) (parse-midi-note (first hit)) -1)
         :vel     (if (seq hit) def-v 0.0)}
 
-       (keyword? hit)
-       (let [[clean-name art-vel] (extract-articulation hit def-v)
-             resolved-alias       (get mini-notation-aliases clean-name)
-             clean-kw             (or resolved-alias (keyword clean-name))]
+       (or (keyword? hit) (string? hit))
+       (let [raw-str         (if (keyword? hit) (name hit) (str hit))
+             [clean art-vel] (extract-articulation raw-str def-v)
+             resolved-alias  (get drum-remaps clean)
+             clean-kw        (or resolved-alias (keyword clean))]
          (cond
-           (contains? #{:_ :- :rest :nil :none} clean-kw)
-           {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
+           (contains? #{:_ :- :rest :nil :none "." "0"} clean-kw)
+           {:inst-id def-id :note -1 :vel 0.0}
 
-           (drum-keyword? clean-kw)
-           {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
+           (or resolved-alias (drum-keyword? clean-kw))
+           (let [target (resolve-target-inst clean-kw default-inst-key)]
+             {:inst-id (inst-keyword->id target (find-instrument-spec target)) :note 60 :vel (float art-vel)})
 
            :else
-           (if-let [m (note->midi clean-name)]
-             {:inst-id (inst-keyword->id default-inst-key) :note (int m) :vel (float art-vel)}
-             {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)})))
-
-       (number? hit)
-       (if (neg? hit)
-         {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
-         {:inst-id (inst-keyword->id default-inst-key) :note (int hit) :vel def-v})
-
-       (string? hit)
-       (let [[clean-name art-vel] (extract-articulation hit def-v)
-             resolved-alias       (get mini-notation-aliases clean-name)
-             clean-kw             (or resolved-alias (keyword clean-name))]
-         (cond
-           (contains? #{:_ :- :rest :nil :none "." "0"} clean-name)
-           {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}
-
-           (drum-keyword? clean-kw)
-           {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
-
-           :else
-           (let [m (parse-midi-note clean-name)]
+           (let [m (parse-midi-note clean)]
              (if (neg? m)
-               {:inst-id (inst-keyword->id clean-kw) :note 60 :vel (float art-vel)}
-               {:inst-id (inst-keyword->id default-inst-key) :note m :vel (float art-vel)}))))
+               (let [target (resolve-target-inst clean-kw default-inst-key)]
+                 {:inst-id (inst-keyword->id target (find-instrument-spec target))
+                  :note    60
+                  :vel     (float art-vel)})
+               {:inst-id def-id :note m :vel (float art-vel)}))))
 
        :else
-       {:inst-id (inst-keyword->id default-inst-key) :note -1 :vel 0.0}))))
+       {:inst-id def-id :note -1 :vel 0.0}))))
 
 (defn compile-voice-patch-msg
   "Compiles a declarative Clojure synth patch map into a WebAudio postMessage payload.

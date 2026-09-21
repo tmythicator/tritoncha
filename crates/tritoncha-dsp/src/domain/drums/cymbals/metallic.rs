@@ -1,11 +1,35 @@
 //! Inharmonic metallic cymbal and percussion voice.
 
-use crate::core::math::{soft_clip, wrap_phase, xorshift32_norm};
+use crate::core::math::{soft_clip, t60_decay_coeff, wrap_phase, xorshift32_norm};
 use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
 use crate::domain::effects::StateVariableFilter;
+use crate::engine::DEFAULT_SAMPLE_RATE;
 use std::f32::consts::PI;
+
+/// Inharmonic metallic cymbal and percussion parameters.
+#[derive(Clone, Copy, Debug)]
+pub struct MetallicParams {
+    pub cutoff_hz: f32,
+    pub resonance: f32,
+    pub decay_s: f32,
+    pub drive: f32,
+    pub mode: f32,
+}
+
+impl From<[f32; 7]> for MetallicParams {
+    #[inline(always)]
+    fn from(p: [f32; 7]) -> Self {
+        Self {
+            cutoff_hz: p[0],
+            resonance: p[1],
+            decay_s: p[2],
+            drive: p[3],
+            mode: p[6],
+        }
+    }
+}
 
 /// Metallic Inharmonic Cymbal and Percussion Voice.
 #[derive(Clone)]
@@ -60,29 +84,23 @@ impl<const N: usize> MetallicVoice<N> {
         }
     }
 
-    pub fn set_params(
-        &mut self,
-        cutoff_hz: f32,
-        resonance: f32,
-        decay_s: f32,
-        drive: f32,
-        mode: f32,
-    ) {
-        if cutoff_hz > 0.0 {
-            self.cutoff_hz = cutoff_hz.clamp(100.0, 18000.0);
+    pub fn set_params(&mut self, params: impl Into<MetallicParams>) {
+        let p = params.into();
+        if p.cutoff_hz > 0.0 {
+            self.cutoff_hz = p.cutoff_hz.clamp(100.0, 18000.0);
         }
-        if resonance >= 0.0 {
-            self.resonance = resonance.clamp(0.05, 0.95);
+        if p.resonance >= 0.0 {
+            self.resonance = p.resonance.clamp(0.05, 0.95);
         }
-        if decay_s > 0.0 {
-            let samples = (decay_s.clamp(0.02, 5.0) * 48000.0).max(50.0);
-            self.decay_coeff = (-6.90775 / samples).exp().clamp(0.980, 0.99998);
+        if p.decay_s > 0.0 {
+            self.decay_coeff = t60_decay_coeff(p.decay_s.clamp(0.02, 5.0), DEFAULT_SAMPLE_RATE)
+                .clamp(0.980, 0.99998);
         }
-        if drive > 0.0 {
-            self.drive = drive.clamp(0.1, 5.0);
+        if p.drive > 0.0 {
+            self.drive = p.drive.clamp(0.1, 5.0);
         }
-        if mode >= 0.0 {
-            self.mode = DrumMode::from(mode);
+        if p.mode >= 0.0 {
+            self.mode = DrumMode::from(p.mode);
         }
     }
 

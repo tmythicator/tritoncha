@@ -2,23 +2,24 @@
   (:require
    ["three" :as three]
    [app.api]
-   [app.audio.control.looper :refer [toggle-click!]]
+   [app.audio.control.looper :as looper :refer [toggle-click!]]
    [app.audio.control.mixer :refer [toggle-bus! toggle-drums!]]
    [app.audio.control.tracker :refer [next-jam! play-track-at! prev-jam! toggle-play!]]
    [app.audio.dsp.engine :refer [init-audio! resume-audio-context!]]
    [app.audio.dsp.fx :refer [trigger-sub-drop!]]
    [app.audio.dsp.instruments]
-   [app.custom.instruments]
+   [app.custom.drums]
    [app.custom.routes]
    [app.custom.scenes]
+   [app.custom.synth]
    [app.custom.tracks]
    [app.demo.tutorial]
    [app.lib.drums]
-   [app.lib.instruments]
    [app.lib.routes]
    [app.lib.scenes]
+   [app.lib.synth]
    [app.lib.tracks]
-   [app.state :refer [engine-ctx ui-state visual-state]]
+   [app.state :refer [audio-state engine-ctx ui-state visual-state]]
    [app.ui.hud :refer [render-ui! toggle-hud! toggle-instrument-browser! toggle-stats! toggle-track-browser! toggle-tutorial!]]
    [app.visuals.engine :as engine :refer [cycle-scene! init-three! render-loop!
                                           resize-viewport! toggle-wireframe!]]))
@@ -92,6 +93,8 @@
 (defn ^:dev/after-load ^:export reload! []
   (js/console.log "Hot Reloading ClojureScript app.core...")
   (render-ui!)
+  (when (and (:active? @audio-state) (seq (:active-tracks @audio-state)))
+    (looper/sync-all-active-tracks!))
   (when-let [{:keys [scene ^js mesh]} (:three @engine-ctx)]
     (let [{:keys [bg-color wireframe? mesh-color]} @visual-state]
       (set! (.. scene -background) (three/Color. bg-color))

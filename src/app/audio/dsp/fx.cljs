@@ -1,7 +1,6 @@
 (ns app.audio.dsp.fx
   "Audio effects automations, drive, chorus, bitcrush, sidechain, smooth filter sweeps, dub sirens, and sub-bass drops via Rust WASM DSP engine."
-  (:require [app.audio.dsp.engine :refer [init-audio!]]
-            [app.audio.dsp.worklet :as worklet]
+  (:require [app.audio.dsp.worklet :as worklet]
             [app.state :refer [audio-state pulse!]]
             [app.utils.math :refer [clamp]]))
 
@@ -17,6 +16,9 @@
 (defonce ^:private reverb-state
   (atom {:room-size 0.70 :wet 0.35}))
 
+(defonce ^:private chorus-state
+  (atom {:rate 0.8 :depth 0.4 :wet 0.0}))
+
 (defonce ^:private compressor-state
   (atom {:enabled false :threshold -12.0 :ratio 4.0 :attack 0.010 :release 0.100 :makeup 2.5 :mix 1.0}))
 
@@ -25,6 +27,26 @@
   []
   @filter-state)
 
+(defn get-delay-state
+  "Returns the current master delay state map {:time s :feedback fb :wet w}."
+  []
+  @delay-state)
+
+(defn get-reverb-state
+  "Returns the current master reverb state map {:room-size s :wet w}."
+  []
+  @reverb-state)
+
+(defn get-drive-state
+  "Returns the current overdrive and bitcrusher state map {:drive d :bits b :sample-hold sh}."
+  []
+  @drive-state)
+
+(defn get-chorus-state
+  "Returns the current chorus state map {:rate r :depth d :wet w}."
+  []
+  @chorus-state)
+
 (defn set-filter-cutoff!
   "Sets the master lowpass filter cutoff frequency in Hz (50 to 18000 Hz).
   Examples: (set-filter-cutoff! 3000), (f! 12000)."
@@ -32,8 +54,6 @@
   (let [hz (if (<= hz-or-norm 1.0) (* hz-or-norm 18000.0) hz-or-norm)
         clamped-hz (clamp hz 50.0 18000.0)]
     (swap! filter-state assoc :cutoff clamped-hz)
-    (when (= (:current-routing @audio-state :default) :default)
-      (swap! audio-state assoc :track-cutoff clamped-hz))
     (worklet/set-worklet-filter! clamped-hz (:resonance @filter-state))))
 
 (defn set-filter-q!
@@ -81,7 +101,11 @@
   ([mix] (set-chorus! 0.8 mix))
   ([rate-hz mix] (set-chorus! rate-hz 0.4 mix))
   ([rate-hz depth mix]
-   (worklet/set-worklet-chorus! (clamp rate-hz 0.1 10.0) (clamp depth 0.0 1.0) (clamp mix 0.0 1.0))))
+   (let [r (clamp rate-hz 0.1 10.0)
+         d (clamp depth 0.0 1.0)
+         w (clamp mix 0.0 1.0)]
+     (swap! chorus-state assoc :rate r :depth d :wet w)
+     (worklet/set-worklet-chorus! r d w))))
 
 (defn set-sidechain!
   "Sets kick sidechain ducking pump amount (0.0 to 1.0).
@@ -97,7 +121,10 @@
     (swap! delay-state assoc :feedback clamped-fb)
     (worklet/set-worklet-delay! (:time @delay-state) clamped-fb (:wet @delay-state))))
 
-(defn- parse-delay-time-s [t]
+(defn parse-delay-time-s
+  "Converts note duration strings or numeric seconds to delay time in seconds.
+  Examples: (parse-delay-time-s \"8n.\") -> 0.27, (parse-delay-time-s 0.35) -> 0.35."
+  [t]
   (cond
     (number? t)  (float t)
     (= t "16n")  0.09
@@ -223,14 +250,12 @@
 (defn trigger-dub-siren!
   "Triggers a classic one-shot dub laser siren FX."
   []
-  (init-audio!)
   (worklet/trigger-worklet-note! :lead "E5" 0.9)
   (pulse! 2.8))
 
 (defn trigger-sub-drop!
   "Triggers a seismic sub-bass drop."
   []
-  (init-audio!)
   (worklet/trigger-worklet-note! :sub-sine "F1" 1.0)
   (pulse! 3.0))
 
@@ -238,7 +263,6 @@
   "Triggers a dark minor 9th pad chord stab."
   ([] (trigger-dark-chord! ["E3" "G3" "B3" "D4" "F#4"]))
   ([chord]
-   (init-audio!)
    (doseq [n chord]
      (worklet/trigger-worklet-note! :pad n 0.6))
    (pulse! 1.8)))

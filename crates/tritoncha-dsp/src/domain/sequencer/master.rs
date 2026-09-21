@@ -6,9 +6,9 @@ use super::track::{
 };
 use super::trigger_mask::TriggerMask;
 use crate::core::math::midi_to_freq;
-use crate::domain::drums::{is_drum_inst, INST_DRUM_TOM};
+use crate::domain::drums::{is_drum_inst, DRUM_TOM};
 
-pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
+pub use crate::engine::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_BPM: f32 = 168.0;
 pub const MIN_BPM: f32 = 30.0;
 pub const MAX_BPM: f32 = 300.0;
@@ -197,7 +197,7 @@ impl MasterSequencer {
                     } else {
                         DEFAULT_NOTE_FREQ_HZ
                     }
-                } else if inst_id == INST_DRUM_TOM {
+                } else if inst_id == DRUM_TOM {
                     midi_to_freq(note as f32)
                 } else {
                     DEFAULT_NOTE_FREQ_HZ
@@ -225,15 +225,18 @@ mod tests {
 
     #[test]
     fn test_master_sequencer_bpm_and_steps() {
-        let mut seq = MasterSequencer::new(48000.0);
+        let mut seq = MasterSequencer::new(DEFAULT_SAMPLE_RATE);
         seq.set_bpm(120.0);
         assert_eq!(seq.bpm, 120.0);
-        assert_eq!(seq.samples_per_step, (48000.0 * 60.0) / (120.0 * 16.0));
+        assert_eq!(
+            seq.samples_per_step,
+            (DEFAULT_SAMPLE_RATE * 60.0) / (120.0 * 16.0)
+        );
     }
 
     #[test]
     fn test_master_sequencer_track_dispatch() {
-        let mut seq = MasterSequencer::new(48000.0);
+        let mut seq = MasterSequencer::new(DEFAULT_SAMPLE_RATE);
         seq.set_track(0, &[1], &[60], &[0.8], &[0.1], 1);
         seq.set_playing(true);
 

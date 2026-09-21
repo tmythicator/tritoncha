@@ -25,7 +25,83 @@ html, body {
     touch-action: none;
 }
 
-/* Close button */
+/* Global custom scrollbars */
+
+::-webkit-scrollbar {
+    width: var(--space-xs);
+    height: var(--space-xs);
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-scrollbar-thumb);
+    border-radius: var(--radius-sm);
+
+    &:hover {
+        background: var(--text-tertiary);
+    }
+}
+
+/* Universal modal card foundation */
+
+:is(.neo-stats-card, .neo-tutorial-card, .instrument-browser-modal, .track-browser-modal) {
+    position: fixed;
+    top: var(--modal-top);
+    bottom: var(--modal-bottom);
+    background: var(--bg-surface);
+    backdrop-filter: var(--blur-glass);
+    border: 1px solid var(--border-strong);
+    padding: var(--modal-card-padding);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-modal);
+    z-index: var(--z-modal);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--modal-max-height);
+    overflow: hidden;
+}
+
+:is(.instrument-browser-modal, .track-browser-modal) {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Modal headers and controls */
+
+.neo-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--space-sm);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+}
+
+.neo-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.neo-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+}
+
+.neo-prompt {
+    color: var(--text-brand);
+}
 
 .neo-btn-close {
     font-family: inherit;
@@ -40,6 +116,55 @@ html, body {
 
     &:hover {
         color: var(--text-primary);
+    }
+}
+
+/* Universal badges, bus tags, and buttons */
+
+.neo-badge,
+.neo-btn-stats {
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding: var(--space-2xs) var(--space-sm);
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-tertiary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    pointer-events: auto;
+
+    &:hover {
+        color: var(--text-brand);
+        border-color: var(--border-primary);
+    }
+}
+
+.neo-bus-tag {
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    min-width: calc(var(--space-3xl) * 2);
+    text-align: center;
+    flex-shrink: 0;
+
+    &.bus-drums  { background: var(--bus-drums-bg); color: var(--bus-drums-color); border: 1px solid var(--bus-drums-border); }
+    &.bus-bass   { background: var(--bus-bass-bg); color: var(--bus-bass-color); border: 1px solid var(--bus-bass-border); }
+    &.bus-lead   { background: var(--bus-lead-bg); color: var(--bus-lead-color); border: 1px solid var(--bus-lead-border); }
+    &.bus-space  { background: var(--bus-space-bg); color: var(--bus-space-color); border: 1px solid var(--bus-space-border); }
+    &.bus-direct { background: var(--bus-direct-bg); color: var(--bus-direct-color); border: 1px solid var(--bus-direct-border); }
+    &.bus-master { background: var(--bus-master-bg); color: var(--bus-master-color); border: 1px solid var(--bus-master-border); }
+
+    &.mini {
+        min-width: 0;
+        padding: var(--space-2xs) var(--space-xs);
+        font-size: var(--font-size-2xs);
+        letter-spacing: 0.3px;
     }
 }
 
