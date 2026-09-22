@@ -1,7 +1,7 @@
 (ns app.demo.tutorial
   "Live-coding audio + visuals tutorial for Tritoncha."
   (:require [app.api :refer [_ arp b! c! chord clear-loops! comp! d definst!
-                             defrouting! defscene! deftrack! demo! demo-stop!
+                             defroute! defscene! deftrack! demo! demo-stop!
                              drive-mode! drop! euc every-n f! fast fb! g! hud!
                              inst! jam! jams! l! m! mod! mod-all! next-jam!
                              pat patch! prev-jam! prog pulse! q! rebass!
@@ -103,7 +103,7 @@
   ;; 3-Tom Linear Chops (High, Mid, Low Floor Tom)
   (l! :toms
       {:inst :drums
-       :notes (pat "th! tm_ tl! k!  th_ tm! tl_ k_  th! tm_ tl! s!  cr18! . . .")
+       :notes (pat "th! tm_ tl! tl!  th_ tm! tl_ th_  th! tm_ tl! tm!  th! . . .")
        :step "16n"})
 
   ;; 32nd-Note Linear Fill (using fast 2x into the drop)
@@ -117,7 +117,7 @@
   (stack!
    [:kick  (pat "k! . . k_  . k_ k! .  k! . . k_  . k! . .")]
    [:snare (pat ". . s_ .  s! s_ . s_  . s_ s_ s!  s_ . s! s_")]
-   [:ride  (pat "rb! . rb_ .  rb! . rb_ rb_  rb! . sp! .  rb_ rb! ch! .")]
+   [:cymb  (pat "rb! . rb_ .  rb! . rb_ rb_  rb! . sp! .  rb_ rb! ch! .")]
    [:toms  (pat ". . . .  . . . .  . . . .  th! tm_ tl! .")]
    [:bass  {:inst :liquid-reese :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 1) :step "16n" :dur "16n" :vel 0.95}]
    [:sub   {:inst :sub-moog     :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _] 1) :step "16n" :dur "8n" :vel 1.0}]
@@ -266,7 +266,7 @@
 
   ;; Define custom routing topology live from REPL
   ;; :out bypasses master bus processors (straight to DAC)
-  (defrouting! :space-dub-custom
+  (defroute! :space-dub-custom
     {:graph {:drums  [:crusher :compressor :out]
              :bass   [:distort :filter]
              :lead   [:delay :reverb]
@@ -395,7 +395,7 @@
      :colors  ["#080412" "#00ffaa"]
      :routing :ambient-prism
      :tracks
-     {:drums {:pattern (pat "k . . .  rs . . .  . . k .  s . . g") :step "16n"}
+     {:drums {:pattern (pat "k . g g  rs! . . .  . . k .  s . . g") :step "16n"}
       :cymb  {:pattern (pat "rd . . .  rb . . .  . . sp .  ch . . .") :step "16n"}
       :hat   {:inst :hat-closed :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}
       :bass  {:inst :bass-liquid :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}

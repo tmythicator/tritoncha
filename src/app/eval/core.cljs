@@ -142,14 +142,20 @@
    ;; Catalog Registries + Live Sound Design
    'tracks              api/tracks
    'deftrack!           api/deftrack!
+   'deftrack            api/deftrack!
    'instruments         api/instruments
    'definst!            api/definst!
+   'definst             api/definst!
    'patch!              api/patch!
    'reset-inst!         api/reset-inst!
    'reset-instrument!   api/reset-instrument!
    'routings            api/routings
    'defrouting!         api/defrouting!
+   'defrouting          api/defrouting!
+   'defroute!           api/defroute!
+   'defroute            api/defroute!
    'route!              api/route!
+   'route               api/route!
    'set-routing!        api/set-routing!
    'demo!               api/demo!
    'demo-stop!          api/demo-stop!
@@ -158,7 +164,9 @@
    ;; Three.js WebGL Visual Controls + 3D Scenes
    'scenes              api/scenes
    'defscene!           api/defscene!
+   'defscene            api/defscene!
    'scene!              api/scene!
+   'scene               api/scene!
    'set-scene!          api/set-scene!
    'cycle-scene!        api/cycle-scene!
    'g!                  api/g!

@@ -25,9 +25,9 @@
     "comp!" "compressor!" "set-compressor!" "comp-state" "compressor-state"
     "rfx!" "reset-fx!" "reset-routing!"
     "s!" "siren!" "drop!" "chord!"
-    "tracks" "deftrack!" "instruments" "definst!" "patch!" "reset-inst!" "reset-instrument!"
-    "routings" "defrouting!" "route!" "set-routing!" "demo!" "demo-stop!" "refresh!"
-    "scenes" "defscene!" "scene!" "set-scene!" "cycle-scene!"
+    "tracks" "deftrack!" "deftrack" "instruments" "definst!" "definst" "patch!" "reset-inst!" "reset-instrument!"
+    "routings" "defrouting!" "defrouting" "defroute!" "defroute" "route!" "route" "set-routing!" "demo!" "demo-stop!" "refresh!"
+    "scenes" "defscene!" "defscene" "scene!" "scene" "set-scene!" "cycle-scene!"
     "g!" "set-geometry!" "w!" "toggle-wireframe!" "c!" "set-colors!"
     "set-figures!" "clear-figures!" "pulse!"
     "stat" "status!" "reset-stats!" "stats!" "hud!" "instruments!" "inst!" "jams!"})
