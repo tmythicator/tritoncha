@@ -5,7 +5,6 @@
    [app.audio.dsp.worklet.protocol :refer [drum-remaps inst-keyword->id]]
    [app.custom.drums :refer [user-drums]]
    [app.lib.drums :refer [core-drums]]
-   [app.ui.instrument-browser.state :refer [custom-file-inst?]]
    [cljs.test :refer [deftest is testing]]))
 
 (deftest core-drums-catalog-test
@@ -28,11 +27,9 @@
       (is (= :drums (:category spec)) (str "User drum " k " must belong to :drums category"))
       (is (string? (:title spec)) (str "User drum " k " must specify a string :title"))))
 
-  (testing "Custom drum identification recognizes user-drums as custom"
-    (is (true? (custom-file-inst? :fat-kick)))
-    (is (true? (custom-file-inst? :lofi-snare))))
-
-  (testing "Custom drums map to proper Rust drum voice IDs instead of modular synths"
+  (testing "Core drum identification includes fat-kick and lofi-snare"
+    (is (contains? core-drums :fat-kick))
+    (is (contains? core-drums :lofi-snare))
     (is (= 0 (inst-keyword->id :fat-kick)) "fat-kick must dispatch to DRUM_KICK voice (0)")
     (is (= 1 (inst-keyword->id :lofi-snare)) "lofi-snare must dispatch to DRUM_SNARE voice (1)")))
 

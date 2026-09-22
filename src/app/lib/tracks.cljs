@@ -3,6 +3,24 @@
   (:require [app.audio.theory.harmony :refer [_ deg prog]]
             [app.audio.theory.patterns :refer [pat]]))
 
+;; Track Arrangement Specification DSL:
+;;   :name    - Human-readable track title displayed in HUD and preset library
+;;   :bpm     - Master playback tempo (e.g. 168, 174)
+;;   :scale   - Vector [root mode octave] (e.g. [:e :phrygian 1], [:d :dorian 1], [:f# :hirajoshi 2])
+;;   :geom    - Single 3D visual geometry fallback (:torus-knot, :icosahedron, :dodecahedron, etc.)
+;;   :figures - Optional map of named 3D figures in scene: {:core {:geom ... :pos [...] :scale ... :colors ...}}
+;;   :colors  - Vector of two hex colors [background-hex mesh-hex] (e.g. ["#080412" "#00ffaa"])
+;;   :routing - Audio routing topology preset key (e.g. :default, :studio-master, :ambient-prism, :crematorium)
+;;   :mod     - Drum character synthesis mode override (:natural, :analog, :idm, :industrial)
+;;   :tracks  - Map of quantized track loops launched simultaneously:
+;;              {:drums {:pattern (pat "k . . .  s . . .  . . k .  s . . g") :step "16n"}
+;;               :cymb  {:pattern (pat "rd . . .  rb . . .  . . sp .  ch . . .") :step "16n"}
+;;               :hat   {:inst :hat-closed :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}
+;;               :bass  {:inst :liquid-reese :notes (deg [1 _ 1 2 _ 1 4 3] 1) :step "16n" :dur "16n" :vel 0.95}
+;;               :sub   {:inst :sub-808 :notes (deg [1 _ _ _ 1 _ _ _] 1) :step "16n" :dur "8n" :vel 1.0}
+;;               :pad   {:inst :blade-runner :notes (prog [[1 :min9] [6 :maj9]] 3) :step "1m" :dur "1m" :vel 0.40}
+;;               :lead  {:inst :glass-mallet :notes (deg [1 3 5 7]) :step "16n" :vel 0.50}}
+
 (def core-tracks-catalog
   [[:orbital-roller
     {:name    "Facing Moons"

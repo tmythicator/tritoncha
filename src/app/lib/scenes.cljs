@@ -16,6 +16,24 @@
     :torus        (three/TorusGeometry. 2.0 0.6 30 100)
     (three/TorusKnotGeometry. 1.8 0.5 128 32)))
 
+;; 3D Scene Specification DSL:
+;;   :name        - Human-readable display title for UI and HUD
+;;   :geom        - Built-in geometry keyword (:torus-knot, :icosahedron, :octahedron,
+;;                  :box, :sphere, :dodecahedron, :tetrahedron, :cylinder, :torus, :none)
+;;                  or custom zero-arg constructor function `(fn [] (three/TubeGeometry. ...))`
+;;   :colors      - Map of {:bg "#hex" :mesh "#hex" :wire "#hex" :outer "#hex"}
+;;   :material    - Material parameters map:
+;;                  {:wireframe true/false
+;;                   :roughness 0.0..1.0
+;;                   :metalness 0.0..1.0
+;;                   :emissiveIntensity 0.0..1.0
+;;                   :opacity 0.0..1.0
+;;                   :visible true/false}
+;;   :outer-geom  - Optional zero-arg constructor function for ambient cage or ring
+;;                  `(fn [] (three/TorusGeometry. 4.5 0.2 16 64))` or nil
+;;   :camera-pos  - Vector [x y z] camera position (e.g. [0 0 7.5])
+;;   :animate     - Per-frame animation hook `(fn [{:keys [^js mesh ^js outer camera-speed sensitivity pulse]}] ...)`
+
 (def core-scenes
   {:none
    {:name        "None (Zero 3D Geometry)"
@@ -157,7 +175,7 @@
                      (set! (.. outer -rotation -y) (+ (.. outer -rotation -y) (* camera-speed 0.9)))))}
 
    :star-tunnel
-   {:name        "Hyperspace Warp Vortex"
+   {:name        "Star tunel"
     :geom        (fn [] (three/TorusGeometry. 3.2 1.6 24 100))
     :colors      {:bg "#000208" :mesh "#00ffcc" :wire "#7928ca" :outer "#001830"}
     :material    {:wireframe true :roughness 0.05 :metalness 0.95 :emissiveIntensity 0.6}
@@ -197,4 +215,33 @@
                      (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 2.8)))
                      (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 0.7))))
                    (when outer
-                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.9)))))}})
+                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.9)))))}
+
+   :neon-prism
+   {:name        "Neon Glass Prism"
+    :geom        :tetrahedron
+    :colors      {:bg "#080010" :mesh "#ff007f" :wire "#00e5ff" :outer "#220033"}
+    :material    {:wireframe true :roughness 0.1 :metalness 0.9 :emissiveIntensity 0.5}
+    :outer-geom  (fn [] (three/TorusGeometry. 4.0 0.15 16 64))
+    :camera-pos  [0 0 6.5]
+    :animate     (fn [{:keys [^js mesh ^js outer camera-speed]}]
+                   (when mesh
+                     (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 2.0)))
+                     (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 1.5))))
+                   (when outer
+                     (set! (.. outer -rotation -z) (+ (.. outer -rotation -z) (* camera-speed 0.8)))))}
+
+   :hyper-cube
+   {:name        "Hyperdimensional Cube"
+    :geom        :box
+    :colors      {:bg "#02040a" :mesh "#00ffcc" :wire "#c77dff" :outer "#051124"}
+    :material    {:wireframe true :roughness 0.2 :metalness 0.8 :emissiveIntensity 0.4}
+    :outer-geom  (fn [] (three/BoxGeometry. 5.2 5.2 5.2))
+    :camera-pos  [0 0 7.5]
+    :animate     (fn [{:keys [^js mesh ^js outer camera-speed]}]
+                   (when mesh
+                     (set! (.. mesh -rotation -x) (+ (.. mesh -rotation -x) (* camera-speed 1.5)))
+                     (set! (.. mesh -rotation -y) (+ (.. mesh -rotation -y) (* camera-speed 1.8))))
+                   (when outer
+                     (set! (.. outer -rotation -x) (- (.. outer -rotation -x) (* camera-speed 0.5)))
+                     (set! (.. outer -rotation -y) (- (.. outer -rotation -y) (* camera-speed 0.5)))))}})
