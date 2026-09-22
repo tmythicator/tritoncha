@@ -36,6 +36,23 @@
     (is (= :redrummed (mixer/toggle-drums!)))
     (is (false? (:drums-muted? @audio-state)))))
 
+(deftest unlead-selective-mute-test
+  (testing "unlead! only mutes lead tracks without affecting drums, cymbals, or hats"
+    (let [cymb-pat (atom {:pattern "rd . rb ." :muted? false})
+          hat-pat  (atom {:inst :hat-closed :muted? false})
+          lead-pat (atom {:inst :glass-mallet :muted? false})]
+      (swap! audio-state assoc :active-tracks
+             {:cymb {:pattern cymb-pat :inst-key :cymb}
+              :hat  {:pattern hat-pat :inst-key :hat-closed}
+              :lead {:pattern lead-pat :inst-key :lead}})
+      (mixer/unlead!)
+      (is (true? (:muted? @lead-pat)))
+      (is (false? (:muted? @cymb-pat)))
+      (is (false? (:muted? @hat-pat)))
+
+      (mixer/relead!)
+      (is (false? (:muted? @lead-pat))))))
+
 (deftest master-bus-volume-and-mute-test
   (testing "Sets master bus volume and toggles mute state"
     (mixer/set-volume! :bus/master -4.5)
