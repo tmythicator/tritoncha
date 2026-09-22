@@ -33,6 +33,10 @@ pub const PATCH_FM_BELL: usize = 38;
 pub const PATCH_GLASS_KEYS: usize = 39;
 pub const PATCH_SIREN: usize = 40;
 pub const PATCH_LASER: usize = 41;
+pub const PATCH_SUB_MOOG: usize = 42;
+pub const PATCH_BASS_MOOG: usize = 43;
+pub const PATCH_LEAD_NBELL: usize = 44;
+pub const PATCH_ZAP: usize = 45;
 
 /// Strongly typed oscillator waveform selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

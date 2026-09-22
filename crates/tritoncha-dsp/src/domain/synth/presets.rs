@@ -762,5 +762,57 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
         analog_drift: 0.0,
     };
 
+    // Patch 44: Noisy Bell Lead
+    patches[PATCH_LEAD_NBELL] = ModularPatch {
+        osc_type: OSC_PULSE,
+        sub_level: 0.45,
+        pulse_width: 0.87,
+        filter_type: FILTER_BANDPASS,
+        cutoff_base: 5940.0,
+        cutoff_env_amt: -5500.0,
+        cutoff_key_track: 2.0,
+        resonance: 0.60,
+        attack: 0.002,
+        decay: 0.710,
+        sustain: 0.06,
+        release: 0.150,
+        mod_attack: 0.001,
+        mod_decay: 2.050,
+        bus_id: BUS_LEAD,
+        polyphony: 4,
+        glide: 0.235,
+        filter_drive: 0.85,
+        noise_level: 0.04,
+        pitch_snap: 43.0,
+        pitch_snap_decay: 0.015,
+        analog_drift: 0.25,
+    };
+
+    // Patch 45: Analog Zap Shot
+    patches[PATCH_ZAP] = ModularPatch {
+        osc_type: OSC_TRIANGLE,
+        sub_level: 0.0,
+        pulse_width: 0.5,
+        filter_type: FILTER_LOWPASS,
+        cutoff_base: 6000.0,
+        cutoff_env_amt: -4000.0,
+        cutoff_key_track: 0.0,
+        resonance: 0.80,
+        attack: 0.001,
+        decay: 0.08,
+        sustain: 0.0,
+        release: 0.04,
+        mod_attack: 0.001,
+        mod_decay: 0.08,
+        bus_id: BUS_DIRECT,
+        polyphony: 2,
+        glide: 0.0,
+        filter_drive: 0.25,
+        noise_level: 0.0,
+        pitch_snap: 24.0,
+        pitch_snap_decay: 0.018,
+        analog_drift: 0.0,
+    };
+
     patches
 }

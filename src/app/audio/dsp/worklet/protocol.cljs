@@ -53,8 +53,10 @@
    :splash        71
    :china         72
    :cowbell       73
+   :fat-kick      0
+   :lofi-snare    1
 
-   ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..43)
+   ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..44)
    :bass-analog   4  :bass 4
    :bass-303      5  :acid 5 :acid-beast 5
    :sub-pure      6  :sub 6
@@ -83,9 +85,11 @@
    :lead-bell     38 :bell 38
    :glass-mallet  39
    :fx-siren      40 :siren 40
-   :fx-laser      41 :laser 41 :fx-zap 41
+   :fx-laser      41 :laser 41
    :sub-moog      42 :moog-sub 42
-   :bass-moog     43 :moog-bass 43})
+   :bass-moog     43 :moog-bass 43
+   :lead-nbell    44 :nbell 44
+   :fx-zap        45 :zap 45})
 
 (def drum-id-set
   #{0 1 2 3 11 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73})
@@ -120,8 +124,8 @@
 (defn register-custom-patch-id!
   "Resolves or allocates a patch ID for an instrument.
   Built-in synths preserve their canonical patch ID.
-  Truly custom user synths are allocated from the safe range 44..63.
-  Examples: (register-custom-patch-id! :my-synth) -> 44."
+  Truly custom user synths are allocated from the safe range 46..63.
+  Examples: (register-custom-patch-id! :my-synth) -> 46."
   [synth-key]
   (let [sk (keyword synth-key)]
     (if-let [cid (get canonical-inst-ids sk)]
@@ -133,9 +137,9 @@
       (if-let [id (get @custom-synth-patch-ids sk)]
         id
         (let [used (set (vals @custom-synth-patch-ids))
-              free (first (filter #(not (contains? used %)) (range 44 64)))]
-          (swap! custom-synth-patch-ids assoc sk (or free 44))
-          (or free 44))))))
+              free (first (filter #(not (contains? used %)) (range 46 64)))]
+          (swap! custom-synth-patch-ids assoc sk (or free 46))
+          (or free 46))))))
 
 (defn inst-keyword->id
   "Resolves an instrument keyword to its numeric ID for the Rust DSP engine.
