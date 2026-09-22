@@ -21,7 +21,7 @@ Shape algorithmic music with ClojureScript, driven by a real-time Rust WebAssemb
 
 |       System Audio Status + Mixer Matrix        |               Track Presets Library                |
 | :---------------------------------------------: | :------------------------------------------------: |
-| ![System Audio Status](assets/audio-status.png) | ![Track Presets Library](assets/track_presets.png) |
+| ![System Audio Status](assets/audio_status.png) | ![Track Presets Library](assets/track_presets.png) |
 
 ---
 
