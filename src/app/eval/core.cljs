@@ -8,8 +8,18 @@
   {;; Master Playback + Transport
    'play!               api/play!
    'jam!                api/jam!
+   'track!              api/track!
+   'play-track-at!      api/play-track-at!
    'toggle-play!        api/toggle-play!
    'cycle-jam!          api/cycle-jam!
+   'cycle-jam           api/cycle-jam!
+   'next-jam!           api/next-jam!
+   'next-jam            api/next-jam!
+   'nextjam             api/next-jam!
+   'prev-jam!           api/prev-jam!
+   'prev-jam            api/prev-jam!
+   'prevjam             api/prev-jam!
+   'jam-list            api/jam-list
    'stop!               api/stop!
    'b!                  api/b!
    'set-bpm!            api/set-bpm!

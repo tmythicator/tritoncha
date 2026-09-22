@@ -99,7 +99,8 @@
     (routing/set-routing! target-routing)
 
     (doseq [[track-name track-opts] tracks]
-      (loop! track-name (resolve-track-scale-notes track-opts scale)))))
+      (loop! track-name (resolve-track-scale-notes track-opts scale)))
+    preset-key))
 
 (defn play-track-at!
   "Launches the track preset at the specified 0-based index from the catalog.

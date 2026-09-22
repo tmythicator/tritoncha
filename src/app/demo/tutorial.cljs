@@ -49,7 +49,7 @@
    [:hat   {:inst :hat-closed :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}]
    [:bass  {:inst :lead-8bit :bus :bus/bass :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}]
    [:sub   {:inst :sub-pure  :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}]
-   [:arp   {:inst :pad-cinema :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35}])
+   [:arp   {:inst :pad-dreamy :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35}])
 
   ;; Remove tracks from stack
   (unstack! :arp)
@@ -112,31 +112,32 @@
        :notes (fast 2 (pat "s! s_ s_ k!  th! tm_ tl! k!  s! s_ s_ s!  cr16! . . ."))
        :step "16n"})
 
-  ;; Full Breakbeat Stack
+  ;; Full Breakbeat Stack featuring diverse core instruments:
+  ;; :liquid-reese bass, :sub-moog, and :pad-strings
   (stack!
    [:kick  (pat "k! . . k_  . k_ k! .  k! . . k_  . k! . .")]
    [:snare (pat ". . s_ .  s! s_ . s_  . s_ s_ s!  s_ . s! s_")]
    [:ride  (pat "rb! . rb_ .  rb! . rb_ rb_  rb! . sp! .  rb_ rb! ch! .")]
    [:toms  (pat ". . . .  . . . .  . . . .  th! tm_ tl! .")]
-   [:bass  {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 1) :step "16n" :dur "16n" :vel 0.95}]
-   [:sub   {:notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _] 1) :step "16n" :dur "8n" :vel 1.0}]
-   [:pad   {:notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35}])
+   [:bass  {:inst :liquid-reese :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 1) :step "16n" :dur "16n" :vel 0.95}]
+   [:sub   {:inst :sub-moog     :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _] 1) :step "16n" :dur "8n" :vel 1.0}]
+   [:pad   {:inst :pad-strings  :notes (arp (chord :e :min9 3) :up-down) :mask (euc 7 16) :step "16n" :vel 0.35}])
 
   ;; Algorithmic Time Transforms + Probability
-  ;; Double-time bass roll (fast 2x):
-  (l! :bass {:notes (fast 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n" :vel 0.95})
+  ;; Double-time acid roll with resonant :acid-beast bass (fast 2x):
+  (l! :bass {:inst :acid-beast :notes (fast 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n" :vel 0.95})
 
-  ;; Halftime bass breakdown (slow 2x):
-  (l! :bass {:notes (slow 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n" :vel 0.95})
+  ;; Halftime neuro breakdown with :bass-neuro (slow 2x):
+  (l! :bass {:inst :bass-neuro :notes (slow 2 (d [1 _ 1 2 _ 1 4 3])) :step "16n" :vel 0.95})
 
-  ;; Reverse the bass melody:
-  (l! :bass {:notes (rev (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])) :step "16n"})
+  ;; Reverse :tokyo-drift aggressive click lead melody:
+  (l! :lead {:inst :tokyo-drift :notes (rev (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])) :step "16n"})
 
-  ;; Rotate notes by offset steps:
-  (l! :bass {:notes (rot 2 (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])) :step "16n"})
+  ;; Rotate percussive :glass-mallet notes by offset steps:
+  (l! :keys {:inst :glass-mallet :notes (rot 2 (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])) :step "16n"})
 
-  ;; Restore standard bass:
-  (l! :bass {:notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95})
+  ;; Restore classic analog saw bass:
+  (l! :bass {:inst :bass-analog :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95})
 
   ;; Double-time kick drum buildup before the drop:
   (l! :kick {:notes (fast 2 (pat "k . . .  k . . .")) :step "16n"})
@@ -145,9 +146,9 @@
   (l! :kick {:notes (pat "k . . .  k . . .  . . k .  . . . .") :step "16n"})
 
   ;; Threading Pipelines (->>)
-  ;; Shifting and doubling an arpeggio on the fly
+  ;; Shifting and doubling an ethereal choir arpeggio with :pad-vocal
   (l! :arp
-      {:inst :pad-cinema
+      {:inst :pad-vocal
        :notes (->> (chord :e :min9 3)
                    (arp :up-down)
                    (fast 2)
@@ -155,19 +156,19 @@
        :step "16n"
        :vel 0.45})
 
-  ;; Probabilistic reverse: 50% chance to flip each bar
-  (l! :arp
-      {:inst :pad-cinema
+  ;; Probabilistic reverse with delicate :lead-bell: 50% chance to flip each bar
+  (l! :bell
+      {:inst :lead-bell
        :notes (->> (chord :e :min9 3)
                    (fast 8)
                    (arp :up-down)
                    (sometimes rev))
        :step "16n"
-       :vel 0.9})
+       :vel 0.70})
 
-  ;; Morphing degree melody pipeline
+  ;; Morphing degree melody with punchy :bass-slap pulse bass
   (l! :bass
-      {:inst :bass-analog
+      {:inst :bass-slap
        :notes (->> [1 _ 1 2 _ 1 4 3]
                    (fast 2)
                    (shift 1)
@@ -176,55 +177,57 @@
        :dur "16n"
        :vel 0.95})
 
-  ;; Breakbeat transformation pipeline
-  (l! :kick
-      {:pattern (->> "k . . .  k . . .  . . k .  . . . ."
+  ;; Breakbeat transformation pipeline with snare ghost rolls and rimshots
+  (l! :snare
+      {:pattern (->> "s! s_ . s_  . s_ s! .  s_ s! s_ s_  rs! . . ."
                      (pat)
                      (fast 2)
                      (shift 4))
        :step "64n"})
 
-  ;; Polyrhythmic truncation with take-steps
+  ;; Polyrhythmic truncation with :hat-open
   (l! :hat
-      {:inst :hat-closed
+      {:inst :hat-open
        :mask (->> (euc 7 16)
                   (shift 2)
                   (take-steps 12))
        :step "16n"
        :dur "32n"
-       :vel 0.6})
+       :vel 0.55})
 
-  ;; Probabilistic pitch mutations with sometimes-by and every-n
+  ;; Probabilistic pitch mutations on trance :lead-supersaw
   (l! :lead
-      {:inst :lead-pluck
+      {:inst :lead-supersaw
        :notes (->> (chord :e :min9 3)
                    (arp :random)
                    (sometimes-by 0.3 rev)
                    (every-n 4 (partial fast 2)))
        :step "16n"
-       :vel 0.4})
+       :vel 0.40})
 
   ;; Music Theory, Scales, Degrees and Progressions
   ;; Global Key Context
   (set-key! :e :phrygian 1)
 
-  ;; Scale Degree Sequences (rests nil or _)
-  (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _])
+  ;; Scale Degree Sequences on CS-80 :lead-blade
+  (l! :blade {:inst :lead-blade :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n"})
 
-  ;; Chords and Voicings
+  ;; Chords and Voicings on deep :pad-drone atmosphere
   (chord :e :min9 3)
   (chord :f :dark-m9 3)
   (chord :d :dom7 3)
 
-  ;; Chord Progression DSL
-  (prog [[1 :min9]
-         [6 :maj9]
-         [4 :min7]
-         [7 :dom7]] 3)
+  ;; Chord Progression DSL on crystalline :pad-glass
+  (l! :pad {:inst :pad-glass
+            :notes (prog [[1 :min9]
+                          [6 :maj9]
+                          [4 :min7]
+                          [7 :dom7]] 3)
+            :step "1m" :dur "1m" :vel 0.35})
 
-  ;; Arpeggiators (:up, :down, :up-down, :down-up, :random)
-  (arp (chord :e :min9 3) :up-down)
-  (arp (chord :e :min9 3) :random)
+  ;; Arpeggiators on tonewheel :lead-organ and acoustic :lead-string (Karplus)
+  (l! :organ  {:inst :lead-organ  :notes (arp (chord :e :min9 3) :up-down) :step "16n" :vel 0.40})
+  (l! :string {:inst :lead-string :notes (arp (chord :e :min9 3) :random)  :step "16n" :vel 0.50})
 
   ;; Scales and Modes
   (scale :d :dorian)
@@ -330,9 +333,12 @@
   (reverb-mode! :fdn)   ;; Feedback Delay Network reverb (:fdn, :freeverb)
 
   ;; Live Sound Design: Patching + Custom Instruments
-  ;; Live patch tweak without redefining
-  (patch! :bass-analog :filter {:cutoff 1400 :drive 0.6 :q 0.5})
-  (patch! :lead-8bit   :osc {:pulse-width 0.4})
+  ;; Hot-patching core instruments live without redefining:
+  (patch! :bass-organ   :filter {:cutoff 1600 :drive 0.45 :q 0.5})
+  (patch! :lead-hoover  :osc {:drift 0.35})
+  (patch! :lead-fm      :pitch-env {:amount 16 :decay 0.020})
+  (patch! :tokyo-drift  :filter {:cutoff 5200 :drive 0.90})
+  (patch! :glass-mallet :pitch-env {:decay 0.015})
 
   ;; Define custom synthesizer voice
   (definst! :supersaw-custom
@@ -350,7 +356,7 @@
   (demo-stop!)
 
   ;; Plug the new synth directly into a live loop
-  (l! :lead {:inst :supersaw-custom :notes (d [1 3 4 5 7 8 5 3] 3) :step "16n" :vel 0.5})
+  (l! :lead {:inst :supersaw-custom :notes (d [1 3 4 5 7 8 5 3] 3) :step "16n" :vel 0.50})
 
   ;; Three.js WebGL Visual Controls + 3D Scenes
   (scene! :synthwave-grid)
@@ -389,11 +395,13 @@
      :colors  ["#080412" "#00ffaa"]
      :routing :ambient-prism
      :tracks
-     {:drums {:pattern (pat "k . . .  s . . .  . . k .  s . . g") :step "16n"}
+     {:drums {:pattern (pat "k . . .  rs . . .  . . k .  s . . g") :step "16n"}
+      :cymb  {:pattern (pat "rd . . .  rb . . .  . . sp .  ch . . .") :step "16n"}
       :hat   {:inst :hat-closed :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}
-      :bass  {:inst :bass-analog :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}
-      :sub   {:inst :sub-pure    :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}
-      :pad   {:inst :pad-cinema  :notes (prog [[1 :min9] [6 :maj9] [4 :min7] [7 :dom7]] 3) :step "1m" :dur "1m" :vel 0.4}}})
+      :bass  {:inst :bass-liquid :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}
+      :sub   {:inst :sub-808     :notes (d [1 _ _ _ 1 _ _ _  4 _ _ _ 3 _ _ _]) :step "16n" :dur "8n" :vel 1.0}
+      :pad   {:inst :blade-runner :notes (prog [[1 :min9] [6 :maj9] [4 :min7] [7 :dom7]] 3) :step "1m" :dur "1m" :vel 0.40}
+      :lead  {:inst :glass-mallet :notes (d [1 3 5 7  8 7 5 3]) :step "16n" :dur "16n" :vel 0.50}}})
 
   (jam! :cyber-roller-custom)
 
