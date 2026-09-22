@@ -8,8 +8,18 @@
   {;; Master Playback + Transport
    'play!               api/play!
    'jam!                api/jam!
+   'track!              api/track!
+   'play-track-at!      api/play-track-at!
    'toggle-play!        api/toggle-play!
    'cycle-jam!          api/cycle-jam!
+   'cycle-jam           api/cycle-jam!
+   'next-jam!           api/next-jam!
+   'next-jam            api/next-jam!
+   'nextjam             api/next-jam!
+   'prev-jam!           api/prev-jam!
+   'prev-jam            api/prev-jam!
+   'prevjam             api/prev-jam!
+   'jam-list            api/jam-list
    'stop!               api/stop!
    'b!                  api/b!
    'set-bpm!            api/set-bpm!
@@ -118,6 +128,10 @@
    'set-drive-mode!     api/set-drive-mode!
    'reverb-mode!        api/reverb-mode!
    'set-reverb-mode!    api/set-reverb-mode!
+   'comp!               api/comp!
+   'set-compressor!     api/set-compressor!
+   'reset-fx!           api/reset-fx!
+   'rfx!                api/rfx!
 
    ;; SFX Drops + Dub One-Shots
    's!                  api/s!
@@ -128,13 +142,21 @@
    ;; Catalog Registries + Live Sound Design
    'tracks              api/tracks
    'deftrack!           api/deftrack!
+   'deftrack            api/deftrack!
    'instruments         api/instruments
    'definst!            api/definst!
+   'definst             api/definst!
    'patch!              api/patch!
    'reset-inst!         api/reset-inst!
    'reset-instrument!   api/reset-instrument!
    'routings            api/routings
    'defrouting!         api/defrouting!
+   'defrouting          api/defrouting!
+   'defroute!           api/defroute!
+   'defroute            api/defroute!
+   'route!              api/route!
+   'route               api/route!
+   'set-routing!        api/set-routing!
    'demo!               api/demo!
    'demo-stop!          api/demo-stop!
    'refresh!            api/refresh!
@@ -142,7 +164,9 @@
    ;; Three.js WebGL Visual Controls + 3D Scenes
    'scenes              api/scenes
    'defscene!           api/defscene!
+   'defscene            api/defscene!
    'scene!              api/scene!
+   'scene               api/scene!
    'set-scene!          api/set-scene!
    'cycle-scene!        api/cycle-scene!
    'g!                  api/g!

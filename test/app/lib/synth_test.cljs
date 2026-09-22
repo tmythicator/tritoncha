@@ -31,8 +31,8 @@
                            :pad-cinema :pad-strings :pad-vocal :pad-glass :pad-drone
                            :pad-dreamy :blade-runner
                            :lead-pluck :lead-supersaw :lead-fm :lead-blade :lead-hoover :lead-string :lead-8bit :lead-bell
-                           :tokyo-drift :glass-mallet
-                           :click :fx-siren :fx-laser]]
+                           :tokyo-drift :glass-mallet :lead-nbell
+                           :click :fx-siren :fx-laser :fx-zap]]
       (doseq [inst-key mnemonic-voices]
         (let [spec (get core-synths inst-key)]
           (is (some? spec) (str "Instrument " inst-key " must exist in core-synths"))

@@ -1,17 +1,11 @@
 (ns app.custom.tracks
   "User custom tracks, live-coding sets, and arrangements.")
 
-;; Custom Tracks Catalog (Same format as app.lib.tracks)
+;; Custom Tracks Catalog
 ;;
-;; Track parameters:
-;;   :name    - Title displayed in HUD
-;;   :bpm     - Master tempo (e.g. 172)
-;;   :scale   - Vector [root mode octave] (e.g. [:e :hirajoshi 2])
-;;   :geom    - Single 3D visual geometry fallback (:torus-knot, :icosahedron, etc.)
-;;   :figures - Map of named 3D figures in scene: {:core {:geom ... :pos [...] :scale ... :colors ...}}
-;;   :colors  - Vector of [background-hex mesh-hex]
-;;   :routing - Audio routing topology key (e.g. :studio-master, :crematorium)
-;;   :tracks  - Map of loops to launch simultaneously (bind :figure :core to react to loop pulses)
+;; Define complete custom song arrangements, live sets, and track presets in `user-tracks`.
+;; For track parameters, loop mappings, scale formats, and built-in jam arrangements,
+;; see the core catalog in: src/app/lib/tracks.cljs (`app.lib.tracks/core-tracks`).
 
 (def user-tracks
   {})

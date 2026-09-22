@@ -243,7 +243,7 @@
     :mod-env   {:attack 0.003 :decay 0.18}}
 
    :lead-supersaw
-   {:title    "Trance Supersaw Lead"
+   {:title    "Vangelis Supersaw Lead"
     :category :leads
     :type     :poly
     :bus      :bus/lead
@@ -253,15 +253,16 @@
     :mod-env  {:attack 0.004 :decay 0.22}}
 
    :lead-fm
-   {:title     "FM Metallic Lead"
+   {:title     "Crystall Blaster Lead"
     :category  :leads
     :type      :poly
     :bus       :bus/lead
-    :osc       {:type :fm}
-    :pitch-env {:amount 12 :decay 0.015}
-    :filter    {:type :lowpass :cutoff 1500 :q 0.3 :drive 0.32 :env-amount 3000 :key-track 2.5}
-    :amp-env   {:attack 0.003 :decay 0.16 :sustain 0.2 :release 0.15}
-    :mod-env   {:attack 0.003 :decay 0.16}}
+    :osc     {:type :fm :sub-level 0.40 :noise 0.06 :drift 0.15}
+    :filter  {:type :lowpass :cutoff 3290 :q 0.74 :drive 0.80 :env-amount -1900 :key-track 2.5}
+    :amp-env {:attack 0.006 :decay 0.390 :sustain 0.20 :release 0.150}
+    :mod-env {:attack 0.041 :decay 0.450}
+    :pitch-env {:amount 24 :decay 0.015}
+    :glide   0.380}
 
    :lead-blade
    {:title    "CS-80 Blade Lead"
@@ -274,14 +275,16 @@
     :mod-env  {:attack 0.08 :decay 0.6}}
 
    :lead-hoover
-   {:title    "Mentasm Hoover Lead"
+   {:title    "India Town Hoover Lead"
     :category :leads
     :type     :poly
     :bus      :bus/lead
-    :osc      {:type :hoover :sub-level 0.3 :drift 0.20}
-    :filter   {:type :lowpass :cutoff 1200 :q 0.65 :drive 0.35 :env-amount 4000 :key-track 2.0}
-    :amp-env  {:attack 0.004 :decay 0.25 :sustain 0.5 :release 0.3}
-    :mod-env  {:attack 0.004 :decay 0.25}}
+    :osc     {:type :hoover :sub-level 0.35 :noise 0.06 :drift 0.80}
+    :filter  {:type :lowpass :cutoff 1240 :q 0.90 :drive 0.35 :env-amount 7000 :key-track 1.6}
+    :amp-env {:attack 0.181 :decay 0.110 :sustain 0.34 :release 0.250}
+    :mod-env {:attack 0.111 :decay 0.810}
+    :pitch-env {:amount 18 :decay 0.015}
+    :glide   0.295}
 
    :lead-string
    {:title    "Karplus Acoustic Lead"
@@ -304,7 +307,7 @@
     :mod-env  {:attack 0.002 :decay 0.18}}
 
    :lead-organ
-   {:title    "Drawbar Tonewheel Organ"
+   {:title    "Mellow Organ Lead"
     :category :leads
     :type     :poly
     :bus      :bus/lead
@@ -348,6 +351,18 @@
     :filter       {:type :lowpass :cutoff 7440 :q 0.40 :drive 0.15 :env-amount 5200}
     :amp-env      {:attack 0.002 :decay 0.280 :sustain 0.06 :release 0.230}
     :mod-env      {:attack 0.361 :decay 0.010}}
+
+   :lead-nbell
+   {:title        "Noisy Bell"
+    :category     :leads
+    :type         :poly
+    :bus          :bus/lead
+    :osc     {:type :pulse :sub-level 0.45 :pulse-width 0.87 :noise 0.04 :drift 0.25}
+    :filter  {:type :bandpass :cutoff 5940 :q 0.60 :drive 0.85 :env-amount -5500 :key-track 2.0}
+    :amp-env {:attack 0.002 :decay 0.710 :sustain 0.06 :release 0.150}
+    :mod-env {:attack 0.001 :decay 2.050}
+    :pitch-env {:amount 43 :decay 0.015}
+    :glide   0.235}
 
    ;; Sound Effects and Utilities
    :click

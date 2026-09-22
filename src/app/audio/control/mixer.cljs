@@ -144,9 +144,21 @@
     (set-track-solo! k false))
   :unsoloed)
 
+(defn- track-in-category? [cat-pred k tr]
+  (let [pat    (when-let [p (:pattern tr)] (if (satisfies? IDeref p) @p p))
+        inst-k (or (:inst pat) (:synth pat) (:inst-key tr))]
+    (or (cat-pred k)
+        (when inst-k (cat-pred inst-k))
+        (when pat (cat-pred pat))
+        (when (= cat-pred busses/drum?)
+          (or (contains? pat :pattern)
+              (busses/drum-keyword? k)
+              (busses/drum-keyword? inst-k)
+              (= (:bus pat) :bus/drums))))))
+
 (defn- mute-category-tracks! [cat-pred bus-key state-flag mute?]
-  (doseq [[k _] (:active-tracks @audio-state)
-          :when (cat-pred k)]
+  (doseq [[k tr] (:active-tracks @audio-state)
+          :when (track-in-category? cat-pred k tr)]
     (set-track-mute! k mute?))
   (if mute? (mute-bus! bus-key) (unmute-bus! bus-key))
   (swap! audio-state (fn [st] (-> st (assoc state-flag mute?) (update :tracks-ver (fnil inc 0))))))

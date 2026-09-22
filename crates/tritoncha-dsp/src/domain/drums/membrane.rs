@@ -46,8 +46,11 @@ impl From<[f32; 7]> for MembraneParams {
 pub struct MembraneVoice {
     pub active: bool,
     phase: f32,
+    click_phase: f32,
     freq: f32,
     env: f32,
+    click_env: f32,
+    pitch_fast: f32,
     vel: f32,
     start_pitch_hz: f32,
     min_pitch_hz: f32,
@@ -68,8 +71,11 @@ impl MembraneVoice {
         Self {
             active: false,
             phase: 0.0,
+            click_phase: 0.0,
             freq: min_pitch_hz,
             env: 0.0,
+            click_env: 0.0,
+            pitch_fast: 0.0,
             vel: 0.0,
             start_pitch_hz,
             min_pitch_hz,
@@ -83,18 +89,25 @@ impl MembraneVoice {
     pub fn trigger(&mut self, vel: f32) {
         let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
         self.active = true;
-        self.phase = 0.0;
+        self.phase = 0.05;
+        self.click_phase = 0.0;
         self.freq = self.start_pitch_hz;
+        self.pitch_fast = (self.start_pitch_hz - self.min_pitch_hz).max(30.0) * 0.85;
         self.env = 1.0;
+        self.click_env = 1.0;
         self.vel = v;
     }
 
     pub fn trigger_freq(&mut self, vel: f32, freq: f32) {
         let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
         self.active = true;
-        self.phase = 0.0;
-        self.freq = freq.max(self.min_pitch_hz);
+        self.phase = 0.05;
+        self.click_phase = 0.0;
+        let base_f = freq.max(self.min_pitch_hz);
+        self.freq = base_f * 1.35;
+        self.pitch_fast = base_f * 0.45;
         self.env = 1.0;
+        self.click_env = 1.0;
         self.vel = v;
     }
 
@@ -104,34 +117,57 @@ impl MembraneVoice {
             return 0.0;
         }
 
-        let sine_val = match self.mode {
+        // Instantaneous frequency: shell fundamental + initial impact tension snap
+        let cur_freq = (self.freq + self.pitch_fast).clamp(20.0, sample_rate * 0.45);
+
+        // Stick tip impact click (~3200 Hz with fast ~3ms decay)
+        let click_sig = if self.click_env > MIN_AUDIBLE_VELOCITY {
+            let clk = (self.click_phase * 2.0 * PI).sin() * self.click_env * 0.40;
+            self.click_phase = wrap_phase(self.click_phase + 3200.0 / sample_rate);
+            self.click_env *= 0.993;
+            clk
+        } else {
+            0.0
+        };
+
+        // Multi-modal circular membrane vibration (Bessel ratios: 1.0, 1.587, 2.140)
+        let membrane_val = match self.mode {
             DrumMode::Natural => {
-                let head1 = (self.phase * 2.0 * PI).sin();
-                let head2 = (self.phase * 1.42 * 2.0 * PI).sin() * 0.35;
-                head1 + head2
+                let m0 = (self.phase * 2.0 * PI).sin();
+                let m1 = (self.phase * 1.587 * 2.0 * PI).sin() * 0.32 * self.env;
+                let m2 = (self.phase * 2.140 * 2.0 * PI).sin() * 0.14 * self.env * self.env;
+                m0 + m1 + m2
+            }
+            DrumMode::Analog => {
+                let m0 = (self.phase * 2.0 * PI).sin();
+                let m1 = (self.phase * 1.587 * 2.0 * PI).sin() * 0.20 * self.env;
+                m0 + m1
             }
             DrumMode::Idm => {
-                let chirp = (self.phase * 2.5 * 2.0 * PI).sin() * 0.5 * self.env;
+                let chirp = (self.phase * 3.2 * 2.0 * PI).sin() * 0.6 * self.env;
                 ((self.phase + chirp) * 2.0 * PI).sin()
             }
             DrumMode::Industrial => {
                 let raw = (self.phase * 2.0 * PI).sin();
-                (raw * 2.2).sin()
+                (raw * 2.4).sin()
             }
-            DrumMode::Analog => (self.phase * 2.0 * PI).sin(),
         };
-        let sig = soft_clip(sine_val * self.drive_gain) * self.env * self.vel * 1.25;
 
-        self.phase = wrap_phase(self.phase + self.freq / sample_rate);
+        let body_sig = soft_clip(membrane_val * self.drive_gain) * self.env;
+        let sig = (body_sig + click_sig) * self.vel * 1.20;
 
-        self.freq += (self.min_pitch_hz - self.freq) * self.pitch_decay_coeff;
+        self.phase = wrap_phase(self.phase + cur_freq / sample_rate);
+
+        // Exponential frequency relaxation to base shell pitch
+        self.freq += (self.min_pitch_hz - self.freq) * (self.pitch_decay_coeff * 2.2);
+        self.pitch_fast *= 0.985; // Fast decay for initial impact tension snap (~8-10ms)
         self.env *= self.amp_decay_coeff;
 
-        if self.env < MIN_AUDIBLE_VELOCITY {
+        if self.env < MIN_AUDIBLE_VELOCITY && self.click_env < MIN_AUDIBLE_VELOCITY {
             self.active = false;
         }
 
-        sig
+        soft_clip(sig)
     }
 
     pub fn set_params(&mut self, params: impl Into<MembraneParams>) {
@@ -160,6 +196,9 @@ impl MembraneVoice {
     pub fn reset(&mut self) {
         self.active = false;
         self.phase = 0.0;
+        self.click_phase = 0.0;
         self.env = 0.0;
+        self.click_env = 0.0;
+        self.pitch_fast = 0.0;
     }
 }

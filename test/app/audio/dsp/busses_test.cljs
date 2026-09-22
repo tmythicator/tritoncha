@@ -43,13 +43,19 @@
     ;; Drums
     (is (true? (busses/drum? :kick)))
     (is (true? (busses/drum? :snare-wire)))
+    (is (true? (busses/drum? :hat)))
     (is (true? (busses/drum? :hats)))
+    (is (true? (busses/drum? :cymb)))
+    (is (true? (busses/drum? :toms)))
     (is (true? (busses/drum? :perc)))
     (is (true? (busses/drum? :percussion)))
     (is (true? (busses/drum? :break)))
     (is (true? (busses/drum? {:bus :bus/drums})))
     (is (true? (busses/drum? {:inst :kick})))
+    (is (true? (busses/drum? {:pattern "k . . ."})))
     (is (false? (busses/drum? :bass-analog)))
+    (is (false? (busses/lead? :cymb)))
+    (is (false? (busses/lead? :hat)))
 
     ;; Bass + Sub
     (is (true? (busses/bass? :bass-analog)))

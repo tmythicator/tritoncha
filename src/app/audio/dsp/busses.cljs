@@ -17,17 +17,56 @@
    :fx    :bus/lead})
 
 (def category-aliases
-  {:pad        :pads
-   :pads       :pads
-   :lead       :leads
-   :leads      :leads
-   :bass       :bass
+  {;; Drums and Percussion
    :drum       :drums
    :drums      :drums
+   :hat        :drums
    :hats       :drums
+   :cymb       :drums
+   :cymbal     :drums
+   :cymbals    :drums
+   :kick       :drums
+   :kicks      :drums
+   :snare      :drums
+   :snares     :drums
+   :sn         :drums
+   :tom        :drums
+   :toms       :drums
+   :ride       :drums
+   :crash      :drums
+   :splash     :drums
+   :china      :drums
+   :clap       :drums
+   :claps      :drums
    :perc       :drums
+   :percs      :drums
    :percussion :drums
    :break      :drums
+   :rim        :drums
+   :shaker     :drums
+   :tamb       :drums
+   :tambourine :drums
+   :cowbell    :drums
+   ;; Bass
+   :bass       :bass
+   :sub        :bass
+   :sub-bass   :bass
+   :acid       :bass
+   ;; Leads
+   :lead       :leads
+   :leads      :leads
+   :arp        :leads
+   :arps       :leads
+   :melody     :leads
+   ;; Pads and Space
+   :pad        :pads
+   :pads       :pads
+   :keys       :pads
+   :ambient    :pads
+   :atmos      :pads
+   :strings    :pads
+   :drone      :pads
+   ;; FX
    :fx         :fx})
 
 (defn normalize-category
@@ -78,7 +117,10 @@
 
 (def drum-keywords
   "Unified set of all drum instrument keywords."
-  (into #{:drums :clap :sn-rs :sn-clk :sn-gh :sn-roll :hat-closed :hat-open :hh-c :hh-o :hh-clk}
+  (into #{:drum :drums :kick :kicks :snare :snares :sn :hat :hats :hat-closed :hat-open :hh-c :hh-o :hh-clk
+          :tom :toms :tom-high :tom-mid :tom-low :cymb :cymbal :cymbals :ride :ride-bell :crash :crash-16 :crash-18
+          :splash :china :clap :claps :cowbell :rim :sn-rs :sn-clk :sn-gh :sn-roll :perc :percs :percussion
+          :shaker :tamb :tambourine :break}
         (concat (keys core-drums)
                 (keys user-drums))))
 
@@ -102,12 +144,14 @@
   "Resolves the target audio bus for an instrument, track, or category keyword.
   Priority:
     1. Direct :bus in map spec (e.g. {:bus :bus/space, :osc ...})
-    2. :bus in referenced instrument (e.g. {:inst :tracker-lead})
-    3. Direct category keyword (e.g. :bass, :pads, :drums, :leads, :fx)
-    4. Standalone bus override (e.g. :click)
-    5. :bus declared in catalog instrument spec (REPL registry, user custom, or core)
-    6. Category default bus fallback determined by instrument category
-    7. Fallback :bus/master"
+    2. Mini-notation drum pattern defaults to drum bus
+    3. :bus in referenced instrument (e.g. {:inst :tracker-lead})
+    4. Direct category keyword (e.g. :bass, :pads, :drums, :leads, :fx)
+    5. Drum keyword
+    6. Standalone bus override (e.g. :click)
+    7. :bus declared in catalog instrument spec (REPL registry, user custom, or core)
+    8. Category default bus fallback determined by instrument category
+    9. Fallback :bus/master"
   [x]
   (cond
     (nil? x) :bus/master
@@ -116,19 +160,27 @@
     (and (map? x) (:bus x))
     (normalize-bus-key (:bus x))
 
-    ;; 2. Map referencing an instrument keyword
-    (and (map? x) (or (:inst x) (:inst-key x)))
-    (instrument-bus (or (:inst x) (:inst-key x)))
+    ;; 2. Mini-notation drum pattern defaults to drum bus
+    (and (map? x) (:pattern x))
+    :bus/drums
 
-    ;; 3. Direct category keyword
+    ;; 3. Map referencing an instrument keyword
+    (and (map? x) (or (:inst x) (:synth x) (:inst-key x)))
+    (instrument-bus (or (:inst x) (:synth x) (:inst-key x)))
+
+    ;; 4. Direct category keyword
     (contains? category-aliases x)
     (category-default-bus x)
 
-    ;; 4. Standalone bus override (e.g. :click)
+    ;; 5. Drum keyword
+    (contains? drum-keywords (if (keyword? x) x (keyword (str x))))
+    :bus/drums
+
+    ;; 6. Standalone bus override (e.g. :click)
     (contains? standalone-instrument-busses x)
     (get standalone-instrument-busses x)
 
-    ;; 5. Lookup instrument keyword or string in catalog
+    ;; 7. Lookup instrument keyword or string in catalog
     :else
     (let [k (if (keyword? x) x (keyword (str x)))]
       (if-let [spec (find-instrument-spec k)]
@@ -141,21 +193,31 @@
   :drums, :bass, :leads, :pads, or :fx based fundamentally on its explicit :category declaration.
   Examples: (sound-category :kick) -> :drums, (sound-category :fx-laser) -> :fx."
   [x]
-  (if-let [direct (get category-aliases x)]
-    direct
+  (cond
+    (nil? x) nil
+    (get category-aliases x) (get category-aliases x)
+    (contains? drum-keywords (if (keyword? x) x (keyword (str x)))) :drums
+    :else
     (let [spec         (if (map? x) x (find-instrument-spec x))
           explicit-cat (or (:category spec)
                            (when (map? x)
-                             (when-let [inst-key (or (:inst x) (:inst-key x))]
+                             (when-let [inst-key (or (:inst x) (:synth x) (:inst-key x))]
                                (:category (find-instrument-spec inst-key)))))]
       (if explicit-cat
         (normalize-category explicit-cat)
         (cond
+          (and (map? x) (contains? x :pattern)) :drums
+          (and (map? x) (or (:notes x) (:chord x)))
+          (cond
+            (= (:bus spec) :bus/space) :pads
+            (= (:bus spec) :bus/bass)  :bass
+            (= (:bus spec) :bus/lead)  :leads
+            :else :leads)
           (= (:bus spec) :bus/drums) :drums
           (= (:bus spec) :bus/space) :pads
           (= (:bus spec) :bus/bass)  :bass
           (= (:bus spec) :bus/lead)  :leads
-          :else :leads)))))
+          :else nil)))))
 
 (defn drum?
   "Returns true if key or spec belongs to the :drums category.
@@ -211,4 +273,4 @@
   "Returns true if key or spec is any tonal or FX synthesizer voice (non-drum).
   Examples: (synth? :bass-analog) -> true, (synth? :kick) -> false."
   [x]
-  (not= (sound-category x) :drums))
+  (and (some? x) (not (drum? x))))

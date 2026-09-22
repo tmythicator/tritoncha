@@ -261,4 +261,29 @@
     :cutoff    1200.0
     :resonance 0.70
     :decay     0.28
-    :drive     1.00}})
+    :drive     1.00}
+
+   :fat-kick
+   {:title       "Fat Kick"
+    :category    :drums
+    :type        :kick
+    :bus         :bus/drums
+    :mod         :natural
+    :base-pitch  42.0
+    :pitch-drop  220.0
+    :pitch-decay 0.035
+    :decay       0.36
+    :click       0.45
+    :drive       2.2}
+
+   :lofi-snare
+   {:title       "Lo-Fi Snare"
+    :category    :drums
+    :type        :snare
+    :bus         :bus/drums
+    :mod         :analog
+    :base-freq   210.0
+    :tone-decay  0.9980
+    :noise-decay 0.9988
+    :cutoff      2100.0
+    :snappy      0.75}})

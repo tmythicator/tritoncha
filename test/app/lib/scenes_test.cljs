@@ -14,7 +14,8 @@
 
 (deftest core-scenes-catalog-test
   (testing "All built-in 3D scene presets are valid"
-    (let [required-scenes [:cyber-torus :quantum-polyhedron :monolith-core :crystal-octahedron :acid-sphere]]
+    (let [required-scenes [:cyber-torus :quantum-polyhedron :monolith-core :crystal-octahedron :acid-sphere
+                           :neon-prism :hyper-cube]]
       (doseq [sc-key required-scenes]
         (let [scene (get core-scenes sc-key)]
           (is (some? scene) (str "Scene " sc-key " must exist in core-scenes"))

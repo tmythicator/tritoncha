@@ -62,7 +62,9 @@
    :karplus      :lead-string
    :bell         :lead-bell
    :laser        :fx-laser
+   :zap          :fx-zap
    :siren        :fx-siren
+   :nbell        :lead-nbell
    :util-click   :click})
 
 (defn find-instrument-spec
