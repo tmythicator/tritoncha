@@ -65,11 +65,11 @@
                               (vector? n) (mapv #(if (or (nil? %) (= % :_)) nil (harmony/transpose % delta-st)) n)
                               :else n))
                           notes)]
-        (assoc pat :notes shifted :hits-vec shifted))
+        (assoc pat :notes shifted))
 
       (string? notes)
       (let [shifted (harmony/transpose notes delta-st)]
-        (assoc pat :notes [shifted] :hits-vec [shifted]))
+        (assoc pat :notes [shifted]))
 
       :else pat)))
 
@@ -89,9 +89,7 @@
             new-notes    (harmony/resolve-track-notes updated-prog [root mode track-oct] track-oct)]
         (assoc pat
                :notes new-notes
-               :hits-vec new-notes
                :oct track-oct
-               :octave track-oct
                :progression updated-prog))
 
       degs
@@ -101,10 +99,8 @@
             new-notes (harmony/deg root mode degs {:octave track-oct})]
         (assoc pat
                :notes new-notes
-               :hits-vec new-notes
                :deg degs
-               :oct track-oct
-               :octave track-oct))
+               :oct track-oct))
 
       notes
       (transpose-track-melody pat delta-st)

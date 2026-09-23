@@ -141,7 +141,7 @@
   a derived DSP voice patch when the track specifies a custom audio bus override for a synth.
   Examples: (resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass}) -> :lead-8bit--bass."
   [tk pat-data]
-  (let [inst-k      (or (:inst pat-data) (:synth pat-data) tk)
+  (let [inst-k      (or (:inst pat-data) tk)
         custom-bus  (when-let [b (:bus pat-data)] (busses/normalize-bus-key b))
         default-bus (busses/instrument-bus inst-k)]
     (if (and custom-bus
@@ -163,18 +163,18 @@
   Examples: (sync-track-to-worklet! :bass {:notes ['C2' 'E2'] :step '16n'})."
   [tk pat-data]
   (let [inst-k   (resolve-track-inst tk pat-data)
-        raw-hits (or (:notes pat-data) (:hits-vec pat-data) [true])
+        raw-hits (or (:notes pat-data) [true])
         key-ctx  (get @audio-state :key cfg/default-key)
-        track-o  (or (:oct pat-data) (:octave pat-data))
+        track-o  (:oct pat-data)
         hits     (harmony/resolve-track-notes raw-hits
                                               [(:root key-ctx) (:mode key-ctx) (or track-o (:octave key-ctx))]
                                               track-o)
         notes    (if (sequential? hits) hits [hits])
         step-m   (audio-utils/step->mult (:step pat-data))
         bpm      (:bpm @audio-state 168)
-        dur-raw  (or (:dur pat-data) (:duration pat-data) (:step pat-data) "16n")
+        dur-raw  (or (:dur pat-data) (:step pat-data) "16n")
         dur-s    (audio-utils/dur->seconds dur-raw bpm)
-        base-vel (or (:vel pat-data) (:vel-vec pat-data) 0.9)]
+        base-vel (or (:vel pat-data) 0.9)]
     (if (chord-progression? notes)
       (let [max-voices   (min 4 (apply max 1 (map #(if (sequential? %) (count %) 1) notes)))
             scale-factor (if (> max-voices 1) (/ 1.0 (js/Math.sqrt max-voices)) 1.0)

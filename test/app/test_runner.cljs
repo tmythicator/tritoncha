@@ -3,6 +3,7 @@
    [app.audio.control.looper-test]
    [app.audio.control.metronome-test]
    [app.audio.control.mixer-test]
+   [app.audio.control.pattern-test]
    [app.audio.control.session-test]
    [app.audio.control.stacker-test]
    [app.audio.control.tracker-test]
