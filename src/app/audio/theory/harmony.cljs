@@ -104,7 +104,63 @@
          (with-meta notes {:degrees degrees :octave octave :root (keyword root) :mode (keyword mode)}))
        (resolve-degree-note sc degrees)))))
 
-(declare chord progression)
+(def ^:private memo-chord-raw
+  (memoize
+   (fn [root chord-type octave]
+     (let [{:keys [pitch octave]} (parse-note root octave)
+           root-midi (note->midi (str pitch octave))
+           intervals (get chord-intervals (keyword chord-type) (:min chord-intervals))]
+       (if root-midi
+         (mapv (fn [i] (midi->note (+ root-midi i))) intervals)
+         [])))))
+
+(defn invert-chord
+  "Inverts a vector of chord notes by N inversions.
+  Examples: (invert-chord ['C3' 'E3' 'G3'] 1) -> ['E3' 'G3' 'C4'], (invert-chord ['C3' 'E3' 'G3'] -1) -> ['G2' 'C3' 'E3']."
+  [notes inversion]
+  (let [inv (or inversion 0)]
+    (if (or (zero? inv) (empty? notes))
+      (vec notes)
+      (let [midis (mapv note->midi notes)
+            shifted (reduce (fn [acc _]
+                              (if (pos? inv)
+                                (let [lowest (first acc)]
+                                  (conj (subvec acc 1) (+ lowest 12)))
+                                (let [highest (last acc)]
+                                  (into [(- highest 12)] (subvec acc 0 (dec (count acc)))))))
+                            midis
+                            (range (js/Math.abs inv)))]
+        (mapv midi->note shifted)))))
+
+(defn chord
+  "Generates chord notes for a given root note (or scale degree) and chord quality.
+  Supports inversion and custom octave options.
+  Examples:
+    (chord :e :min9) -> ['E3' 'G3' 'B3' 'D4' 'F#4']
+    (chord :c :maj7 {:inversion 1}) -> ['E3' 'G3' 'B3' 'C4']
+    (chord 1 :min9 3) -> deferred degree chord."
+  ([root-or-deg] (chord root-or-deg :maj {}))
+  ([root-or-deg quality-or-opts]
+   (if (map? quality-or-opts)
+     (chord root-or-deg (:type quality-or-opts :maj) quality-or-opts)
+     (chord root-or-deg quality-or-opts {})))
+  ([root-or-deg quality opts-or-oct]
+   (if (number? root-or-deg)
+     (let [oct (if (map? opts-or-oct) (get opts-or-oct :octave 3) (or opts-or-oct 3))
+           inv (if (map? opts-or-oct) (get opts-or-oct :inversion 0) 0)]
+       (with-meta
+         [:chord-deg root-or-deg (keyword quality) oct inv]
+         {:chord-deg true
+          :degree    root-or-deg
+          :quality   (keyword quality)
+          :octave    oct
+          :inversion inv}))
+     (let [oct       (if (map? opts-or-oct) (get opts-or-oct :octave 3) (or opts-or-oct 3))
+           inversion (if (map? opts-or-oct) (get opts-or-oct :inversion 0) 0)
+           raw-notes (memo-chord-raw (keyword root-or-deg) (keyword quality) oct)]
+       (if (and (seq raw-notes) (not (zero? inversion)))
+         (invert-chord raw-notes inversion)
+         raw-notes)))))
 
 (defn resolve-track-notes
   "Resolves notes, deferred deg-patterns, progression patterns, or raw degree vectors against a scale [root mode oct].
@@ -171,64 +227,6 @@
 
       :else
       notes)))
-
-(def ^:private memo-chord-raw
-  (memoize
-   (fn [root chord-type octave]
-     (let [{:keys [pitch octave]} (parse-note root octave)
-           root-midi (note->midi (str pitch octave))
-           intervals (get chord-intervals (keyword chord-type) (:min chord-intervals))]
-       (if root-midi
-         (mapv (fn [i] (midi->note (+ root-midi i))) intervals)
-         [])))))
-
-(defn invert-chord
-  "Inverts a vector of chord notes by N inversions.
-  Examples: (invert-chord ['C3' 'E3' 'G3'] 1) -> ['E3' 'G3' 'C4'], (invert-chord ['C3' 'E3' 'G3'] -1) -> ['G2' 'C3' 'E3']."
-  [notes inversion]
-  (let [inv (or inversion 0)]
-    (if (or (zero? inv) (empty? notes))
-      (vec notes)
-      (let [midis (mapv note->midi notes)
-            shifted (reduce (fn [acc _]
-                              (if (pos? inv)
-                                (let [lowest (first acc)]
-                                  (conj (subvec acc 1) (+ lowest 12)))
-                                (let [highest (last acc)]
-                                  (into [(- highest 12)] (subvec acc 0 (dec (count acc)))))))
-                            midis
-                            (range (js/Math.abs inv)))]
-        (mapv midi->note shifted)))))
-
-(defn chord
-  "Generates chord notes for a given root note (or scale degree) and chord quality.
-  Supports inversion and custom octave options.
-  Examples:
-    (chord :e :min9) -> ['E3' 'G3' 'B3' 'D4' 'F#4']
-    (chord :c :maj7 {:inversion 1}) -> ['E3' 'G3' 'B3' 'C4']
-    (chord 1 :min9 3) -> deferred degree chord."
-  ([root-or-deg] (chord root-or-deg :maj {}))
-  ([root-or-deg quality-or-opts]
-   (if (map? quality-or-opts)
-     (chord root-or-deg (:type quality-or-opts :maj) quality-or-opts)
-     (chord root-or-deg quality-or-opts {})))
-  ([root-or-deg quality opts-or-oct]
-   (if (number? root-or-deg)
-     (let [oct (if (map? opts-or-oct) (get opts-or-oct :octave 3) (or opts-or-oct 3))
-           inv (if (map? opts-or-oct) (get opts-or-oct :inversion 0) 0)]
-       (with-meta
-         [:chord-deg root-or-deg (keyword quality) oct inv]
-         {:chord-deg true
-          :degree    root-or-deg
-          :quality   (keyword quality)
-          :octave    oct
-          :inversion inv}))
-     (let [oct       (if (map? opts-or-oct) (get opts-or-oct :octave 3) (or opts-or-oct 3))
-           inversion (if (map? opts-or-oct) (get opts-or-oct :inversion 0) 0)
-           raw-notes (memo-chord-raw (keyword root-or-deg) (keyword quality) oct)]
-       (if (and (seq raw-notes) (not (zero? inversion)))
-         (invert-chord raw-notes inversion)
-         raw-notes)))))
 
 (defn progression
   "Generates a chord progression sequence from scale degree numbers or degree-chord specs.
