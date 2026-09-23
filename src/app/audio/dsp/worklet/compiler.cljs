@@ -1,72 +1,24 @@
 (ns app.audio.dsp.worklet.compiler
   "Pure compilers and parsers for score notation, articulation, and DSP patches."
-  (:require [app.audio.dsp.busses :refer [drum-keyword? find-instrument-spec]]
+  (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.instruments.catalog :refer [drum-keyword? find-instrument-spec resolve-target-inst]]
             [app.audio.dsp.worklet.protocol :refer [bus-key->id drum-mod->id drum-remaps filter-type->id
                                                     inst-keyword->id osc-type->id]]
-            [app.utils.audio :refer [midi->freq note->midi]]
-            [clojure.string :as str]))
+            [app.audio.theory.patterns :refer [extract-articulation]]
+            [app.utils.audio :refer [parse-midi-note]]))
 
-(defn parse-freq
-  "Parses note name, MIDI number, or raw frequency into frequency in Hertz.
-  Examples: (parse-freq \"A4\") -> 440.0, (parse-freq 69) -> 440.0."
-  [pitch]
-  (cond
-    (number? pitch) (if (> pitch 127) pitch (midi->freq pitch))
-    (string? pitch) (if-let [m (note->midi pitch)] (midi->freq m) 440.0)
-    (keyword? pitch) (if-let [m (note->midi (name pitch))] (midi->freq m) 440.0)
-    :else 440.0))
+(def ^:private rest-tokens #{:_ :- :rest :nil :none "." "0"})
 
-(defn parse-midi-note
-  "Parses note name or number into integer MIDI pitch number or -1 for rests.
-  Examples: (parse-midi-note \"C4\") -> 60, (parse-midi-note nil) -> -1."
-  [pitch]
-  (cond
-    (nil? pitch) -1
-    (number? pitch) (int pitch)
-    (string? pitch) (if-let [m (note->midi pitch)] (int m) -1)
-    (keyword? pitch) (if-let [m (note->midi (name pitch))] (int m) -1)
-    :else -1))
+(defn- step-rest [def-id]
+  {:inst-id def-id :note -1 :vel 0.0})
 
-(defn extract-articulation
-  "Splits a string or keyword into [clean-token vel].
-  Supports '!' suffix for accents and '_' suffix for ghost notes.
-  Examples: (extract-articulation :snare!) -> [\"snare\" 1.15]."
-  ([token] (extract-articulation token 0.9))
-  ([token default-vel]
-   (let [s        (if (keyword? token) (name token) (str token))
-         base-vel (float (or default-vel 0.9))]
-     (cond
-       (str/ends-with? s "!")
-       [(subs s 0 (dec (count s))) (min 1.25 (* base-vel (/ 1.15 0.9)))]
-
-       (and (> (count s) 1) (str/ends-with? s "_"))
-       [(subs s 0 (dec (count s))) (* base-vel (/ 0.35 0.9))]
-
-       :else
-       [s base-vel]))))
-
-(defn- inst-base-type
-  [k]
-  (when k
-    (or (:type (find-instrument-spec k))
-        (get drum-remaps (name k))
-        k)))
-
-(defn resolve-target-inst
-  "Resolves the actual instrument to trigger for a pattern hit.
-  If the hit matches the base drum type of default-inst-key, default-inst-key is used.
-  Examples: (resolve-target-inst :kick :fat-kick) -> :fat-kick,
-            (resolve-target-inst :clap :fat-kick) -> :clap."
-  [hit-kw default-inst-key]
-  (if (or (nil? default-inst-key) (= default-inst-key hit-kw))
-    hit-kw
-    (let [hit-type (inst-base-type hit-kw)
-          def-type (inst-base-type default-inst-key)]
-      (if (or (= hit-type def-type)
-              (not (drum-keyword? default-inst-key))
-              (contains? #{:drum :drums :hit :beat :x :1} hit-kw))
-        default-inst-key
-        hit-kw))))
+(defn- step-hit
+  ([def-id note vel]
+   {:inst-id def-id :note (int note) :vel (float vel)})
+  ([inst-key def-inst-key note vel]
+   (let [target (resolve-target-inst inst-key def-inst-key)
+         id     (inst-keyword->id target (find-instrument-spec target))]
+     {:inst-id id :note (int note) :vel (float vel)})))
 
 (defn parse-step-hit
   "Parses a step hit into {:inst-id :note :vel} map respecting default-vel.
@@ -77,28 +29,23 @@
          def-id (inst-keyword->id default-inst-key (find-instrument-spec default-inst-key))]
      (cond
        (or (nil? hit) (false? hit))
-       {:inst-id def-id :note -1 :vel 0.0}
+       (step-rest def-id)
 
        (true? hit)
-       {:inst-id def-id :note 60 :vel def-v}
+       (step-hit def-id 60 def-v)
 
        (number? hit)
-       (if (neg? hit)
-         {:inst-id def-id :note -1 :vel 0.0}
-         {:inst-id def-id :note (int hit) :vel def-v})
+       (if (neg? hit) (step-rest def-id) (step-hit def-id hit def-v))
 
        (and (vector? hit) (keyword? (first hit)))
        (let [[k v n]           hit
-             [clean-k art-vel] (extract-articulation k def-v)
-             target-inst       (resolve-target-inst (keyword clean-k) default-inst-key)]
-         {:inst-id (inst-keyword->id target-inst (find-instrument-spec target-inst))
-          :note    (if n (parse-midi-note n) 60)
-          :vel     (float (or v art-vel def-v))})
+             [clean-k art-vel] (extract-articulation k def-v)]
+         (step-hit (keyword clean-k) default-inst-key (if n (parse-midi-note n) 60) (or v art-vel def-v)))
 
        (vector? hit)
-       {:inst-id def-id
-        :note    (if (seq hit) (parse-midi-note (first hit)) -1)
-        :vel     (if (seq hit) def-v 0.0)}
+       (if (seq hit)
+         (step-hit def-id (parse-midi-note (first hit)) def-v)
+         (step-rest def-id))
 
        (or (keyword? hit) (string? hit))
        (let [raw-str         (if (keyword? hit) (name hit) (str hit))
@@ -106,130 +53,95 @@
              resolved-alias  (get drum-remaps clean)
              clean-kw        (or resolved-alias (keyword clean))]
          (cond
-           (contains? #{:_ :- :rest :nil :none "." "0"} clean-kw)
-           {:inst-id def-id :note -1 :vel 0.0}
+           (contains? rest-tokens clean-kw)
+           (step-rest def-id)
 
            (or resolved-alias (drum-keyword? clean-kw))
-           (let [target (resolve-target-inst clean-kw default-inst-key)]
-             {:inst-id (inst-keyword->id target (find-instrument-spec target)) :note 60 :vel (float art-vel)})
+           (step-hit clean-kw default-inst-key 60 art-vel)
 
            :else
            (let [m (parse-midi-note clean)]
              (if (neg? m)
-               (let [target (resolve-target-inst clean-kw default-inst-key)]
-                 {:inst-id (inst-keyword->id target (find-instrument-spec target))
-                  :note    60
-                  :vel     (float art-vel)})
-               {:inst-id def-id :note m :vel (float art-vel)}))))
+               (step-hit clean-kw default-inst-key 60 art-vel)
+               (step-hit def-id m art-vel)))))
 
        :else
-       {:inst-id def-id :note -1 :vel 0.0}))))
+       (step-rest def-id)))))
+
+(def synth-patch-spec
+  "Schema and baseline defaults for the Rust modular synthesizer voice patch."
+  {:osc       {:type :saw :sub-level 0.0 :pulse-width 0.5 :noise 0.0 :drift 0.0}
+   :filter    {:type :lowpass :cutoff 1200.0 :env-amount 3000.0 :key-track 2.0 :q 0.4 :drive 0.0}
+   :amp-env   {:attack 0.005 :decay 0.2 :sustain 0.3 :release 0.2}
+   :mod-env   {:attack 0.005 :decay 0.2}
+   :pitch-env {:amount 0.0 :decay 0.015}
+   :glide     0.0
+   :polyphony 8})
 
 (defn compile-voice-patch-msg
-  "Compiles a declarative Clojure synth patch map into a WebAudio postMessage payload.
-  Examples: (compile-voice-patch-msg 4 {:osc {:type :saw}}) -> #js {:type \"setVoicePatch\" ...}."
+  "Compiles a declarative Clojure synth patch map into a WebAudio postMessage payload."
   [patch-id patch-spec]
-  (let [pid       (int patch-id)
-        osc       (:osc patch-spec)
-        flt       (:filter patch-spec)
-        amp       (:amp-env patch-spec)
-        mod-e     (:mod-env patch-spec)
-        pitch-e   (:pitch-env patch-spec)
-        bus-id    (int (bus-key->id (or (:bus patch-spec)
-                                        (case (:category patch-spec)
-                                          :bass :bus/bass
-                                          :pads :bus/space
-                                          :drums :bus/drums
-                                          :bus/lead))))
-        poly      (int (if (= (:type patch-spec) :mono) 1 8))]
+  (let [spec    (merge synth-patch-spec patch-spec)
+        osc     (merge (:osc synth-patch-spec) (:osc spec))
+        flt     (merge (:filter synth-patch-spec) (:filter spec))
+        amp     (merge (:amp-env synth-patch-spec) (:amp-env spec))
+        mod-e   (merge (:mod-env synth-patch-spec) {:attack (:attack amp) :decay (:decay amp)} (:mod-env spec))
+        pitch-e (merge (:pitch-env synth-patch-spec) (:pitch-env spec))
+        bus-key (or (:bus spec)
+                    (busses/instrument-bus spec)
+                    (busses/category-default-bus (:category spec))
+                    :bus/lead)]
     #js {:type           "setVoicePatch"
-         :patchId        pid
-         :oscType        (osc-type->id (:type osc :saw))
-         :subLevel       (float (:sub-level osc 0.0))
-         :pulseWidth     (float (:pulse-width osc 0.5))
-         :filterType     (filter-type->id (:type flt :lowpass))
-         :cutoffBase     (float (:cutoff flt 1200.0))
-         :cutoffEnvAmt   (float (:env-amount flt 3000.0))
-         :cutoffKeyTrack (float (:key-track flt 2.0))
-         :resonance      (float (:q flt 0.4))
-         :attack         (float (:attack amp 0.005))
-         :decay          (float (:decay amp 0.2))
-         :sustain        (float (:sustain amp 0.3))
-         :release        (float (:release amp 0.2))
-         :modAttack      (float (:attack mod-e (:attack amp 0.005)))
-         :modDecay       (float (:decay mod-e (:decay amp 0.2)))
-         :busId          bus-id
-         :polyphony      poly
-         :glide          (float (:glide patch-spec 0.0))
-         :filterDrive    (float (:drive flt 0.0))
-         :noiseLevel     (float (:noise osc 0.0))
-         :pitchEnvAmt    (float (:amount pitch-e 0.0))
-         :pitchEnvDecay  (float (:decay pitch-e 0.015))
-         :analogDrift    (float (:drift osc 0.0))}))
+         :patchId        (int patch-id)
+         :oscType        (osc-type->id (:type osc))
+         :subLevel       (float (:sub-level osc))
+         :pulseWidth     (float (:pulse-width osc))
+         :filterType     (filter-type->id (:type flt))
+         :cutoffBase     (float (:cutoff flt))
+         :cutoffEnvAmt   (float (:env-amount flt))
+         :cutoffKeyTrack (float (:key-track flt))
+         :resonance      (float (:q flt))
+         :attack         (float (:attack amp))
+         :decay          (float (:decay amp))
+         :sustain        (float (:sustain amp))
+         :release        (float (:release amp))
+         :modAttack      (float (:attack mod-e))
+         :modDecay       (float (:decay mod-e))
+         :busId          (int (bus-key->id bus-key))
+         :polyphony      (int (if (= (:type spec) :mono) 1 (:polyphony spec 8)))
+         :glide          (float (:glide spec))
+         :filterDrive    (float (:drive flt))
+         :noiseLevel     (float (:noise osc))
+         :pitchEnvAmt    (float (:amount pitch-e))
+         :pitchEnvDecay  (float (:decay pitch-e))
+         :analogDrift    (float (:drift osc))}))
+
+(def drum-type-specs
+  "Parameter contracts for the Rust drum synthesis engine."
+  {:kick     {:id 0  :fields [:base-pitch :pitch-drop :pitch-decay :decay :click :drive]}
+   :snare    {:id 1  :fields [:base-freq :tone-decay :noise-decay :cutoff :snappy]}
+   :hat      {:id 2  :fields [:cutoff :decay-closed :decay-open]}
+   :membrane {:id nil :fields [:start-pitch :min-pitch :pitch-decay :decay :drive]}
+   :metallic {:id nil :fields [:cutoff :resonance :decay :drive]}
+   :clap     {:id 18 :fields [:cutoff :resonance :decay :drive]}})
 
 (defn compile-drum-patch-msg
-  "Compiles a drum sound design map into a setDrumPatch message payload.
-  Examples: (compile-drum-patch-msg :kick {:decay 0.3}) -> #js {:type \"setDrumPatch\" ...}."
+  "Compiles a drum sound design map into a setDrumPatch message payload for Rust WASM."
   [drum-key drum-spec]
-  (let [dk      (keyword drum-key)
-        spec    (or drum-spec (find-instrument-spec dk))
-        type    (or (:type spec) dk)
-        inst-id (inst-keyword->id dk)
-        mod-id  (drum-mod->id (:mod spec))]
-    (when-let [[drum-id params]
-               (case type
-                 :kick
-                 [0 [(or (:base-pitch spec) (:pitch spec) 48.0)
-                     (or (:pitch-drop spec) (:snap spec) 180.0)
-                     (or (:pitch-decay spec) (:sweep spec) 0.040)
-                     (or (:decay spec) 0.28)
-                     (or (:click spec) 0.35)
-                     (or (:drive spec) 1.6)]]
-
-                 :snare
-                 [1 [(or (:base-freq spec) (:pitch spec) 185.0)
-                     (or (:tone-decay spec) 0.9985)
-                     (or (:noise-decay spec) 0.9991)
-                     (or (:cutoff spec) 2400.0)
-                     (or (:snappy spec) (:noise spec) 0.85)
-                     0.0]]
-
-                 :hat
-                 [2 [(or (:cutoff spec) 7200.0)
-                     (or (:decay-closed spec) (:decay spec) 0.04)
-                     (or (:decay-open spec) 0.24)
-                     0.0 0.0 0.0]]
-
-                 :membrane
-                 [inst-id [(or (:start-pitch spec) 180.0)
-                           (or (:min-pitch spec) 105.0)
-                           (or (:pitch-decay spec) 0.015)
-                           (or (:decay spec) 0.40)
-                           (or (:drive spec) 1.10)
-                           0.0]]
-
-                 :metallic
-                 [inst-id [(or (:cutoff spec) 3500.0)
-                           (or (:resonance spec) 0.35)
-                           (or (:decay spec) 0.85)
-                           (or (:drive spec) 1.0)
-                           0.0 0.0]]
-
-                 :clap
-                 [18 [(or (:cutoff spec) 1200.0)
-                      (or (:resonance spec) 0.70)
-                      (or (:decay spec) 0.28)
-                      (or (:drive spec) 1.0)
-                      0.0 0.0]]
-
-                 nil)]
-      (let [[p0 p1 p2 p3 p4 p5] params]
+  (let [dk   (keyword drum-key)
+        base (find-instrument-spec dk)
+        spec (if drum-spec (merge base drum-spec) base)
+        type (or (:type spec) dk)]
+    (when-let [{:keys [id fields]} (get drum-type-specs type)]
+      (let [drum-id (or id (inst-keyword->id dk))
+            params  (mapv #(float (get spec % 0.0)) fields)
+            p       (into params (repeat (- 6 (count params)) 0.0))]
         #js {:type   "setDrumPatch"
              :drumId drum-id
-             :p0     (float (or p0 0.0))
-             :p1     (float (or p1 0.0))
-             :p2     (float (or p2 0.0))
-             :p3     (float (or p3 0.0))
-             :p4     (float (or p4 0.0))
-             :p5     (float (or p5 0.0))
-             :p6     mod-id}))))
+             :p0     (nth p 0)
+             :p1     (nth p 1)
+             :p2     (nth p 2)
+             :p3     (nth p 3)
+             :p4     (nth p 4)
+             :p5     (nth p 5)
+             :p6     (drum-mod->id (:mod spec))}))))

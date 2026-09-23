@@ -1,7 +1,7 @@
 (ns app.lib.drums-test
   (:require
-   [app.audio.dsp.busses :refer [drum-keyword?]]
-   [app.audio.dsp.worklet.compiler :refer [parse-step-hit resolve-target-inst]]
+   [app.audio.dsp.instruments.catalog :refer [drum-keyword? resolve-target-inst]]
+   [app.audio.dsp.worklet.compiler :refer [parse-step-hit]]
    [app.audio.dsp.worklet.protocol :refer [drum-remaps inst-keyword->id]]
    [app.custom.drums :refer [user-drums]]
    [app.lib.drums :refer [core-drums]]

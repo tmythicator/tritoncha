@@ -33,9 +33,8 @@
                                                   :dur "32n"})]
       (is (= [:hh-c nil :hh-c] (:notes pat)))
       (is (= :hat (:inst pat)))
-      (is (nil? (:hits-vec pat)))
-      (is (= [true false true] (:mask-vec pat)))
-      (is (= [0.4 0.8] (:vel-vec pat)))
+      (is (= [true false true] (:mask pat)))
+      (is (= [0.4 0.8] (:vel pat)))
       (is (= "32n" (:dur pat)))
       (is (true? (pattern/valid-pattern? pat))))))
 

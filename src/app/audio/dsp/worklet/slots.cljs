@@ -1,6 +1,6 @@
 (ns app.audio.dsp.worklet.slots
   "Sequencer hardware slot allocator managing 16 real-time playback tracks."
-  (:require [app.audio.dsp.busses :refer [sound-category]]
+  (:require [app.audio.dsp.instruments.catalog :refer [sound-category]]
             [clojure.string :as str]))
 
 (defonce track-slot-assignments

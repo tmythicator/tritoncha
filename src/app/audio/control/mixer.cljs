@@ -1,6 +1,7 @@
 (ns app.audio.control.mixer
   "Audio bus mixer, levels, track mutes, solo, and performance drop controls."
   (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.instruments.catalog :as catalog]
             [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
             [app.state :refer [audio-state]]))
@@ -151,17 +152,17 @@
     (set-track-solo! k false))
   :unsoloed)
 
-;; Section Performance Drop and Mute Controls
+;; Section Controllers
 
 (def ^:private section-controllers
-  {:drums {:pred busses/drum? :bus :bus/drums :flag :drums-muted? :un :undrummed :re :redrummed}
-   :bass  {:pred busses/bass? :bus :bus/bass  :flag :bass-muted?  :un :unbassed  :re :rebassed}
-   :lead  {:pred busses/lead? :bus :bus/lead  :flag :leads-muted? :un :unleaded  :re :releaded}
-   :pad   {:pred busses/pad?  :bus :bus/space :flag :pads-muted?  :un :unpadded  :re :repadded}})
+  {:drums {:pred catalog/drum? :bus :bus/drums :flag :drums-muted? :un :undrummed :re :redrummed}
+   :bass  {:pred catalog/bass? :bus :bus/bass  :flag :bass-muted?  :un :unbassed  :re :rebassed}
+   :lead  {:pred catalog/lead? :bus :bus/lead  :flag :leads-muted? :un :unleaded  :re :releaded}
+   :pad   {:pred catalog/pad?  :bus :bus/space :flag :pads-muted?  :un :unpadded  :re :repadded}})
 
 (defn- track-in-category? [cat-pred k tr]
   (let [pat    (when-let [p (:pattern tr)] (if (satisfies? IDeref p) @p p))
-        inst-k (or (:inst pat) (:synth pat) (:inst-key tr))]
+        inst-k (or (:inst pat) (:inst-key tr))]
     (boolean
      (or (cat-pred k)
          (when inst-k (cat-pred inst-k))

@@ -1,7 +1,7 @@
 (ns app.ui.instrument-browser.inspector.shared
   "Shared inspector UI sections for mixer bus routing, code specification generation, and parameter sliders."
   (:require
-   [app.audio.dsp.busses :as busses]
+   [app.audio.dsp.instruments :as inst]
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.components :as comps]
    [app.ui.instrument-browser.formatters :as fmt]
@@ -61,7 +61,7 @@
   "Render declarative code specification block ready for custom/synth.cljs or custom/drums.cljs.
   Examples: [code-spec-section cur-sel-key cur-spec] or [code-spec-section cur-sel-key cur-spec drum?]."
   ([cur-sel-key cur-spec]
-   (code-spec-section cur-sel-key cur-spec (busses/drum? (or cur-spec cur-sel-key))))
+   (code-spec-section cur-sel-key cur-spec (inst/drum? (or cur-spec cur-sel-key))))
   ([cur-sel-key cur-spec drum?]
    (r/with-let [copied? (r/atom false)]
      (let [code (fmt/format-spec-map cur-sel-key cur-spec)]

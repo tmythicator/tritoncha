@@ -1,7 +1,6 @@
 (ns app.ui.instrument-browser.state
   "State management and live patch mutations for Instrument Studio."
   (:require
-   [app.audio.dsp.busses :as busses]
    [app.audio.dsp.instruments :as instruments]
    [app.audio.dsp.worklet :as worklet]
    [app.custom.drums :refer [user-drums]]
@@ -58,7 +57,7 @@
   [inst-key]
   (reset! selected-inst inst-key)
   (let [spec (instruments/resolve-instrument-spec inst-key)]
-    (when (busses/drum? (or spec inst-key))
+    (when (instruments/drum? (or spec inst-key))
       (worklet/set-worklet-drum-patch! inst-key spec)))
   (when @audition/audition-loop-active?
     (audition/start-audition-loop! inst-key)))

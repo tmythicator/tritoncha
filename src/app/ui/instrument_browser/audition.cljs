@@ -2,8 +2,7 @@
   "Audio audition engine, preview triggers, phrase runs, and looper playback for Instrument Studio."
   (:require
    [app.audio.control.looper :as looper]
-   [app.audio.dsp.busses :as busses]
-   [app.audio.dsp.instruments :as instruments]
+   [app.audio.dsp.instruments :as inst]
    [app.audio.dsp.worklet :as worklet]
    [reagent.core :as r]))
 
@@ -14,8 +13,8 @@
   "Resolve intrinsic sound family (:drums, :fx, :bass, :pads, :leads).
   Examples: (sound-family :fx-laser spec) -> :fx."
   [inst-key spec]
-  (let [resolved (or spec (instruments/resolve-instrument-spec inst-key))]
-    (busses/sound-category (or resolved inst-key))))
+  (let [resolved (or spec (inst/resolve-instrument-spec inst-key))]
+    (inst/sound-category (or resolved inst-key))))
 
 (defn stop-audition-loop!
   "Halt active audition looper playback.
@@ -29,7 +28,7 @@
   "Start continuous audition looper for the given instrument.
   Examples: (start-audition-loop! :saw-bass) -> nil."
   [inst-key]
-  (let [spec   (instruments/resolve-instrument-spec inst-key)
+  (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
     (reset! audition-loop-active? true)
     (case family
@@ -52,7 +51,7 @@
                      :vel 0.85})
 
       :bass
-      (let [sub? (busses/sub? inst-key)]
+      (let [sub? (inst/sub? inst-key)]
         (looper/loop! :inst-audition
                       {:inst inst-key
                        :notes (if sub?
@@ -94,37 +93,37 @@
     (let [now (.now js/Date)]
       (when (> (- now @last-slider-preview-time) 1400)
         (reset! last-slider-preview-time now)
-        (let [spec   (instruments/resolve-instrument-spec inst-key)
+        (let [spec   (inst/resolve-instrument-spec inst-key)
               family (sound-family inst-key spec)]
           (case family
             :drums (do
                      (worklet/set-worklet-drum-patch! inst-key spec)
-                     (instruments/trigger-drum! inst-key 0.9))
-            :fx    (instruments/trigger-note! inst-key "E4" "16n" 0.9)
-            :bass  (instruments/trigger-note! inst-key "E1" "2n" 0.85)
-            :pads  (instruments/trigger-note! inst-key ["E3" "G3" "B3" "D4"] "1m" 0.5)
-            :leads (instruments/trigger-note! inst-key "E4" "2n" 0.75)))))))
+                     (inst/trigger-drum! inst-key 0.9))
+            :fx    (inst/trigger-note! inst-key "E4" "16n" 0.9)
+            :bass  (inst/trigger-note! inst-key "E1" "2n" 0.85)
+            :pads  (inst/trigger-note! inst-key ["E3" "G3" "B3" "D4"] "1m" 0.5)
+            :leads (inst/trigger-note! inst-key "E4" "2n" 0.75)))))))
 
 (defn play-test-note!
   "Audition single note for selected instrument.
   Examples: (play-test-note! :kick) -> nil."
   [inst-key]
-  (let [spec   (instruments/resolve-instrument-spec inst-key)
+  (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
     (case family
       :drums (do
                (worklet/set-worklet-drum-patch! inst-key spec)
-               (instruments/trigger-drum! inst-key 0.95))
-      :fx    (instruments/trigger-note! inst-key "E4" "8n" 0.95)
-      :bass  (instruments/trigger-note! inst-key "E1" "4n" 0.92)
-      :pads  (instruments/trigger-note! inst-key ["E3" "G3" "B3" "D4"] "2n" 0.85)
-      :leads (instruments/trigger-note! inst-key "E4" "16n" 0.92))))
+               (inst/trigger-drum! inst-key 0.95))
+      :fx    (inst/trigger-note! inst-key "E4" "8n" 0.95)
+      :bass  (inst/trigger-note! inst-key "E1" "4n" 0.92)
+      :pads  (inst/trigger-note! inst-key ["E3" "G3" "B3" "D4"] "2n" 0.85)
+      :leads (inst/trigger-note! inst-key "E4" "16n" 0.92))))
 
 (defn play-test-run!
   "Audition melodic 5-note phrase or drum roll.
   Examples: (play-test-run! :acid-bass) -> nil."
   [inst-key]
-  (let [spec   (instruments/resolve-instrument-spec inst-key)
+  (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
     (case family
       :drums
@@ -133,7 +132,7 @@
         (doseq [[idx v] (map-indexed vector [0.9 0.5 0.85 0.6 1.0])]
           (js/setTimeout
            (fn []
-             (instruments/trigger-drum! inst-key v))
+             (inst/trigger-drum! inst-key v))
            (* idx 110))))
 
       :fx
@@ -141,18 +140,18 @@
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "16n" 0.95))
+             (inst/trigger-note! inst-key n "16n" 0.95))
            (* idx 70))))
 
       :bass
-      (let [sub? (busses/sub? inst-key)
+      (let [sub? (inst/sub? inst-key)
             notes (if sub?
                     ["E1" "G1" "E1" "D1" "E1"]
                     ["E1" "G1" "A1" "Bb1" "B1"])]
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n (if sub? "8n" "16n") 0.92))
+             (inst/trigger-note! inst-key n (if sub? "8n" "16n") 0.92))
            (* idx 110))))
 
       :pads
@@ -160,7 +159,7 @@
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "8n" 0.85))
+             (inst/trigger-note! inst-key n "8n" 0.85))
            (* idx 150))))
 
       :leads
@@ -168,14 +167,14 @@
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "16n" 0.92))
+             (inst/trigger-note! inst-key n "16n" 0.92))
            (* idx 95)))))))
 
 (defn play-test-arp!
   "Audition 8-step rhythmic arpeggio or drum fill across instrument families.
   Examples: (play-test-arp! :bass-analog) -> nil."
   [inst-key]
-  (let [spec   (instruments/resolve-instrument-spec inst-key)
+  (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
     (case family
       :drums
@@ -185,7 +184,7 @@
           (doseq [[idx v] (map-indexed vector velocities)]
             (js/setTimeout
              (fn []
-               (instruments/trigger-drum! inst-key v))
+               (inst/trigger-drum! inst-key v))
              (* idx 85)))))
 
       :fx
@@ -193,18 +192,18 @@
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "16n" 0.95))
+             (inst/trigger-note! inst-key n "16n" 0.95))
            (* idx 80))))
 
       :bass
-      (let [sub? (busses/sub? inst-key)
+      (let [sub? (inst/sub? inst-key)
             notes (if sub?
                     ["E1" "E1" "D1" "E1" "G1" "E1" "D1" "E1"]
                     ["E1" "G1" "A1" "Bb1" "B1" "D2" "B1" "E1"])]
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "16n" 0.92))
+             (inst/trigger-note! inst-key n "16n" 0.92))
            (* idx (if sub? 110 85)))))
 
       :pads
@@ -212,7 +211,7 @@
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "8n" 0.85))
+             (inst/trigger-note! inst-key n "8n" 0.85))
            (* idx 110))))
 
       :leads
@@ -220,14 +219,14 @@
         (doseq [[idx n] (map-indexed vector notes)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-note! inst-key n "16n" 0.9))
+             (inst/trigger-note! inst-key n "16n" 0.9))
            (* idx 75)))))))
 
 (defn play-test-chord!
   "Audition harmonic chord: simultaneous polyphonic chord or fast broken strum for mono synths.
   Examples: (play-test-chord! :pad-cinema) -> nil."
   [inst-key]
-  (let [spec   (instruments/resolve-instrument-spec inst-key)
+  (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)
         poly?  (= (:type spec) :poly)]
     (case family
@@ -236,45 +235,45 @@
         (doseq [[idx v] (map-indexed vector velocities)]
           (js/setTimeout
            (fn []
-             (instruments/trigger-drum! inst-key v))
+             (inst/trigger-drum! inst-key v))
            (* idx 60))))
 
       :fx
       (if poly?
-        (instruments/trigger-note! inst-key ["E4" "B4" "E5"] "2n" 0.85)
+        (inst/trigger-note! inst-key ["E4" "B4" "E5"] "2n" 0.85)
         (let [notes ["E4" "B4" "E5"]]
           (doseq [[idx n] (map-indexed vector notes)]
             (js/setTimeout
              (fn []
-               (instruments/trigger-note! inst-key n "16n" 0.95))
+               (inst/trigger-note! inst-key n "16n" 0.95))
              (* idx 35)))))
 
       :bass
       (if poly?
-        (instruments/trigger-note! inst-key ["E1" "B1" "G2"] "2n" 0.88)
+        (inst/trigger-note! inst-key ["E1" "B1" "G2"] "2n" 0.88)
         (let [notes ["E1" "B1" "E2" "G2"]]
           (doseq [[idx n] (map-indexed vector notes)]
             (js/setTimeout
              (fn []
-               (instruments/trigger-note! inst-key n "8n" 0.9))
+               (inst/trigger-note! inst-key n "8n" 0.9))
              (* idx 45)))))
 
       :pads
       (if poly?
-        (instruments/trigger-note! inst-key ["E3" "G3" "B3" "D4" "F#4"] "1m" 0.82)
+        (inst/trigger-note! inst-key ["E3" "G3" "B3" "D4" "F#4"] "1m" 0.82)
         (let [notes ["E3" "G3" "B3" "D4" "F#4"]]
           (doseq [[idx n] (map-indexed vector notes)]
             (js/setTimeout
              (fn []
-               (instruments/trigger-note! inst-key n "8n" 0.82))
+               (inst/trigger-note! inst-key n "8n" 0.82))
              (* idx 50)))))
 
       :leads
       (if poly?
-        (instruments/trigger-note! inst-key ["E4" "G4" "B4" "D5"] "2n" 0.85)
+        (inst/trigger-note! inst-key ["E4" "G4" "B4" "D5"] "2n" 0.85)
         (let [notes ["E4" "G4" "B4" "E5"]]
           (doseq [[idx n] (map-indexed vector notes)]
             (js/setTimeout
              (fn []
-               (instruments/trigger-note! inst-key n "16n" 0.9))
+               (inst/trigger-note! inst-key n "16n" 0.9))
              (* idx 40))))))))

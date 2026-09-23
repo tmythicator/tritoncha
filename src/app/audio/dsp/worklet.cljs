@@ -1,6 +1,7 @@
 (ns app.audio.dsp.worklet
   "Unified public facade for the WebAudio AudioWorklet processor and Rust WASM DSP."
   (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.instruments.catalog :as catalog]
             [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.audio.dsp.worklet.slots :as slots]
@@ -35,11 +36,6 @@
 (def osc-type->id protocol/osc-type->id)
 (def filter-type->id protocol/filter-type->id)
 (def drum-mod->id protocol/drum-mod->id)
-
-;; Score and Pattern Compilation
-(def parse-freq compiler/parse-freq)
-(def parse-midi-note compiler/parse-midi-note)
-(def parse-step-hit compiler/parse-step-hit)
 
 ;; Master Clock and Sequencer Commands
 (defn set-bpm!
@@ -146,10 +142,10 @@
         default-bus (busses/instrument-bus inst-k)]
     (if (and custom-bus
              (busses/valid-bus? custom-bus)
-             (not (busses/drum? inst-k))
+             (not (catalog/drum? inst-k))
              (not= custom-bus default-bus))
       (let [derived-k (keyword (str (name inst-k) "--" (name custom-bus)))]
-        (when-let [base (busses/find-instrument-spec inst-k)]
+        (when-let [base (catalog/find-instrument-spec inst-k)]
           (let [derived-spec (assoc base :bus custom-bus)
                 patch-id     (protocol/register-custom-patch-id! derived-k)]
             (swap! repl-registry assoc-in [:instruments derived-k] derived-spec)
@@ -240,7 +236,7 @@
   ([inst-key pitch vel] (trigger-worklet-note! inst-key pitch vel 0.0))
   ([inst-key pitch vel dur-s]
    (let [inst-id (protocol/inst-keyword->id inst-key)
-         freq    (compiler/parse-freq pitch)
+         freq    (audio-utils/note->freq pitch)
          v       (or vel 0.9)
          d       (float (or dur-s 0.0))]
      (transport/send-msg! #js {:type "noteOn"

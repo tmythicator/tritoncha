@@ -29,12 +29,11 @@
 
 (def canonical-inst-ids
   {;; Analog Drum Voices (fixed DSP algorithms in Rust)
-   :kick          0
-   :snare         1
-   :sn-roll       1
-   :hat-closed    2 :hat 2 :hh-c 2 :hh-clk 2
-   :hat-open      3 :hh-o 3
-   :click         11 :util-click 11
+   :kick          0  :fat-kick 0
+   :snare         1  :sn-roll 1 :lofi-snare 1
+   :hat-closed    2  :hat 2 :hh-c 2 :hh-clk 2
+   :hat-open      3  :hh-o 3
+   :click         11
    :clap          18
    :ride          20
    :tom           21
@@ -53,19 +52,17 @@
    :splash        71
    :china         72
    :cowbell       73
-   :fat-kick      0
-   :lofi-snare    1
 
    ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..44)
    :bass-analog   4  :bass 4
-   :bass-303      5  :acid 5 :acid-beast 5
+   :bass-303      5  :acid 5
    :sub-pure      6  :sub 6
    :pad-cinema    7  :pad 7
    :lead-pluck    8  :lead 8 :pluck 8 :arp 8
    :lead-fm       9  :fm 9
-   :bass-reese    10 :reese 10 :liquid-reese 10
+   :bass-reese    10 :reese 10
    :lead-supersaw 12 :supersaw 12
-   :lead-blade    13 :blade 13 :blade-runner 13
+   :lead-blade    13 :blade 13
    :lead-hoover   14 :hoover 14
    :lead-string   15 :karplus 15
    :lead-organ    16 :organ 16

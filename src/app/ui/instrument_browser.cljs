@@ -1,8 +1,7 @@
 (ns app.ui.instrument-browser
   "Interactive Instrument Studio and Audition Lab facade."
   (:require
-   [app.audio.dsp.busses :as busses]
-   [app.audio.dsp.instruments :as instruments]
+   [app.audio.dsp.instruments :as inst]
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.inspector :as inspector]
    [app.ui.instrument-browser.list :as list-view]
@@ -22,11 +21,11 @@
   (let [_rev        @state/patch-revision
         cat-filter  @state/active-category
         query       (str/trim (str/lower-case @state/search-query))
-        all-insts     (instruments/all-instruments)
+        all-insts     (inst/all-instruments)
         primary-insts all-insts
         cur-sel-key   @state/selected-inst
-        cur-spec      (instruments/resolve-instrument-spec cur-sel-key)
-        drum?         (busses/drum? (or cur-spec cur-sel-key))
+        cur-spec      (inst/resolve-instrument-spec cur-sel-key)
+        drum?         (inst/drum? (or cur-spec cur-sel-key))
         looping?      @audition/audition-loop-active?
         filtered      (into []
                             (filter (fn [[k spec]]

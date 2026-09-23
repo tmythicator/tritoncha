@@ -2,7 +2,7 @@
   "Multi-track live loop batch launcher and arrangement orchestrator."
   (:require [app.audio.control.looper :as looper]
             [app.audio.control.transport :as transport]
-            [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.instruments.catalog :as catalog]
             [app.state :refer [audio-state]]))
 
 (def unstack!
@@ -19,7 +19,7 @@
       [y more]
 
       ;; (stack! :idm ...)
-      (busses/drum-mode? x)
+      (catalog/drum-mode? x)
       [x (cons y more)]
 
       ;; (stack! {:mod :idm ...} ...)
@@ -60,10 +60,10 @@
         tks                   (into #{} (map first) pairs)]
     (when drum-mod
       (transport/set-drum-mode! drum-mod))
-    (when (some busses/individual-drum? tks)
+    (when (some catalog/individual-drum? tks)
       (looper/stop-loop! :drums :drum :break :kit))
-    (when (some busses/composite-drums? tks)
-      (doseq [k (filter busses/individual-drum? (keys (:active-tracks @audio-state)))]
+    (when (some catalog/composite-drums? tks)
+      (doseq [k (filter catalog/individual-drum? (keys (:active-tracks @audio-state)))]
         (looper/stop-loop! k)))
     (doseq [[k spec] pairs]
       (when (and k spec) (looper/loop! k spec)))

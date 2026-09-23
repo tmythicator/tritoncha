@@ -1,6 +1,7 @@
 (ns app.audio.dsp.busses-test
   "Unit tests for audio bus taxonomy, normalization, and routing mappings."
   (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.instruments.catalog :as catalog]
             [cljs.test :refer [deftest is testing]]))
 
 (deftest bus-normalization-test
@@ -38,62 +39,62 @@
     (is (= :bus/direct (busses/instrument-bus :click)))
     (is (= :bus/master (busses/instrument-bus :unregistered-synth-xyz)))))
 
-(deftest bus-predicates-and-spec-test
+(deftest instrument-catalog-predicates-and-spec-test
   (testing "Classifies instruments from keyword, track map, and explicit :bus in spec map"
     ;; Drums
-    (is (true? (busses/drum? :kick)))
-    (is (true? (busses/drum? :snare-wire)))
-    (is (true? (busses/drum? :hat)))
-    (is (true? (busses/drum? :hats)))
-    (is (true? (busses/drum? :cymb)))
-    (is (true? (busses/drum? :toms)))
-    (is (true? (busses/drum? :perc)))
-    (is (true? (busses/drum? :percussion)))
-    (is (true? (busses/drum? :break)))
-    (is (true? (busses/drum? {:bus :bus/drums})))
-    (is (true? (busses/drum? {:inst :kick})))
-    (is (true? (busses/drum? {:pattern "k . . ."})))
-    (is (false? (busses/drum? :bass-analog)))
-    (is (false? (busses/lead? :cymb)))
-    (is (false? (busses/lead? :hat)))
+    (is (true? (catalog/drum? :kick)))
+    (is (true? (catalog/drum? :snare-wire)))
+    (is (true? (catalog/drum? :hat)))
+    (is (true? (catalog/drum? :hats)))
+    (is (true? (catalog/drum? :cymb)))
+    (is (true? (catalog/drum? :toms)))
+    (is (true? (catalog/drum? :perc)))
+    (is (true? (catalog/drum? :percussion)))
+    (is (true? (catalog/drum? :break)))
+    (is (true? (catalog/drum? {:bus :bus/drums})))
+    (is (true? (catalog/drum? {:inst :kick})))
+    (is (true? (catalog/drum? {:pattern "k . . ."})))
+    (is (false? (catalog/drum? :bass-analog)))
+    (is (false? (catalog/lead? :cymb)))
+    (is (false? (catalog/lead? :hat)))
 
     ;; Bass + Sub
-    (is (true? (busses/bass? :bass-analog)))
-    (is (true? (busses/bass? :liquid-reese)))
-    (is (true? (busses/bass? {:bus :bus/bass})))
-    (is (true? (busses/bass? {:inst :sub-pure})))
-    (is (false? (busses/bass? :kick)))
+    (is (true? (catalog/bass? :bass-analog)))
+    (is (true? (catalog/bass? :liquid-reese)))
+    (is (true? (catalog/bass? {:bus :bus/bass})))
+    (is (true? (catalog/bass? {:inst :sub-pure})))
+    (is (false? (catalog/bass? :kick)))
 
-    (is (true? (busses/sub? :sub)))
-    (is (true? (busses/sub? :sub-pure)))
-    (is (true? (busses/sub? :sub-808)))
-    (is (false? (busses/sub? :lead)))
+    (is (true? (catalog/sub? :sub)))
+    (is (true? (catalog/sub? :sub-pure)))
+    (is (true? (catalog/sub? :sub-808)))
+    (is (false? (catalog/sub? :lead)))
 
     ;; Leads
-    (is (true? (busses/lead? :lead-pluck)))
-    (is (true? (busses/lead? :tokyo-drift)))
-    (is (true? (busses/lead? {:bus :bus/lead})))
-    (is (false? (busses/lead? :pad-cinema)))
+    (is (true? (catalog/lead? :lead-pluck)))
+    (is (true? (catalog/lead? :tokyo-drift)))
+    (is (true? (catalog/lead? {:bus :bus/lead})))
+    (is (false? (catalog/lead? :pad-cinema)))
 
-    ;; Pads & Space
-    (is (true? (busses/pad? :pad-cinema)))
-    (is (true? (busses/pad? :pad-strings)))
-    (is (true? (busses/pad? {:bus :bus/space})))
-    (is (false? (busses/pad? :kick)))
+    ;; Pads + Space
+    (is (true? (catalog/pad? :pad-cinema)))
+    (is (true? (catalog/pad? :pad-strings)))
+    (is (true? (catalog/pad? {:bus :bus/space})))
+    (is (false? (catalog/pad? :kick)))
 
     ;; Synth (non-drum)
-    (is (true? (busses/synth? :bass-analog)))
-    (is (true? (busses/synth? :lead-pluck)))
-    (is (false? (busses/synth? :kick)))
+    (is (true? (catalog/synth? :bass-analog)))
+    (is (true? (catalog/synth? :lead-pluck)))
+    (is (false? (catalog/synth? :kick)))
 
     ;; Sound Category
-    (is (= :drums (busses/sound-category :kick)))
-    (is (= :bass (busses/sound-category :bass-analog)))
-    (is (= :leads (busses/sound-category :lead-pluck)))
-    (is (= :pads (busses/sound-category :pad-cinema)))
-    (is (= :fx (busses/sound-category :fx-laser)))
-    (is (= :fx (busses/sound-category {:category :fx :bus :bus/lead})))
-    (is (= :pads (busses/sound-category {:bus :bus/space})))))
+    (is (= :drums (catalog/sound-category :kick)))
+    (is (= :bass (catalog/sound-category :bass-analog)))
+    (is (= :leads (catalog/sound-category :lead-pluck)))
+    (is (= :pads (catalog/sound-category :pad-cinema)))
+    (is (= :fx (catalog/sound-category :fx-laser)))
+    (is (= :fx (catalog/sound-category {:category :fx :bus :bus/lead})))
+    (is (= :pads (catalog/sound-category {:bus :bus/space})))))
 
 (deftest category-default-bus-test
   (testing "Resolves canonical default bus based directly on category"
@@ -112,28 +113,28 @@
 
 (deftest drum-mode-predicate-test
   (testing "Classifies valid drum character modes"
-    (is (true? (busses/drum-mode? :idm)))
-    (is (true? (busses/drum-mode? :natural)))
-    (is (true? (busses/drum-mode? :analog)))
-    (is (true? (busses/drum-mode? :industrial)))
-    (is (false? (busses/drum-mode? :bass)))
-    (is (false? (busses/drum-mode? :kick)))
-    (is (false? (busses/drum-mode? nil)))
-    (is (false? (busses/drum-mode? "idm")))))
+    (is (true? (catalog/drum-mode? :idm)))
+    (is (true? (catalog/drum-mode? :natural)))
+    (is (true? (catalog/drum-mode? :analog)))
+    (is (true? (catalog/drum-mode? :industrial)))
+    (is (false? (catalog/drum-mode? :bass)))
+    (is (false? (catalog/drum-mode? :kick)))
+    (is (false? (catalog/drum-mode? nil)))
+    (is (false? (catalog/drum-mode? "idm")))))
 
 (deftest composite-and-individual-drum-predicates-test
   (testing "Distinguishes all-in-one composite drum tracks from individual drum voices"
-    (is (true? (busses/composite-drums? :drums)))
-    (is (true? (busses/composite-drums? :drum)))
-    (is (true? (busses/composite-drums? :break)))
-    (is (true? (busses/composite-drums? :kit)))
-    (is (false? (busses/composite-drums? :kick)))
-    (is (false? (busses/composite-drums? :snare)))
+    (is (true? (catalog/composite-drums? :drums)))
+    (is (true? (catalog/composite-drums? :drum)))
+    (is (true? (catalog/composite-drums? :break)))
+    (is (true? (catalog/composite-drums? :kit)))
+    (is (false? (catalog/composite-drums? :kick)))
+    (is (false? (catalog/composite-drums? :snare)))
 
-    (is (true? (busses/individual-drum? :kick)))
-    (is (true? (busses/individual-drum? :snare)))
-    (is (true? (busses/individual-drum? :hat)))
-    (is (true? (busses/individual-drum? :tom)))
-    (is (false? (busses/individual-drum? :drums)))
-    (is (false? (busses/individual-drum? :drum)))
-    (is (false? (busses/individual-drum? :bass-analog)))))
+    (is (true? (catalog/individual-drum? :kick)))
+    (is (true? (catalog/individual-drum? :snare)))
+    (is (true? (catalog/individual-drum? :hat)))
+    (is (true? (catalog/individual-drum? :tom)))
+    (is (false? (catalog/individual-drum? :drums)))
+    (is (false? (catalog/individual-drum? :drum)))
+    (is (false? (catalog/individual-drum? :bass-analog)))))

@@ -1,9 +1,9 @@
 (ns app.audio.control.looper
   "Live looper and track scheduler driving the Rust WASM hardware sequencer."
-  (:require [app.audio.control.scheduler :as sched]
+  (:require [app.audio.control.pattern :as pattern]
+            [app.audio.control.scheduler :as sched]
             [app.audio.control.transport :as transport]
             [app.audio.control.triggers]
-            [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
             [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.worklet :as worklet]
@@ -35,8 +35,8 @@
 (defn- patch-drum-on-loop!
   "Updates drum voice synthesis patch or character mode when specified in pattern options."
   [tk inst-k pat-data]
-  (let [target-drum (cond (busses/drum? inst-k) inst-k
-                          (busses/drum? tk)     tk
+  (let [target-drum (cond (inst/drum? inst-k) inst-k
+                          (inst/drum? tk)     tk
                           :else nil)]
     (when target-drum
       (when-let [base (inst/resolve-instrument-spec target-drum)]
@@ -51,22 +51,26 @@
   [track-name pattern-map]
   (init-audio!)
   (let [tk       (keyword track-name)
-        pat-data (sched/normalize-pattern-data tk pattern-map)
-        inst-k   (:inst pat-data)]
-    (patch-drum-on-loop! tk inst-k pat-data)
-    (if-let [tr (get (:active-tracks @audio-state) tk)]
-      (let [old-pat @(:pattern tr)]
-        (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false))))
-      (let [pat-atom (r/atom (assoc pat-data :muted? false :solo? false))
-            tr-info  {:pattern pat-atom :inst-key inst-k}]
-        (swap! audio-state assoc-in [:active-tracks tk] tr-info)))
-    (sync-track-to-worklet! tk pat-data)
-    (worklet/set-playing! true)
-    (let [hw-now (if-let [ctx (worklet/get-audio-context)] (.-currentTime ctx) 0.0)]
-      (swap! audio-state (fn [st]
-                           (cond-> (assoc st :active? true)
-                             (nil? (:transport-start st)) (assoc :transport-start hw-now)))))
-    tk))
+        pat-data (sched/normalize-pattern-data tk pattern-map)]
+    (if (pattern/valid-pattern? pat-data)
+      (let [inst-k (:inst pat-data)]
+        (patch-drum-on-loop! tk inst-k pat-data)
+        (if-let [tr (get (:active-tracks @audio-state) tk)]
+          (let [old-pat @(:pattern tr)]
+            (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false))))
+          (let [pat-atom (r/atom (assoc pat-data :muted? false :solo? false))
+                tr-info  {:pattern pat-atom :inst-key inst-k}]
+            (swap! audio-state assoc-in [:active-tracks tk] tr-info)))
+        (sync-track-to-worklet! tk pat-data)
+        (worklet/set-playing! true)
+        (let [hw-now (if-let [ctx (worklet/get-audio-context)] (.-currentTime ctx) 0.0)]
+          (swap! audio-state (fn [st]
+                               (cond-> (assoc st :active? true)
+                                 (nil? (:transport-start st)) (assoc :transport-start hw-now)))))
+        tk)
+      (do
+        (println (str "Invalid track pattern for " tk ": :inst keyword and :notes vector required."))
+        nil))))
 
 (defn set-track-vel!
   "Sets the velocity or volume multiplier for an active track loop.
