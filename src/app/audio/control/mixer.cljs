@@ -1,30 +1,30 @@
 (ns app.audio.control.mixer
-  "Audio bus mixer, levels, track mutes, solo, and performance undrum/redrum."
+  "Audio bus mixer, levels, track mutes, solo, and performance drop controls."
   (:require [app.audio.dsp.busses :as busses]
             [app.audio.dsp.worklet :as worklet]
             [app.config :as cfg]
             [app.state :refer [audio-state]]))
 
+;; Default Bus Configuration
+
 (def default-bus-sends
-  {:bus/drums  {:delay 0.02 :reverb 0.06}
-   :bus/bass   {:delay 0.0  :reverb 0.0}
-   :bus/space  {:delay 0.20 :reverb 0.35}
-   :bus/lead   {:delay 0.15 :reverb 0.10}
-   :bus/direct {:delay 0.0  :reverb 0.0}})
+  "Baseline hardware FX send routing into master delay and reverb in Rust WASM."
+  cfg/default-bus-sends)
 
 (def default-bus-levels
-  {:bus/drums   0.0
-   :bus/bass    0.0
-   :bus/space   0.0
-   :bus/lead    0.0
-   :bus/direct  0.0
-   :bus/master  0.0})
+  "Default gain levels in decibels across all audio buses."
+  cfg/default-bus-levels)
 
-(defn- sync-bus-to-worklet! [b-key]
-  (let [db         (get-in @audio-state [:bus-levels b-key] (get default-bus-levels b-key 0.0))
+;; Bus Parameter Synchronization
+
+(defn- sync-bus-to-worklet!
+  "Sends gain, mute, FX send levels, and master FX bypass state of a bus into the Rust WASM engine."
+  [b-key]
+  (let [def-sends  (get cfg/default-bus-sends b-key {:delay 0.0 :reverb 0.0})
+        db         (get-in @audio-state [:bus-levels b-key] (get cfg/default-bus-levels b-key 0.0))
         muted?     (get-in @audio-state [:bus-mutes b-key] false)
-        del        (get-in @audio-state [:bus-sends b-key :delay] (get-in default-bus-sends [b-key :delay] 0.15))
-        rev        (get-in @audio-state [:bus-sends b-key :reverb] (get-in default-bus-sends [b-key :reverb] 0.20))
+        del        (get-in @audio-state [:bus-sends b-key :delay] (:delay def-sends))
+        rev        (get-in @audio-state [:bus-sends b-key :reverb] (:reverb def-sends))
         bypass-fx? (get-in @audio-state [:bus-bypass-master-fx b-key] false)]
     (if (= b-key :bus/master)
       (worklet/set-worklet-master-volume! (if muted? -60.0 db))
@@ -33,8 +33,10 @@
 (defn sync-all-busses!
   "Synchronizes all bus volumes, mutes, and sends into the Rust WASM DSP engine."
   []
-  (doseq [b-key (keys default-bus-levels)]
+  (doseq [b-key (keys cfg/default-bus-levels)]
     (sync-bus-to-worklet! b-key)))
+
+;; Bus Gain and Channel Fader Controls
 
 (defn set-volume!
   "Sets the gain volume of a specific audio bus in decibels.
@@ -47,7 +49,8 @@
        (sync-bus-to-worklet! b-key)))))
 
 (defn mute-bus!
-  "Mutes an audio bus."
+  "Mutes an audio bus.
+  Examples: (mute-bus! :bus/drums)."
   [bus-key]
   (let [b-key (busses/normalize-bus-key bus-key)]
     (when (busses/valid-bus? b-key)
@@ -55,12 +58,23 @@
       (sync-bus-to-worklet! b-key))))
 
 (defn unmute-bus!
-  "Unmutes an audio bus."
+  "Unmutes an audio bus.
+  Examples: (unmute-bus! :bus/drums)."
   [bus-key]
   (let [b-key (busses/normalize-bus-key bus-key)]
     (when (busses/valid-bus? b-key)
       (swap! audio-state assoc-in [:bus-mutes b-key] false)
       (sync-bus-to-worklet! b-key))))
+
+(defn toggle-bus!
+  "Toggles the mute state of an audio bus.
+  Examples: (toggle-bus! :bus/drums)."
+  [bus-key]
+  (let [b-key  (busses/normalize-bus-key bus-key)
+        muted? (get-in @audio-state [:bus-mutes b-key] false)]
+    (if muted?
+      (unmute-bus! b-key)
+      (mute-bus! b-key))))
 
 (defn set-bus-bypass-master-fx!
   "Configures whether an audio bus bypasses master inserts (filter and compressor) directly to output.
@@ -73,7 +87,7 @@
       (sync-bus-to-worklet! b-key))))
 
 (defn set-send!
-  "Sets the FX send amount for a bus (:delay or :reverb, 0.0 to 1.0).
+  "Sets the hardware FX send level for a bus (:delay or :reverb, 0.0 to 1.0) into the Rust WASM engine.
   Examples: (set-send! :bus/space :reverb 0.6), (set-send! :bus/drums :delay 0.2)."
   [bus-key send-type amount]
   (let [b-key (busses/normalize-bus-key bus-key)
@@ -82,14 +96,7 @@
       (swap! audio-state assoc-in [:bus-sends b-key stype] amount)
       (sync-bus-to-worklet! b-key))))
 
-(defn toggle-bus!
-  "Toggles the mute state of an audio bus."
-  [bus-key]
-  (let [b-key (busses/normalize-bus-key bus-key)
-        muted? (get-in @audio-state [:bus-mutes b-key] false)]
-    (if muted?
-      (unmute-bus! b-key)
-      (mute-bus! b-key))))
+;; Track Mute and Solo State Controls
 
 (defn- set-track-mute! [k muted?]
   (let [kw (keyword k)]
@@ -144,17 +151,21 @@
     (set-track-solo! k false))
   :unsoloed)
 
+;; Section Performance Drop and Mute Controls
+
+(def ^:private section-controllers
+  {:drums {:pred busses/drum? :bus :bus/drums :flag :drums-muted? :un :undrummed :re :redrummed}
+   :bass  {:pred busses/bass? :bus :bus/bass  :flag :bass-muted?  :un :unbassed  :re :rebassed}
+   :lead  {:pred busses/lead? :bus :bus/lead  :flag :leads-muted? :un :unleaded  :re :releaded}
+   :pad   {:pred busses/pad?  :bus :bus/space :flag :pads-muted?  :un :unpadded  :re :repadded}})
+
 (defn- track-in-category? [cat-pred k tr]
   (let [pat    (when-let [p (:pattern tr)] (if (satisfies? IDeref p) @p p))
         inst-k (or (:inst pat) (:synth pat) (:inst-key tr))]
-    (or (cat-pred k)
-        (when inst-k (cat-pred inst-k))
-        (when pat (cat-pred pat))
-        (when (= cat-pred busses/drum?)
-          (or (contains? pat :pattern)
-              (busses/drum-keyword? k)
-              (busses/drum-keyword? inst-k)
-              (= (:bus pat) :bus/drums))))))
+    (boolean
+     (or (cat-pred k)
+         (when inst-k (cat-pred inst-k))
+         (when pat (cat-pred pat))))))
 
 (defn- mute-category-tracks! [cat-pred bus-key state-flag mute?]
   (doseq [[k tr] (:active-tracks @audio-state)
@@ -163,70 +174,71 @@
   (if mute? (mute-bus! bus-key) (unmute-bus! bus-key))
   (swap! audio-state (fn [st] (-> st (assoc state-flag mute?) (update :tracks-ver (fnil inc 0))))))
 
+(defn- set-section-mute! [section mute?]
+  (let [{:keys [pred bus flag un re]} (get section-controllers section)]
+    (mute-category-tracks! pred bus flag mute?)
+    (if mute? un re)))
+
+(defn- toggle-section! [section]
+  (let [{:keys [flag]} (get section-controllers section)]
+    (set-section-mute! section (not (get @audio-state flag false)))))
+
 (defn undrum!
-  "Mutes all drum/percussion tracks, keeping bass, pads, leads and click intact."
+  "Mutes all drum and percussion tracks, keeping bass, pads, leads and click intact."
   []
-  (mute-category-tracks! busses/drum? :bus/drums :drums-muted? true)
-  :undrummed)
+  (set-section-mute! :drums true))
 
 (defn redrum!
   "Unmutes all drum tracks and restores full drum bus volume for the drop."
   []
-  (mute-category-tracks! busses/drum? :bus/drums :drums-muted? false)
-  :redrummed)
+  (set-section-mute! :drums false))
 
 (defn toggle-drums!
   "Toggles all drum tracks between muted (undrum) and active (redrum) states."
   []
-  (if (:drums-muted? @audio-state) (redrum!) (undrum!)))
+  (toggle-section! :drums))
 
 (defn unbass!
   "Mutes all bass and sub tracks, isolating groove, drums, and pads."
   []
-  (mute-category-tracks! busses/bass? :bus/bass :bass-muted? true)
-  :unbassed)
+  (set-section-mute! :bass true))
 
 (defn rebass!
   "Unmutes all bass and sub tracks, restoring low-end punch for the bass drop."
   []
-  (mute-category-tracks! busses/bass? :bus/bass :bass-muted? false)
-  :rebassed)
+  (set-section-mute! :bass false))
 
 (defn toggle-bass!
   "Toggles all bass and sub tracks between muted and active states."
   []
-  (if (:bass-muted? @audio-state) (rebass!) (unbass!)))
+  (toggle-section! :bass))
 
 (defn unlead!
   "Mutes all lead and arpeggiator tracks."
   []
-  (mute-category-tracks! busses/lead? :bus/lead :leads-muted? true)
-  :unleaded)
+  (set-section-mute! :lead true))
 
 (defn relead!
   "Unmutes all lead and arpeggiator tracks."
   []
-  (mute-category-tracks! busses/lead? :bus/lead :leads-muted? false)
-  :releaded)
+  (set-section-mute! :lead false))
 
 (defn toggle-leads!
   "Toggles all lead tracks between muted and active states."
   []
-  (if (:leads-muted? @audio-state) (relead!) (unlead!)))
+  (toggle-section! :lead))
 
 (defn unpad!
   "Mutes all pad, string, and atmospheric soundscape tracks."
   []
-  (mute-category-tracks! busses/pad? :bus/space :pads-muted? true)
-  :unpadded)
+  (set-section-mute! :pad true))
 
 (defn repad!
   "Unmutes all pad, string, and atmospheric soundscape tracks."
   []
-  (mute-category-tracks! busses/pad? :bus/space :pads-muted? false)
-  :repadded)
+  (set-section-mute! :pad false))
 
 (defn toggle-pads!
   "Toggles all pad and atmospheric tracks between muted and active states."
   []
-  (if (:pads-muted? @audio-state) (repad!) (unpad!)))
+  (toggle-section! :pad))
