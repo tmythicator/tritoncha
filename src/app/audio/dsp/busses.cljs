@@ -232,6 +232,30 @@
   (or (contains? drum-keywords (keyword k))
       (drum? k)))
 
+(def drum-modes
+  "Set of all supported drum character synthesis mode keywords."
+  #{:analog :natural :idm :industrial})
+
+(defn drum-mode?
+  "Checks if a value represents a known drum character synthesis mode.
+  Examples: (drum-mode? :idm) -> true, (drum-mode? :bass) -> false."
+  [x]
+  (and (keyword? x) (contains? drum-modes x)))
+
+(def is-drum-mode? drum-mode?)
+
+(defn composite-drums?
+  "Returns true if the track key represents an all-in-one composite drum pattern (:drums, :drum, :kit, :break).
+  Examples: (composite-drums? :drums) -> true, (composite-drums? :kick) -> false."
+  [k]
+  (and (some? k) (contains? #{:drums :drum :break :kit} (keyword k))))
+
+(defn individual-drum?
+  "Returns true if the track or key is an individual drum voice (kick, snare, hi-hat, toms, cymbals, etc.).
+  Examples: (individual-drum? :kick) -> true, (individual-drum? :drums) -> false."
+  [k]
+  (boolean (and (drum? k) (not (composite-drums? k)))))
+
 (defn bass?
   "Returns true if key or spec belongs to the :bass category.
   Examples: (bass? :bass-analog) -> true, (bass? :lead-pluck) -> false."

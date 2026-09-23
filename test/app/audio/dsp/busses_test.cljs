@@ -109,3 +109,31 @@
     (is (= :bus/bass (busses/instrument-bus :bass)))
     (is (= :bus/space (busses/instrument-bus :pads)))
     (is (= :bus/lead (busses/instrument-bus :leads)))))
+
+(deftest drum-mode-predicate-test
+  (testing "Classifies valid drum character modes"
+    (is (true? (busses/drum-mode? :idm)))
+    (is (true? (busses/drum-mode? :natural)))
+    (is (true? (busses/drum-mode? :analog)))
+    (is (true? (busses/drum-mode? :industrial)))
+    (is (false? (busses/drum-mode? :bass)))
+    (is (false? (busses/drum-mode? :kick)))
+    (is (false? (busses/drum-mode? nil)))
+    (is (false? (busses/drum-mode? "idm")))))
+
+(deftest composite-and-individual-drum-predicates-test
+  (testing "Distinguishes all-in-one composite drum tracks from individual drum voices"
+    (is (true? (busses/composite-drums? :drums)))
+    (is (true? (busses/composite-drums? :drum)))
+    (is (true? (busses/composite-drums? :break)))
+    (is (true? (busses/composite-drums? :kit)))
+    (is (false? (busses/composite-drums? :kick)))
+    (is (false? (busses/composite-drums? :snare)))
+
+    (is (true? (busses/individual-drum? :kick)))
+    (is (true? (busses/individual-drum? :snare)))
+    (is (true? (busses/individual-drum? :hat)))
+    (is (true? (busses/individual-drum? :tom)))
+    (is (false? (busses/individual-drum? :drums)))
+    (is (false? (busses/individual-drum? :drum)))
+    (is (false? (busses/individual-drum? :bass-analog)))))
