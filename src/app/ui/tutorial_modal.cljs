@@ -2,6 +2,7 @@
   "In-browser Live REPL tutorial modal."
   (:require-macros [app.macros :refer [load-tutorial-content]])
   (:require [app.eval.core :as eval-engine]
+            [app.ui.common :as common]
             [app.ui.tutorial.editor :refer [editor-component]]
             [app.ui.tutorial.output :refer [output-component]]
             [reagent.core :as r]))
@@ -21,29 +22,29 @@
     (set! (.-selectionStart el) 0)
     (set! (.-selectionEnd el) 0)))
 
-(defn tutorial-modal-component [{:keys [on-close]}]
+(defn tutorial-modal-component
+  "Render interactive tutorial and in-browser live REPL modal dialog.
+  Examples: [tutorial-modal-component {:on-close f}]."
+  [{:keys [on-close]}]
   [:div.neo-tutorial-card {:role "dialog" :aria-modal true :aria-label "Interactive Livecoding Tutorial and REPL"}
-   [:div.neo-header
-    [:div.neo-title
-     [:span.neo-prompt "> "]
-     [:span "LIVE REPL + TUTORIAL"]]
-    [:div.neo-modal-tabs
-     [:button.tab-btn {:on-click handle-reset!
-                       :title "Reset editor to tutorial masterclass"}
-      "RESET"]
-     [:button.neo-btn-close {:on-click on-close
-                             :aria-label "Close tutorial"}
-      "[X]"]]]
+   [common/modal-header
+    {:title         "LIVE REPL + TUTORIAL"
+     :on-close      on-close
+     :close-label   "Close tutorial"
+     :right-class   "neo-modal-tabs"
+     :right-content [:button.tab-btn {:on-click handle-reset!
+                                      :title    "Reset editor to tutorial masterclass"}
+                     "RESET"]}]
 
    [:div.neo-body
-    [editor-component {:content-atom   editor-content-atom
+    [editor-component {:content-atom    editor-content-atom
                        :default-content tutorial-source-code
-                       :on-eval-sexp   handle-eval!
-                       :on-eval-line   handle-eval!
-                       :on-eval-all    handle-eval!}]
+                       :on-eval-sexp    handle-eval!
+                       :on-eval-line    handle-eval!
+                       :on-eval-all     handle-eval!}]
 
     [output-component {:output-atom eval-output}]]
 
-   [:div.neo-footer
-    [:span.neo-foot-cmd "> ./tritoncha --repl [SCI In-Browser]"]
-    [:span.neo-foot-hint "[Press T to toggle modal]"]]])
+   [common/modal-footer
+    {:cmd  "> ./tritoncha --repl [SCI In-Browser]"
+     :hint "[Press T to toggle modal]"}]])

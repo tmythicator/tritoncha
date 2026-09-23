@@ -2,6 +2,7 @@
   "Interactive Instrument Studio and Audition Lab facade."
   (:require
    [app.audio.dsp.instruments :as inst]
+   [app.ui.common :as common]
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.inspector :as inspector]
    [app.ui.instrument-browser.list :as list-view]
@@ -42,14 +43,10 @@
       :aria-label "Synth Studio"}
 
      ;; Modal Header
-     [:div.neo-header
-      [:div.neo-title
-       [:span.neo-prompt "> "]
-       [:span "SYNTH STUDIO (" (count primary-insts) " SOUNDS)"]]
-      [:button.neo-btn-close
-       {:on-click   #(do (audition/stop-audition-loop!) (when on-close (on-close)))
-        :aria-label "Close synth studio"}
-       "[X]"]]
+     [common/modal-header
+      {:title       (str "SYNTH STUDIO (" (count primary-insts) " SOUNDS)")
+       :on-close    #(do (audition/stop-audition-loop!) (when on-close (on-close)))
+       :close-label "Close synth studio"}]
 
      ;; Search and Category Filters Bar
      [:div.inst-filter-bar
@@ -62,8 +59,9 @@
       [inspector/inspector-panel cur-sel-key cur-spec drum? looping?]]
 
      ;; Modal Footer
-     [:div.neo-footer.inst-footer
-      [:span.neo-foot-cmd.inst-foot-cmd
-       "> (patch! " (str cur-sel-key) " :filter {:cutoff 2400})"]
-      [:span.neo-foot-hint.inst-foot-hint
-       "[♪ NOTE / ♫ RUN / ≋ ARP / ≈ CHORD to audition in real-time]"]]]))
+     [common/modal-footer
+      {:cmd        (str "> (patch! " cur-sel-key " :filter {:cutoff 2400})")
+       :hint       "[♪ NOTE / ♫ RUN / ≋ ARP / ≈ CHORD to audition in real-time]"
+       :class      "inst-footer"
+       :cmd-class  "inst-foot-cmd"
+       :hint-class "inst-foot-hint"}]]))

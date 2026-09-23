@@ -6,7 +6,7 @@
             [app.lib.drums :refer [core-drums]]
             [app.lib.synth :refer [core-synths]]
             [app.state :refer [repl-registry]]))
-            
+
 (defn all-drums
   "Returns a merged map of core built-in drums, user custom drums, and REPL drums.
   Examples: (all-drums)."

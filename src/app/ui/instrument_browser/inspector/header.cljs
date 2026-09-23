@@ -31,7 +31,7 @@
       (cond
         drum? "ANALOG DRUM"
         (= (:type cur-spec) :poly)
-        (let [poly (or (:polyphony cur-spec) (:maxPolyphony cur-spec) (:max-polyphony cur-spec) 16)]
+        (let [poly (or (:polyphony cur-spec) 16)]
           (str "POLY (" poly "x)"))
         :else "MONOPHONIC")]]]])
 

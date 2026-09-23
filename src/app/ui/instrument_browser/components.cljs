@@ -4,51 +4,23 @@
    [app.audio.dsp.routing :as routing]
    [app.lib.routes :refer [default-graph]]
    [app.state :refer [audio-state]]
+   [app.ui.common :as common]
    [clojure.string :as str]))
 
-(defn param-slider
+(def param-slider
   "Render slider input with numeric readout.
   Examples: [param-slider {:label \"Cutoff\" :val-str \"2400 Hz\" :min 40 :max 14000 :step 50 :value 2400}]."
-  [{:keys [label val-str min max step value on-down on-change]}]
-  [:div.inst-param-slider
-   [:div.inst-slider-header
-    [:span.inst-slider-label label]
-    [:span.neo-v.v-cyan val-str]]
-   [:input {:type            "range"
-            :min             min
-            :max             max
-            :step            step
-            :value           value
-            :on-pointer-down on-down
-            :on-change       on-change}]])
+  common/param-slider)
 
-(defn pill-selector
+(def pill-selector
   "Render compact pill button selector.
   Examples: [pill-selector {:label \"WAVEFORM\" :items [:saw :pulse] :current :saw :on-select f}]."
-  [{:keys [label items current on-select]}]
-  [:div.inst-pill-selector
-   (when label
-     [:span.inst-pill-label label])
-   [:div.inst-pill-group
-    (for [item items]
-      (let [active? (= current item)]
-        ^{:key (str item)}
-        [:button.inst-pill-btn
-         {:class    (when active? "active")
-          :on-click #(on-select item)}
-         (str/upper-case (name item))]))]])
+  common/pill-selector)
 
-(defn bus-badge-class
+(def bus-badge-class
   "Return CSS class for bus badge styling.
   Examples: (bus-badge-class :bus/bass) -> \"bus-bass\"."
-  [bus-key]
-  (case bus-key
-    :bus/bass   "bus-bass"
-    :bus/space  "bus-space"
-    :bus/lead   "bus-lead"
-    :bus/drums  "bus-drums"
-    :bus/direct "bus-direct"
-    "bus-direct"))
+  common/bus-badge-class)
 
 (defn resolve-bus-chain
   "Trace audio processing sequence starting from bus-key to :out.

@@ -23,7 +23,7 @@
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :pulse-width]
                           :label "Pulse Width:" :min 0.05 :max 0.95 :step 0.02 :default 0.5 :decimals 2}]]
 
-   [:div.inst-grid-2col-bottom
+   [:div.inst-grid-2col
     [comps/pill-selector
      {:label    "VOICING MODE:"
       :items    [:mono :poly]
@@ -32,15 +32,19 @@
                    (if (= mode :poly)
                      (do
                        (state/patch-param! cur-sel-key :type :poly cur-spec)
-                       (state/patch-param! cur-sel-key :polyphony 16 cur-spec)
-                       (state/patch-param! cur-sel-key :maxPolyphony 16 cur-spec))
+                       (state/patch-param! cur-sel-key :polyphony (or (:polyphony cur-spec) 16) cur-spec))
                      (do
                        (state/patch-param! cur-sel-key :type :mono cur-spec)
-                       (state/patch-param! cur-sel-key :polyphony 1 cur-spec)
-                       (state/patch-param! cur-sel-key :maxPolyphony 1 cur-spec))))}]
+                       (state/patch-param! cur-sel-key :polyphony 1 cur-spec))))}]
 
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :glide
                           :label "Portamento Glide:" :min 0.0 :max 0.5 :step 0.005 :default 0.0 :unit "s" :decimals 3}]]
+
+   (when (= (:type cur-spec) :poly)
+     [:div.inst-grid-2col
+      [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :polyphony
+                            :label "Max Polyphony Voices:" :min 2 :max 16 :step 1 :default 16 :decimals 0}]
+      [:div]])
 
    [:div.inst-grid-2col
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :noise]

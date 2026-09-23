@@ -152,7 +152,10 @@
                   " :decay " (.toFixed (or (:decay pitch-e) 0.015) 3) "}\n")
              "")
            (if poly?
-             "   :type    :poly\n"
+             (str "   :type    :poly\n"
+                  (if-let [p (:polyphony spec)]
+                    (str "   :polyphony " p "\n")
+                    ""))
              "")
            (if (and glide (> glide 0.001))
              (str "   :glide   " (.toFixed glide 3) "\n")

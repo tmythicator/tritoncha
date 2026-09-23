@@ -116,8 +116,14 @@
    [:div.inst-grid-2col
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :cutoff
                           :label "Bandpass Cutoff (Hz):" :min 400.0 :max 3000.0 :step 50.0 :default 1200.0 :unit "Hz" :decimals 0}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :resonance
+                          :label "Filter Resonance:" :min 0.10 :max 0.95 :step 0.05 :default 0.70 :decimals 2}]]
+
+   [:div.inst-grid-2col-bottom
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :decay
-                          :label "Decay Time (s):" :min 0.08 :max 0.80 :step 0.02 :default 0.28 :unit "s" :decimals 2}]]])
+                          :label "Decay Time (s):" :min 0.08 :max 0.80 :step 0.02 :default 0.28 :unit "s" :decimals 2}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :drive
+                          :label "Saturation Drive:" :min 0.2 :max 3.0 :step 0.1 :default 1.0 :decimals 2}]]])
 
 (defn drum-inspector
   "Render drum voice parameter studio, reset controls, and mini-notation generator.
@@ -137,7 +143,7 @@
       [comps/pill-selector
        {:label    "CHARACTER MODE:"
         :items    [:analog :natural :idm :industrial]
-        :current  (or (:mod cur-spec) :natural)
+        :current  (or (:mod cur-spec) :analog)
         :on-select #(state/patch-param! cur-sel-key :mod % cur-spec)}]]
 
      (case drum-type
