@@ -51,6 +51,30 @@
   (when (number? midi-num)
     (* 440.0 (js/Math.pow 2.0 (/ (- midi-num 69.0) 12.0)))))
 
+(defn note->freq
+  "Converts a note string, keyword, MIDI number, or raw frequency to frequency in Hertz.
+  Examples: (note->freq \"A4\") -> 440.0, (note->freq 69) -> 440.0, (note->freq 880.0) -> 880.0."
+  [pitch]
+  (cond
+    (nil? pitch) 440.0
+    (and (number? pitch) (> pitch 127)) (float pitch)
+    (number? pitch) (float (midi->freq pitch))
+    :else (if-let [m (note->midi pitch)]
+            (float (midi->freq m))
+            440.0)))
+
+(defn parse-freq
+  "Parses note name, MIDI number, or raw frequency into frequency in Hertz.
+  Examples: (parse-freq \"A4\") -> 440.0, (parse-freq 69) -> 440.0, (parse-freq 880.0) -> 880.0."
+  [pitch]
+  (note->freq pitch))
+
+(defn parse-midi-note
+  "Parses note name or number into integer MIDI pitch number or -1 for rests.
+  Examples: (parse-midi-note \"C4\") -> 60, (parse-midi-note nil) -> -1."
+  [pitch]
+  (int (or (note->midi pitch) -1)))
+
 (defn format-key
   "Formats a musical key map into a clean uppercase string.
   Examples: (format-key {:root :e :mode :phrygian}) -> \"E PHRYGIAN\"."
