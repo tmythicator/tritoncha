@@ -2,7 +2,8 @@
   (:require
    ["three" :as three]
    [app.api]
-   [app.audio.control.looper :as looper :refer [toggle-click!]]
+   [app.audio.control.looper :as looper]
+   [app.audio.control.metronome :refer [toggle-click!]]
    [app.audio.control.mixer :refer [toggle-bus! toggle-drums!]]
    [app.audio.control.tracker :refer [next-jam! play-track-at! prev-jam! toggle-play!]]
    [app.audio.dsp.engine :refer [init-audio! resume-audio-context!]]

@@ -13,6 +13,21 @@
 (def default-lead-octave 2)
 (def stats-refresh-interval-ms 500)
 
+(def default-bus-levels
+  {:bus/drums   0.0
+   :bus/bass    0.0
+   :bus/space   0.0
+   :bus/lead    0.0
+   :bus/direct  0.0
+   :bus/master  0.0})
+
+(def default-bus-sends
+  {:bus/drums  {:delay 0.02 :reverb 0.06}
+   :bus/bass   {:delay 0.0  :reverb 0.0}
+   :bus/space  {:delay 0.20 :reverb 0.35}
+   :bus/lead   {:delay 0.15 :reverb 0.10}
+   :bus/direct {:delay 0.0  :reverb 0.0}})
+
 (def lookahead-desktop 0.10)
 (def lookahead-mobile  0.10)
 (def lookahead-bg      0.25)
@@ -25,6 +40,8 @@
 (def default-pulse-decay 0.06)
 (def default-scale-lerp 0.18)
 (def default-pulse-scale-factor 0.4)
+(def default-kick-pulse 0.7)
+(def default-trigger-velocity 0.85)
 
 (def default-figure-scale-factor 0.12)
 (def default-figure-lerp 0.10)

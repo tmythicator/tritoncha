@@ -1,6 +1,6 @@
 (ns app.ui.hud
   (:require
-   [app.audio.control.looper :refer [toggle-click!]]
+   [app.audio.control.metronome :refer [toggle-click!]]
    [app.audio.control.mixer :refer [mute! toggle-drums! unmute!]]
    [app.audio.control.tracker :refer [cycle-jam! toggle-play!]]
    [app.state :refer [audio-state engine-ctx ui-state]]
