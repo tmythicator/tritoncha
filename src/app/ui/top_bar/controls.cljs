@@ -11,13 +11,32 @@
 (def ^:private scale-options
   [[:phrygian          "Phrygian"]
    [:dorian            "Dorian"]
+   [:aeolian           "Aeolian"]
    [:minor             "Minor"]
-   [:harmonic-minor    "Harmonic Min"]
-   [:blues             "Blues"]
    [:major             "Major"]
    [:lydian            "Lydian"]
    [:mixolydian        "Mixolydian"]
-   [:phrygian-dominant "Phryg Dom"]])
+   [:locrian           "Locrian"]
+   [:ionian            "Ionian"]
+   [:harmonic-minor    "Harmonic Min"]
+   [:melodic-minor     "Melodic Min"]
+   [:hungarian-minor   "Hungarian Min"]
+   [:neapolitan-minor  "Neapolitan Min"]
+   [:blues             "Blues"]
+   [:major-blues       "Major Blues"]
+   [:pentatonic-minor  "Pentatonic Min"]
+   [:pentatonic-major  "Pentatonic Maj"]
+   [:hirajoshi         "Hirajoshi"]
+   [:in-sen            "In-sen"]
+   [:iwato             "Iwato"]
+   [:kumoi             "Kumoi"]
+   [:arabic            "Arabic"]
+   [:double-harmonic   "Double Harm"]
+   [:persian           "Persian"]
+   [:phrygian-dominant "Phryg Dom"]
+   [:whole-tone        "Whole Tone"]
+   [:diminished        "Diminished"]
+   [:bebop-dominant    "Bebop Dom"]])
 
 (def ^:private chromatic-keys
   ["c" "c#" "d" "d#" "e" "f" "f#" "g" "g#" "a" "a#" "b"])
@@ -119,7 +138,8 @@
   [_props]
   (let [{:keys [bpm key current-jam]} @audio-state
         root-kw   (:root key :e)
-        mode-kw   (:mode key :phrygian)
+        raw-mode  (:mode key :phrygian)
+        mode-kw   (if (= raw-mode :insen) :in-sen raw-mode)
         oct-num   (:octave key 1)
         orig-bpm  (track-orig-bpm current-jam)
         [orig-root orig-mode orig-oct] (track-orig-scale current-jam)
@@ -179,7 +199,7 @@
        :title      (str "Reset to track defaults: " orig-bpm " BPM · "
                         (str/upper-case (name orig-root)) " "
                         (str/capitalize (name orig-mode)))}
-      "↺ RESET"]]))
+      "RESET"]]))
 
 (defn controls-component
   "Render top bar master and tweaks control decks."

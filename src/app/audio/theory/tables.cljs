@@ -25,6 +25,7 @@
 
    :hirajoshi         [0 2 3 7 8]
    :insen             [0 1 5 7 10]
+   :in-sen            [0 1 5 7 10]
    :iwato             [0 1 5 6 10]
    :kumoi             [0 2 3 7 9]
    :arabic            [0 1 4 5 7 8 11]
