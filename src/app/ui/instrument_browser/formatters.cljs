@@ -7,8 +7,7 @@
     ""))
 
 (defn format-drum-spec-map
-  "Generate ClojureScript definst! map for drum voices.
-  Examples: (format-drum-spec-map :kick spec) -> \"(definst! :kick ...)\"."
+  "Generate ClojureScript definst! map for drum voices."
   [inst-key spec]
   (let [bus     (or (:bus spec) :bus/drums)
         mod-val (or (:mod spec) :natural)
@@ -96,8 +95,7 @@
            "  " (pr-str spec) ")"))))
 
 (defn format-spec-map
-  "Generate ClojureScript definst! map matching instrument definitions.
-  Examples: (format-spec-map :saw-bass spec) -> \"(definst! :saw-bass ...)\"."
+  "Generate ClojureScript definst! map matching instrument definitions."
   [inst-key spec]
   (if (= (:category spec) :drums)
     (format-drum-spec-map inst-key spec)
@@ -152,7 +150,10 @@
                   " :decay " (.toFixed (or (:decay pitch-e) 0.015) 3) "}\n")
              "")
            (if poly?
-             "   :type    :poly\n"
+             (str "   :type    :poly\n"
+                  (if-let [p (:polyphony spec)]
+                    (str "   :polyphony " p "\n")
+                    ""))
              "")
            (if (and glide (> glide 0.001))
              (str "   :glide   " (.toFixed glide 3) "\n")

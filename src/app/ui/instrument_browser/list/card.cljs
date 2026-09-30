@@ -8,8 +8,7 @@
    [clojure.string :as str]))
 
 (defn- card-origin-badges
-  "Render optional custom and session badges.
-  Examples: [card-origin-badges true false]."
+  "Render optional custom and session badges."
   [custom? session?]
   [:<>
    (when custom?
@@ -22,16 +21,14 @@
       "SESSION"])])
 
 (defn- card-routing-and-poly-badges
-  "Render bus routing tag.
-  Examples: [card-routing-and-poly-badges spec]."
+  "Render bus routing tag."
   [spec]
   [:div.inst-card-badges
    [:span.neo-bus-tag.mini {:class (comps/bus-badge-class (:bus spec))}
     (str/upper-case (str/replace (name (or (:bus spec) :direct)) #"bus/" ""))]])
 
 (defn- card-header-row
-  "Render title, origin tags, and bus badge.
-  Examples: [card-header-row :bass-analog spec selected? custom? session?]."
+  "Render title, origin tags, and bus badge."
   [inst-key spec selected? custom? session?]
   [:div.inst-card-header
    [:div.inst-card-title-group
@@ -43,8 +40,7 @@
    [card-routing-and-poly-badges spec]])
 
 (defn- card-subtitle-row
-  "Render oscillator waveform summary and quick audition trigger buttons.
-  Examples: [card-subtitle-row :lead-pluck spec :leads true]."
+  "Render oscillator waveform summary and quick audition trigger buttons."
   [inst-key spec cat poly?]
   [:div.inst-card-subtitle
    [:span.inst-subtitle-text
@@ -55,8 +51,7 @@
    [buttons/card-audition-buttons inst-key cat poly?]])
 
 (defn instrument-card
-  "Render interactive card for a single instrument in catalog list.
-  Examples: [instrument-card :bass-analog spec selected?]."
+  "Render interactive card for a single instrument in catalog list."
   [inst-key spec selected?]
   (let [cat         (audition/sound-family inst-key spec)
         poly?       (= (:type spec) :poly)

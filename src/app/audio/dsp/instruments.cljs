@@ -1,6 +1,6 @@
 (ns app.audio.dsp.instruments
-  "Instrument lifecycle, node factory, bus routing, and audio trigger dispatcher."
-  (:require [app.audio.dsp.busses :as busses]
+  "Instrument lifecycle, catalog registry, sound design, and live performance triggers."
+  (:require [app.audio.dsp.instruments.catalog :as catalog]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.custom.drums :refer [user-drums]]
@@ -10,6 +10,31 @@
             [app.state :refer [audio-state pulse! repl-registry]]
             [app.utils.audio :as audio-utils]))
 
+(def all-drums catalog/all-drums)
+(def all-synths catalog/all-synths)
+(def all-instruments catalog/all-instruments)
+(def instrument-aliases catalog/instrument-aliases)
+(def default-category-instruments catalog/default-category-instruments)
+(def sub-voices catalog/sub-voices)
+(def drum-keywords catalog/drum-keywords)
+(def drum-modes catalog/drum-modes)
+(def drum-mode? catalog/drum-mode?)
+(def composite-drums? catalog/composite-drums?)
+(def individual-drum? catalog/individual-drum?)
+(def drum? catalog/drum?)
+(def drum-keyword? catalog/drum-keyword?)
+(def bass? catalog/bass?)
+(def lead? catalog/lead?)
+(def pad? catalog/pad?)
+(def fx? catalog/fx?)
+(def sub? catalog/sub?)
+(def synth? catalog/synth?)
+(def sound-category catalog/sound-category)
+(def inst-base-type catalog/inst-base-type)
+(def resolve-target-inst catalog/resolve-target-inst)
+(def find-instrument-spec catalog/find-instrument-spec)
+(def resolve-instrument-spec catalog/find-instrument-spec)
+
 (defn register-instrument!
   "Registers or updates a dynamic user instrument preset in the REPL registry.
   Examples: (register-instrument! :supersaw {:type :mono :bus :bus/space :osc {:type :supersaw}})."
@@ -17,73 +42,12 @@
   (swap! repl-registry assoc-in [:instruments inst-key] spec)
   inst-key)
 
-(defn all-drums
-  "Returns a merged map of core built-in drums, user custom drums, and REPL drums.
-  Examples: (all-drums)."
-  []
-  (merge core-drums user-drums (:instruments @repl-registry)))
-
-(defn all-synths
-  "Returns a merged map of core built-in synthesizers, user custom synths, and REPL synths.
-  Examples: (all-synths)."
-  []
-  (merge core-synths user-synths (:instruments @repl-registry)))
-
-(defn all-instruments
-  "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments.
-  Examples: (all-instruments)."
-  []
-  (merge core-synths user-synths core-drums user-drums (:instruments @repl-registry)))
-
-(def instrument-aliases
-  {;; Generic shortcuts
-   :bass         :bass-analog
-   :sub          :sub-pure
-   :pad          :pad-cinema
-   :lead         :lead-pluck
-   :strings      :pad-strings
-   :acid         :bass-303
-   :tb303        :bass-303
-   :reese        :liquid-reese
-   :slap         :bass-slap
-   :neuro        :bass-neuro
-   :808          :sub-808
-   :choir        :pad-vocal
-   :glass        :pad-glass
-   :drone        :pad-drone
-   :pluck        :lead-pluck
-   :supersaw     :lead-supersaw
-   :fm           :lead-fm
-   :blade        :lead-blade
-   :cs80         :lead-blade
-   :hoover       :lead-hoover
-   :chiptune     :lead-8bit
-   :8bit         :lead-8bit
-   :karplus      :lead-string
-   :bell         :lead-bell
-   :laser        :fx-laser
-   :zap          :fx-zap
-   :siren        :fx-siren
-   :nbell        :lead-nbell
-   :util-click   :click})
-
-(defn find-instrument-spec
-  "Looks up an instrument specification map across REPL, custom, and core catalogs.
-  Examples: (find-instrument-spec :bass) -> {:type :mono ...}."
-  [spec]
-  (busses/find-instrument-spec spec))
-
-(def resolve-instrument-spec
-  "Resolves an instrument keyword or map, expanding canonical aliases (:bass, :sub, :pad).
-  Examples: (resolve-instrument-spec :bass) -> {:type :mono ...}."
-  find-instrument-spec)
-
 (defn sync-instrument-dsp!
   "Transmits instrument DSP configuration to Rust WASM engine without touching REPL registry.
   Examples: (sync-instrument-dsp! :kick spec)."
   [inst-name spec]
   (let [ik (keyword inst-name)]
-    (if (or (busses/drum? ik) (busses/drum? spec) (= (:category spec) :drums))
+    (if (or (catalog/drum? ik) (catalog/drum? spec) (= (:category spec) :drums))
       (let [dtype (or (:type spec) :kick)
             did   (get protocol/drum-type->id dtype 0)]
         (protocol/register-custom-drum-id! ik did)
@@ -108,7 +72,7 @@
    (patch! inst-name {param-key val}))
   ([inst-name spec-map]
    (let [ik        (keyword inst-name)
-         canonical (get instrument-aliases ik ik)
+         canonical (get catalog/instrument-aliases ik ik)
          old-spec  (resolve-instrument-spec ik)
          new-spec  (merge old-spec (if (map? spec-map) spec-map {}))]
      (definst! ik new-spec)
@@ -121,7 +85,7 @@
   Examples: (reset-instrument! :ethereal-pad), (reset-instrument! :kick)."
   [synth-name]
   (let [sk        (keyword synth-name)
-        canonical (get instrument-aliases sk sk)
+        canonical (get catalog/instrument-aliases sk sk)
         orig-spec (or (get core-synths canonical)
                       (get core-drums canonical)
                       (get user-synths canonical)
@@ -138,7 +102,7 @@
          (fn [insts]
            (into {}
                  (remove (fn [[k spec]]
-                           (let [canonical (get instrument-aliases k k)]
+                           (let [canonical (get catalog/instrument-aliases k k)]
                              (= spec (or (get core-synths k)
                                          (get core-drums k)
                                          (get user-synths k)

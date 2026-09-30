@@ -725,3 +725,24 @@ fn test_c_abi_ffi_modular_routing_and_processor_updates() {
         let _ = Box::from_raw(ptr);
     }
 }
+
+#[test]
+fn test_dsp_version_and_build_info() {
+    use tritoncha_dsp::{
+        tritoncha_dsp_version_len, tritoncha_dsp_version_ptr, TRITONCHA_DSP_BUILD_INFO,
+        TRITONCHA_DSP_VERSION,
+    };
+
+    assert_eq!(TRITONCHA_DSP_VERSION, "1.7.0");
+
+    let ptr = tritoncha_dsp_version_ptr();
+    let len = tritoncha_dsp_version_len();
+    assert_eq!(len, TRITONCHA_DSP_BUILD_INFO.len());
+    assert!(!ptr.is_null());
+
+    let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
+    let text = std::str::from_utf8(slice).expect("Must be valid UTF-8");
+    assert!(text.contains("1.7.0"));
+    assert!(text.contains("Alexandr Timchenko"));
+    assert!(text.contains("AGPL-3.0-or-later"));
+}

@@ -2,16 +2,8 @@
   "Active audio loops monitor and track card subcomponent with volume control."
   (:require [app.audio.control.looper :as looper]
             [app.audio.control.mixer :as mixer]
-            [app.audio.dsp.busses :as busses]))
-
-(defn- bus-badge-class [bus-kw]
-  (case (busses/normalize-bus-key bus-kw)
-    :bus/drums  "bus-drums"
-    :bus/bass   "bus-bass"
-    :bus/lead   "bus-lead"
-    :bus/space  "bus-space"
-    :bus/direct "bus-direct"
-    "bus-master"))
+            [app.audio.dsp.busses :as busses]
+            [app.ui.common :as common]))
 
 (defn- format-vel [vel]
   (cond
@@ -45,7 +37,7 @@
        [:span.track-sep "/"]
        [:span.track-inst (name inst)]]
       [:div.track-right
-       [:span.neo-bus-tag {:class (bus-badge-class bus)} (name bus)]
+       [common/bus-tag {:bus bus :label (name bus)}]
        [:button.neo-track-btn.btn-mute
         {:class (when muted? "active")
          :title (if muted? "Unmute loop" "Mute loop")

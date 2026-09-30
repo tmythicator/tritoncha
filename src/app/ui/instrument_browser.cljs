@@ -1,8 +1,8 @@
 (ns app.ui.instrument-browser
   "Interactive Instrument Studio and Audition Lab facade."
   (:require
-   [app.audio.dsp.busses :as busses]
-   [app.audio.dsp.instruments :as instruments]
+   [app.audio.dsp.instruments :as inst]
+   [app.ui.common :as common]
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.inspector :as inspector]
    [app.ui.instrument-browser.list :as list-view]
@@ -10,23 +10,20 @@
    [clojure.string :as str]))
 
 (defn stop-audition-loop!
-  "Halt active audition looper playback.
-  Examples: (stop-audition-loop!) -> nil."
+  "Halt active audition looper playback."
   []
   (audition/stop-audition-loop!))
 
 (defn instrument-browser-component
-  "Render interactive instrument studio modal overlay.
-  Examples: [instrument-browser-component {:on-close f}]."
+  "Render interactive instrument studio modal overlay."
   [{:keys [on-close]}]
-  (let [_rev        @state/patch-revision
-        cat-filter  @state/active-category
+  (let [cat-filter    @state/active-category
         query       (str/trim (str/lower-case @state/search-query))
-        all-insts     (instruments/all-instruments)
+        all-insts     (inst/all-instruments)
         primary-insts all-insts
         cur-sel-key   @state/selected-inst
-        cur-spec      (instruments/resolve-instrument-spec cur-sel-key)
-        drum?         (busses/drum? (or cur-spec cur-sel-key))
+        cur-spec      (inst/resolve-instrument-spec cur-sel-key)
+        drum?         (inst/drum? (or cur-spec cur-sel-key))
         looping?      @audition/audition-loop-active?
         filtered      (into []
                             (filter (fn [[k spec]]
@@ -43,14 +40,10 @@
       :aria-label "Synth Studio"}
 
      ;; Modal Header
-     [:div.neo-header
-      [:div.neo-title
-       [:span.neo-prompt "> "]
-       [:span "SYNTH STUDIO (" (count primary-insts) " SOUNDS)"]]
-      [:button.neo-btn-close
-       {:on-click   #(do (audition/stop-audition-loop!) (when on-close (on-close)))
-        :aria-label "Close synth studio"}
-       "[X]"]]
+     [common/modal-header
+      {:title       (str "SYNTH STUDIO (" (count primary-insts) " SOUNDS)")
+       :on-close    #(do (audition/stop-audition-loop!) (when on-close (on-close)))
+       :close-label "Close synth studio"}]
 
      ;; Search and Category Filters Bar
      [:div.inst-filter-bar
@@ -63,8 +56,9 @@
       [inspector/inspector-panel cur-sel-key cur-spec drum? looping?]]
 
      ;; Modal Footer
-     [:div.neo-footer.inst-footer
-      [:span.neo-foot-cmd.inst-foot-cmd
-       "> (patch! " (str cur-sel-key) " :filter {:cutoff 2400})"]
-      [:span.neo-foot-hint.inst-foot-hint
-       "[♪ NOTE / ♫ RUN / ≋ ARP / ≈ CHORD to audition in real-time]"]]]))
+     [common/modal-footer
+      {:cmd        (str "> (patch! " cur-sel-key " :filter {:cutoff 2400})")
+       :hint       "[♪ NOTE / ♫ RUN / ≋ ARP / ≈ CHORD to audition in real-time]"
+       :class      "inst-footer"
+       :cmd-class  "inst-foot-cmd"
+       :hint-class "inst-foot-hint"}]]))

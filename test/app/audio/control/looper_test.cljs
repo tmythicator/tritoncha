@@ -1,6 +1,7 @@
 (ns app.audio.control.looper-test
   "Isolated unit tests for looper data normalization, mask resolution, and step multiplier."
   (:require [app.audio.control.looper :as looper]
+            [app.audio.control.pattern :as pattern]
             [app.audio.control.scheduler :as sched]
             [app.utils.audio :as audio-utils]
             [cljs.test :refer [deftest is testing]]))
@@ -9,16 +10,21 @@
   (testing "Normalizes raw vector of notes"
     (let [pat (sched/normalize-pattern-data :lead ["C4" "E4" "G4"])]
       (is (= ["C4" "E4" "G4"] (:notes pat)))
-      (is (= ["C4" "E4" "G4"] (:hits-vec pat)))
+      (is (nil? (:hits-vec pat)))
+      (is (= :lead (:inst pat)))
       (is (= "16n" (:step pat)))
       (is (= "16n" (:dur pat)))
-      (is (= 0.9 (:vel pat)))))
+      (is (= 0.9 (:vel pat)))
+      (is (true? (pattern/valid-pattern? pat)))))
 
   (testing "Normalizes map with degrees and octave"
     (let [pat (sched/normalize-pattern-data :bass {:deg [1 3 5] :oct 1 :step "8n"})]
       (is (= [1 3 5] (:deg pat)))
+      (is (= :bass (:inst pat)))
       (is (= "8n" (:step pat)))
-      (is (= 1 (:oct pat)))))
+      (is (= 1 (:oct pat)))
+      (is (nil? (:octave pat)))
+      (is (true? (pattern/valid-pattern? pat)))))
 
   (testing "Applies mask to hits in pattern normalization"
     (let [pat (sched/normalize-pattern-data :hat {:notes [:hh-c :hh-c]
@@ -26,10 +32,11 @@
                                                   :vel [0.4 0.8]
                                                   :dur "32n"})]
       (is (= [:hh-c nil :hh-c] (:notes pat)))
-      (is (= [:hh-c nil :hh-c] (:hits-vec pat)))
-      (is (= [true false true] (:mask-vec pat)))
-      (is (= [0.4 0.8] (:vel-vec pat)))
-      (is (= "32n" (:dur pat))))))
+      (is (= :hat (:inst pat)))
+      (is (= [true false true] (:mask pat)))
+      (is (= [0.4 0.8] (:vel pat)))
+      (is (= "32n" (:dur pat)))
+      (is (true? (pattern/valid-pattern? pat))))))
 
 (deftest step->mult-test
   (testing "Converts step notation to multiplier relative to 64th notes"

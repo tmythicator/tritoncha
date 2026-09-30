@@ -1,6 +1,6 @@
 (ns app.audio.control.session
   "Session key context, scale degree resolution, and real-time modal transposition."
-  (:require [app.audio.dsp.busses :as busses]
+  (:require [app.audio.dsp.instruments.catalog :as catalog]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.theory.harmony :as harmony]
             [app.audio.theory.patterns :as patterns]
@@ -54,65 +54,48 @@
 (defn- transpose-track-melody
   "Pure helper transposing a single track pattern map by semitones."
   [pat delta-st]
-  (let [notes (or (:notes pat) (:pattern pat))]
-    (cond
-      (vector? notes)
-      (let [shifted (mapv (fn [n]
-                            (cond
-                              (nil? n) nil
-                              (= n :_) nil
-                              (string? n) (harmony/transpose n delta-st)
-                              (vector? n) (mapv #(if (or (nil? %) (= % :_)) nil (harmony/transpose % delta-st)) n)
-                              :else n))
-                          notes)]
-        (assoc pat :notes shifted :hits-vec shifted))
-
-      (string? notes)
-      (let [shifted (harmony/transpose notes delta-st)]
-        (assoc pat :notes [shifted] :hits-vec [shifted]))
-
-      :else pat)))
+  (if-let [notes (:notes pat)]
+    (assoc pat :notes (harmony/transpose notes delta-st))
+    pat))
 
 (defn- update-track-melody
   "Pure transform modulating pattern notes to new key context or applying chromatic pitch shift."
   [pat track-key delta-st {:keys [root mode oct-shift]}]
-  (let [notes (or (:notes pat) (:pattern pat))
-        degs  (patterns/extract-pattern-degs pat notes)
-        prog  (patterns/extract-pattern-prog pat notes)]
+  (let [notes     (:notes pat)
+        degs      (patterns/extract-pattern-degs pat notes)
+        prog      (patterns/extract-pattern-prog pat notes)
+        def-oct   (if (catalog/bass? track-key) cfg/default-bass-octave cfg/default-lead-octave)
+        base-oct  (patterns/extract-pattern-octave pat notes degs prog (if prog 3 def-oct))
+        track-oct (+ base-oct oct-shift)]
     (cond
       prog
-      (let [base-oct     (patterns/extract-pattern-octave pat notes degs prog 3)
-            track-oct    (+ base-oct oct-shift)
-            updated-prog (if (and (meta prog) (:progression (meta prog)))
+      (let [updated-prog (if (and (meta prog) (:progression (meta prog)))
                            (vary-meta prog assoc :octave track-oct)
                            prog)
             new-notes    (harmony/resolve-track-notes updated-prog [root mode track-oct] track-oct)]
         (assoc pat
                :notes new-notes
-               :hits-vec new-notes
                :oct track-oct
-               :octave track-oct
                :progression updated-prog))
 
       degs
-      (let [def-oct   (if (busses/bass? track-key) cfg/default-bass-octave cfg/default-lead-octave)
-            base-oct  (patterns/extract-pattern-octave pat notes degs prog def-oct)
-            track-oct (+ base-oct oct-shift)
-            new-notes (harmony/deg root mode degs {:octave track-oct})]
-        (assoc pat
-               :notes new-notes
-               :hits-vec new-notes
-               :deg degs
-               :oct track-oct
-               :octave track-oct))
+      (assoc pat
+             :notes (harmony/deg root mode degs {:octave track-oct})
+             :deg degs
+             :oct track-oct)
 
       notes
       (transpose-track-melody pat delta-st)
 
       :else pat)))
 
-(defn- worklet-sync-track! [tk pat-data]
-  (worklet/sync-track-to-worklet! tk pat-data))
+(defn- update-active-melodies!
+  "Applies an update function to all active non-drum track patterns and re-syncs them to the worklet."
+  [update-fn]
+  (doseq [[kw tr] (:active-tracks @audio-state)
+          :when (not (catalog/drum? kw))]
+    (let [updated-pat (swap! (:pattern tr) update-fn kw)]
+      (worklet/sync-track-to-worklet! kw updated-pat))))
 
 (defn transpose-all!
   "Transposes all active melodic loops by N semitones live.
@@ -120,10 +103,7 @@
   [semitones]
   (let [delta (or semitones 0)]
     (when-not (zero? delta)
-      (doseq [[kw tr] (:active-tracks @audio-state)
-              :when (not (busses/drum? kw))]
-        (let [updated-pat (swap! (:pattern tr) transpose-track-melody delta)]
-          (worklet-sync-track! kw updated-pat))))
+      (update-active-melodies! (fn [pat _] (transpose-track-melody pat delta))))
     delta))
 
 (defn modulate-all!
@@ -140,8 +120,5 @@
          delta-st   (+ (- new-midi old-midi) (* 12 oct-shift))
          key-info   {:root root :mode mode :oct-shift oct-shift}
          new-k      (set-key! root mode target-oct)]
-     (doseq [[kw tr] (:active-tracks @audio-state)
-             :when (not (busses/drum? kw))]
-       (let [updated-pat (swap! (:pattern tr) update-track-melody kw delta-st key-info)]
-         (worklet-sync-track! kw updated-pat)))
+     (update-active-melodies! (fn [pat kw] (update-track-melody pat kw delta-st key-info)))
      new-k)))

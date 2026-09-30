@@ -15,28 +15,24 @@
   (atom []))
 
 (defn worklet-ready?
-  "Returns true if the AudioWorklet WASM engine is initialized and ready.
-  Examples: (worklet-ready?) -> true."
+  "Returns true if the AudioWorklet WASM engine is initialized and ready."
   []
   (:ready? @worklet-state))
 
 (defn get-audio-context
-  "Returns the active WebAudio AudioContext instance.
-  Examples: (get-audio-context) -> #object[AudioContext]."
+  "Returns the active WebAudio AudioContext instance."
   []
   (:ctx @worklet-state))
 
 (defn on-worklet-ready!
-  "Registers a callback to execute when the AudioWorklet WASM engine reports ready.
-  Examples: (on-worklet-ready! (fn [] (println \"Ready\")))."
+  "Registers a callback to execute when the AudioWorklet WASM engine reports ready."
   [cb]
   (if (:ready? @worklet-state)
     (cb)
     (swap! ready-callbacks conj cb)))
 
 (defn on-trigger-event!
-  "Registers a callback to receive hardware sequencer trigger bitmask events.
-  Examples: (on-trigger-event! (fn [mask] ...))."
+  "Registers a callback to receive hardware sequencer trigger bitmask events."
   [cb]
   (swap! trigger-callbacks conj cb))
 
@@ -58,8 +54,8 @@
 
 (defn- notify-worklet-ready!
   "Marks worklet state as ready and invokes registered ready callbacks."
-  []
-  (swap! worklet-state assoc :ready? true)
+  [wasm-version]
+  (swap! worklet-state assoc :ready? true :wasm-version (or wasm-version config/app-version))
   (let [cbs @ready-callbacks]
     (reset! ready-callbacks [])
     (doseq [cb cbs]
@@ -86,7 +82,7 @@
               (let [t (.-type d)]
                 (cond
                   (= t "ready")
-                  (notify-worklet-ready!)
+                  (notify-worklet-ready! (.-version d))
 
                   (= t "triggers")
                   (let [mask (.-mask d)
@@ -97,6 +93,11 @@
     (swap! worklet-state assoc :node node)
     (flush-pending-messages! node)
     true))
+
+(defn get-wasm-version
+  "Returns the loaded Rust WebAssembly DSP engine build version."
+  []
+  (:wasm-version @worklet-state config/app-version))
 
 (defn- create-audio-context
   "Instantiates and stores the native WebAudio context, resuming immediately if suspended."

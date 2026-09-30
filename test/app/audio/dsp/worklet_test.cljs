@@ -1,23 +1,26 @@
 (ns app.audio.dsp.worklet-test
-  (:require [app.audio.dsp.busses :as busses :refer [drum-keywords find-instrument-spec]]
+  (:require [app.audio.dsp.busses :as busses]
+            [app.audio.dsp.instruments.catalog :refer [drum-keywords find-instrument-spec]]
             [app.audio.dsp.worklet :as worklet]
+            [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.lib.synth :as synths]
+            [app.utils.audio :as audio]
             [clojure.set :as set]
             [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest test-worklet-parse-freq
   (testing "Frequency parsing from note names and MIDI numbers"
-    (is (< (js/Math.abs (- (worklet/parse-freq "A4") 440.0)) 0.01))
-    (is (< (js/Math.abs (- (worklet/parse-freq 69) 440.0)) 0.01))
-    (is (< (js/Math.abs (- (worklet/parse-freq "C4") 261.63)) 0.1))
-    (is (= (worklet/parse-freq 880.0) 880.0))))
+    (is (< (js/Math.abs (- (audio/parse-freq "A4") 440.0)) 0.01))
+    (is (< (js/Math.abs (- (audio/parse-freq 69) 440.0)) 0.01))
+    (is (< (js/Math.abs (- (audio/parse-freq "C4") 261.63)) 0.1))
+    (is (= (audio/parse-freq 880.0) 880.0))))
 
 (deftest test-parse-step-hit-articulation
   (testing "Normal, accent (!), and ghost (_) velocities on drum hits"
-    (let [normal (worklet/parse-step-hit :snare :snare)
-          accent (worklet/parse-step-hit :snare! :snare)
-          ghost  (worklet/parse-step-hit :snare_ :snare)]
+    (let [normal (compiler/parse-step-hit :snare :snare)
+          accent (compiler/parse-step-hit :snare! :snare)
+          ghost  (compiler/parse-step-hit :snare_ :snare)]
       (is (= 1 (:inst-id normal)))
       (is (< (js/Math.abs (- (:vel normal) 0.9)) 0.01))
       (is (= 1 (:inst-id accent)))
@@ -25,16 +28,16 @@
       (is (= 1 (:inst-id ghost)))
       (is (< (js/Math.abs (- (:vel ghost) 0.35)) 0.01)))
 
-    (let [rb-accent (worklet/parse-step-hit :rb! :drums)
-          th-accent (worklet/parse-step-hit :th! :drums)
-          tm-ghost  (worklet/parse-step-hit :tm_ :drums)
-          tl-hit    (worklet/parse-step-hit :tl :drums)
-          cr16-acc  (worklet/parse-step-hit :cr16! :drums)
-          cr17-hit  (worklet/parse-step-hit :cr17 :drums)
-          cr18-hit  (worklet/parse-step-hit :cr18 :drums)
-          sp-ghost  (worklet/parse-step-hit :sp_ :drums)
-          ch-accent (worklet/parse-step-hit :ch! :drums)
-          cb-hit    (worklet/parse-step-hit :cb :drums)]
+    (let [rb-accent (compiler/parse-step-hit :rb! :drums)
+          th-accent (compiler/parse-step-hit :th! :drums)
+          tm-ghost  (compiler/parse-step-hit :tm_ :drums)
+          tl-hit    (compiler/parse-step-hit :tl :drums)
+          cr16-acc  (compiler/parse-step-hit :cr16! :drums)
+          cr17-hit  (compiler/parse-step-hit :cr17 :drums)
+          cr18-hit  (compiler/parse-step-hit :cr18 :drums)
+          sp-ghost  (compiler/parse-step-hit :sp_ :drums)
+          ch-accent (compiler/parse-step-hit :ch! :drums)
+          cb-hit    (compiler/parse-step-hit :cb :drums)]
       (is (= 64 (:inst-id rb-accent)))
       (is (< (js/Math.abs (- (:vel rb-accent) 1.15)) 0.01))
       (is (= 65 (:inst-id th-accent)))
@@ -50,11 +53,11 @@
 
 (deftest test-parse-step-hit-custom-velocity
   (testing "Custom track velocity propagates to notes, chords, and accents"
-    (let [low-note  (worklet/parse-step-hit "E3" :pad 0.28)
-          low-chord (worklet/parse-step-hit ["E3" "G3"] :pad 0.28)
-          low-bool  (worklet/parse-step-hit true :pad 0.28)
-          low-midi  (worklet/parse-step-hit 60 :pad 0.28)
-          low-ghost (worklet/parse-step-hit "E3_" :pad 0.28)]
+    (let [low-note  (compiler/parse-step-hit "E3" :pad 0.28)
+          low-chord (compiler/parse-step-hit ["E3" "G3"] :pad 0.28)
+          low-bool  (compiler/parse-step-hit true :pad 0.28)
+          low-midi  (compiler/parse-step-hit 60 :pad 0.28)
+          low-ghost (compiler/parse-step-hit "E3_" :pad 0.28)]
       (is (< (js/Math.abs (- (:vel low-note) 0.28)) 0.01))
       (is (< (js/Math.abs (- (:vel low-chord) 0.28)) 0.01))
       (is (< (js/Math.abs (- (:vel low-bool) 0.28)) 0.01))
@@ -102,7 +105,7 @@
       (is (= 20 (protocol/canonical-inst-ids :ride)))
       (is (= 21 (protocol/canonical-inst-ids :tom)))
       ;; Verify all drum keywords in the catalog resolve to valid drum IDs (or click)
-      (doseq [dk (disj drum-keywords :click :util-click)]
+      (doseq [dk (disj drum-keywords :click)]
         (when-let [id (protocol/canonical-inst-ids dk)]
           (is (contains? drum-ids id))))
       ;; Custom dynamic synth allocator must stay within the safe range 44..63

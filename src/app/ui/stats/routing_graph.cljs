@@ -1,23 +1,12 @@
 (ns app.ui.stats.routing-graph
   "Audio routing topology visualization subcomponent."
   (:require
-   [app.audio.dsp.busses :as busses]
    [app.audio.dsp.fx :as fx]
    [app.audio.dsp.routing :as routing]
    [app.lib.routes :refer [default-graph]]
    [app.state :refer [audio-state engine-ctx]]
+   [app.ui.common :as common]
    [clojure.string :as str]))
-
-(defn- bus-badge-info [bus-key]
-  (case (busses/normalize-bus-key bus-key)
-    :bus/drums  {:label "DRUMS"  :class "bus-drums"}
-    :bus/bass   {:label "BASS"   :class "bus-bass"}
-    :bus/lead   {:label "LEAD"   :class "bus-lead"}
-    :bus/space  {:label "SPACE"  :class "bus-space"}
-    :bus/direct {:label "CLICK"  :class "bus-direct"}
-    :bus/master {:label "MASTER" :class "bus-master"}
-    (let [clean (-> (name bus-key) (str/replace #"-bus$" "") str/upper-case)]
-      {:label clean :class "bus-direct"})))
 
 (defn- format-route-title [rk spec]
   (or (:title spec)
@@ -99,11 +88,10 @@
        [:span.neo-arrow " > "]])))
 
 (defn- route-row [bus-key route-entry sends processors live-ctx]
-  (let [{:keys [label class]} (bus-badge-info bus-key)
-        master?               (= bus-key :bus/master)
-        chain                 (display-nodes route-entry sends)]
+  (let [master? (= bus-key :bus/master)
+        chain   (display-nodes route-entry sends)]
     [:div.neo-route-row {:class (when master? "master-row")}
-     [:span.neo-bus-tag {:class class} label]
+     [common/bus-tag bus-key]
      [:div.neo-route-chain
       (map-indexed
        (fn [idx k]

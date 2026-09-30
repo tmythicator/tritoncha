@@ -154,7 +154,7 @@
     :category      :pads
     :type          :poly
     :bus           :bus/space
-    :maxPolyphony  16
+    :polyphony     16
     :osc           {:type :saw :sub-level 0.4 :drift 0.30 :noise 0.035}
     :filter        {:type :lowpass :cutoff 1100 :q 0.28 :drive 0.15 :env-amount 500 :key-track 0.7}
     :amp-env       {:attack 0.08 :decay 0.45 :sustain 0.75 :release 0.65}
@@ -165,7 +165,7 @@
     :category      :pads
     :type          :poly
     :bus           :bus/space
-    :maxPolyphony  16
+    :polyphony     16
     :osc           {:type :supersaw :sub-level 0.0 :drift 0.32 :noise 0.065}
     :filter        {:type :lowpass :cutoff 1900 :q 0.12 :drive 0.12 :env-amount 800 :key-track 0.85}
     :amp-env       {:attack 0.07 :decay 0.45 :sustain 0.8 :release 0.7}
@@ -176,7 +176,7 @@
     :category      :pads
     :type          :poly
     :bus           :bus/space
-    :maxPolyphony  16
+    :polyphony     16
     :osc           {:type :organ :sub-level 0.20 :noise 0.02 :drift 0.35}
     :filter        {:type :ladder :cutoff 3740 :q 0.56 :drive 0.15 :env-amount -2800 :key-track 1.7}
     :amp-env       {:attack 0.071 :decay 1.030 :sustain 0.36 :release 0.230}
@@ -189,7 +189,7 @@
     :category      :pads
     :type          :poly
     :bus           :bus/space
-    :maxPolyphony  16
+    :polyphony     16
     :osc           {:type :sine :sub-level 0.0 :drift 0.18 :noise 0.045}
     :filter        {:type :lowpass :cutoff 3200 :q 0.15 :drive 0.08 :env-amount 1200 :key-track 1.0}
     :amp-env       {:attack 0.01 :decay 0.25 :sustain 0.0 :release 0.2}
@@ -200,7 +200,7 @@
     :category      :pads
     :type          :poly
     :bus           :bus/space
-    :maxPolyphony  16
+    :polyphony     16
     :osc           {:type :saw :sub-level 0.55 :drift 0.32 :noise 0.03}
     :filter        {:type :lowpass :cutoff 750 :q 0.38 :drive 0.25 :env-amount 400 :key-track 0.6}
     :amp-env       {:attack 0.12 :decay 0.6 :sustain 0.85 :release 0.85}
@@ -211,7 +211,7 @@
     :category     :pads
     :type         :poly
     :bus          :bus/space
-    :maxPolyphony 16
+    :polyphony    16
     :osc          {:type :supersaw :sub-level 0.15 :noise 0.18 :drift 0.95}
     :filter       {:type :lowpass :cutoff 3690 :q 0.18 :drive 0.12 :env-amount 800 :key-track 0.9}
     :amp-env      {:attack 0.080 :decay 1.370 :sustain 0.52 :release 0.850}
@@ -224,7 +224,7 @@
     :category     :pads
     :type         :poly
     :bus          :bus/space
-    :maxPolyphony 8
+    :polyphony    8
     :osc          {:type :blade :drift 0.35 :noise 0.025}
     :filter       {:type :lowpass :cutoff 1700 :q 0.30 :drive 0.22 :env-amount 2200 :key-track 1.2}
     :amp-env      {:attack 0.07 :decay 0.60 :sustain 0.75 :release 1.2}
@@ -321,7 +321,7 @@
     :category     :leads
     :type         :poly
     :bus          :bus/lead
-    :maxPolyphony 8
+    :polyphony    8
     :osc          {:type :sine :sub-level 0.2 :drift 0.15}
     :filter       {:type :lowpass :cutoff 3600 :q 0.3 :drive 0.10 :env-amount 2000 :key-track 2.0}
     :amp-env      {:attack 0.002 :decay 0.3 :sustain 0.0 :release 0.2}
@@ -344,7 +344,7 @@
     :category     :leads
     :type         :poly
     :bus          :bus/lead
-    :maxPolyphony 12
+    :polyphony    12
     :glide        0.030
     :osc          {:type :tri :sub-level 0.15}
     :pitch-env    {:amount 18 :decay 0.008}

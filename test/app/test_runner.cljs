@@ -1,10 +1,15 @@
 (ns app.test-runner
   (:require
    [app.audio.control.looper-test]
+   [app.audio.control.metronome-test]
    [app.audio.control.mixer-test]
+   [app.audio.control.pattern-test]
    [app.audio.control.session-test]
+   [app.audio.control.stacker-test]
    [app.audio.control.tracker-test]
+   [app.audio.control.transport-test]
    [app.audio.dsp.busses-test]
+   [app.audio.dsp.processors-test]
    [app.audio.dsp.telemetry-test]
    [app.audio.dsp.worklet-test]
    [app.audio.theory.harmony-test]

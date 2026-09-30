@@ -4,55 +4,23 @@
    [app.audio.dsp.routing :as routing]
    [app.lib.routes :refer [default-graph]]
    [app.state :refer [audio-state]]
+   [app.ui.common :as common]
    [clojure.string :as str]))
 
-(defn param-slider
-  "Render slider input with numeric readout.
-  Examples: [param-slider {:label \"Cutoff\" :val-str \"2400 Hz\" :min 40 :max 14000 :step 50 :value 2400}]."
-  [{:keys [label val-str min max step value on-down on-change]}]
-  [:div.inst-param-slider
-   [:div.inst-slider-header
-    [:span.inst-slider-label label]
-    [:span.neo-v.v-cyan val-str]]
-   [:input {:type            "range"
-            :min             min
-            :max             max
-            :step            step
-            :value           value
-            :on-pointer-down on-down
-            :on-change       on-change}]])
+(def param-slider
+  "Render slider input with numeric readout."
+  common/param-slider)
 
-(defn pill-selector
-  "Render compact pill button selector.
-  Examples: [pill-selector {:label \"WAVEFORM\" :items [:saw :pulse] :current :saw :on-select f}]."
-  [{:keys [label items current on-select]}]
-  [:div.inst-pill-selector
-   (when label
-     [:span.inst-pill-label label])
-   [:div.inst-pill-group
-    (for [item items]
-      (let [active? (= current item)]
-        ^{:key (str item)}
-        [:button.inst-pill-btn
-         {:class    (when active? "active")
-          :on-click #(on-select item)}
-         (str/upper-case (name item))]))]])
+(def pill-selector
+  "Render compact pill button selector."
+  common/pill-selector)
 
-(defn bus-badge-class
-  "Return CSS class for bus badge styling.
-  Examples: (bus-badge-class :bus/bass) -> \"bus-bass\"."
-  [bus-key]
-  (case bus-key
-    :bus/bass   "bus-bass"
-    :bus/space  "bus-space"
-    :bus/lead   "bus-lead"
-    :bus/drums  "bus-drums"
-    :bus/direct "bus-direct"
-    "bus-direct"))
+(def bus-badge-class
+  "Return CSS class for bus badge styling."
+  common/bus-badge-class)
 
 (defn resolve-bus-chain
-  "Trace audio processing sequence starting from bus-key to :out.
-  Examples: (resolve-bus-chain :bus/space routes 10) -> [:bus/space :delay :reverb :bus/master :filter :limiter :out]."
+  "Trace audio processing sequence starting from bus-key to :out."
   [bus-key routes-spec max-depth]
   (let [normalized (routing/normalize-routes routes-spec)]
     (loop [curr    bus-key
@@ -72,8 +40,7 @@
             result))))))
 
 (defn proc-label
-  "Format processor keyword to human readable title.
-  Examples: (proc-label :filter) -> \"Filter\"."
+  "Format processor keyword to human readable title."
   [proc-key]
   (case proc-key
     :bus/master "Master"
@@ -91,8 +58,7 @@
     (-> (name proc-key) str/capitalize (str/replace #"-" " "))))
 
 (defn active-routing-spec
-  "Retrieve active routing graph specification.
-  Examples: (active-routing-spec) -> {:routes {...}}."
+  "Retrieve active routing graph specification."
   []
   (let [routings    (routing/all-routings)
         cur-route-k (:current-routing @audio-state :default)]
@@ -100,8 +66,7 @@
         default-graph)))
 
 (defn bus-fx-summary
-  "Dynamically resolve FX chain for a bus by traversing current routing graph.
-  Examples: (bus-fx-summary :bus/space) -> \"Delay + Reverb\"."
+  "Dynamically resolve FX chain for a bus by traversing current routing graph."
   [bus-key]
   (let [target-bus (or bus-key :bus/direct)]
     (if (= target-bus :bus/direct)

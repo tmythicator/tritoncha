@@ -29,12 +29,11 @@
 
 (def canonical-inst-ids
   {;; Analog Drum Voices (fixed DSP algorithms in Rust)
-   :kick          0
-   :snare         1
-   :sn-roll       1
-   :hat-closed    2 :hat 2 :hh-c 2 :hh-clk 2
-   :hat-open      3 :hh-o 3
-   :click         11 :util-click 11
+   :kick          0  :fat-kick 0
+   :snare         1  :sn-roll 1 :lofi-snare 1
+   :hat-closed    2  :hat 2 :hh-c 2 :hh-clk 2
+   :hat-open      3  :hh-o 3
+   :click         11
    :clap          18
    :ride          20
    :tom           21
@@ -53,19 +52,17 @@
    :splash        71
    :china         72
    :cowbell       73
-   :fat-kick      0
-   :lofi-snare    1
 
    ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..44)
    :bass-analog   4  :bass 4
-   :bass-303      5  :acid 5 :acid-beast 5
+   :bass-303      5  :acid 5
    :sub-pure      6  :sub 6
    :pad-cinema    7  :pad 7
    :lead-pluck    8  :lead 8 :pluck 8 :arp 8
    :lead-fm       9  :fm 9
-   :bass-reese    10 :reese 10 :liquid-reese 10
+   :bass-reese    10 :reese 10
    :lead-supersaw 12 :supersaw 12
-   :lead-blade    13 :blade 13 :blade-runner 13
+   :lead-blade    13 :blade 13
    :lead-hoover   14 :hoover 14
    :lead-string   15 :karplus 15
    :lead-organ    16 :organ 16
@@ -113,8 +110,7 @@
                 [k (get drum-type->id (:type spec) 0)]))))
 
 (defn register-custom-drum-id!
-  "Maps a custom drum keyword to its underlying Rust drum voice ID.
-  Examples: (register-custom-drum-id! :fat-kick 0)."
+  "Maps a custom drum keyword to its underlying Rust drum voice ID."
   [drum-key drum-id]
   (swap! custom-drum-ids assoc (keyword drum-key) (int drum-id)))
 
@@ -124,8 +120,7 @@
 (defn register-custom-patch-id!
   "Resolves or allocates a patch ID for an instrument.
   Built-in synths preserve their canonical patch ID.
-  Truly custom user synths are allocated from the safe range 46..63.
-  Examples: (register-custom-patch-id! :my-synth) -> 46."
+  Truly custom user synths are allocated from the safe range 46..63."
   [synth-key]
   (let [sk (keyword synth-key)]
     (if-let [cid (get canonical-inst-ids sk)]
@@ -142,8 +137,7 @@
           (or free 46))))))
 
 (defn inst-keyword->id
-  "Resolves an instrument keyword to its numeric ID for the Rust DSP engine.
-  Examples: (inst-keyword->id :kick) -> 0, (inst-keyword->id :bass-analog) -> 4."
+  "Resolves an instrument keyword to its numeric ID for the Rust DSP engine."
   ([inst-key]
    (inst-keyword->id inst-key nil))
   ([inst-key spec]
@@ -160,8 +154,7 @@
          (register-custom-patch-id! k)))))
 
 (defn bus-key->id
-  "Maps symbolic audio bus keyword to numeric index for the Rust multi-bus DSP mixer.
-  Examples: (bus-key->id :bus/drums) -> 0, (bus-key->id :bus/bass) -> 1."
+  "Maps symbolic audio bus keyword to numeric index for the Rust multi-bus DSP mixer."
   [bus-key]
   (case (keyword bus-key)
     (:bus/drums :drums) 0
@@ -173,8 +166,7 @@
     4))
 
 (defn osc-type->id
-  "Maps oscillator type keyword to numeric identifier for the Rust voice architecture.
-  Examples: (osc-type->id :saw) -> 0, (osc-type->id :pulse) -> 1."
+  "Maps oscillator type keyword to numeric identifier for the Rust voice architecture."
   [osc]
   (case (keyword osc)
     (:saw :sawtooth) 0
@@ -194,8 +186,7 @@
 
 (defn filter-type->id
   "Maps filter type keyword to numeric identifier for voice filters (SVF and 4-Pole 24dB Ladder).
-  Supported types: :lp (:lowpass), :hp (:highpass), :bp (:bandpass), :notch, :ladder (:ladder24).
-  Examples: (filter-type->id :lowpass) -> 0, (filter-type->id :ladder) -> 4."
+  Supported types: :lp (:lowpass), :hp (:highpass), :bp (:bandpass), :notch, :ladder (:ladder24)."
   [ft]
   (case (keyword ft)
     (:lp :lowpass) 0
@@ -207,8 +198,7 @@
 
 (defn drum-mod->id
   "Maps symbolic drum character mode keyword to numeric float ID for Rust WASM DSP.
-  Supported modes: :analog (0.0), :natural (1.0), :idm (2.0), :industrial (3.0).
-  Examples: (drum-mod->id :natural) -> 1.0, (drum-mod->id :analog) -> 0.0."
+  Supported modes: :analog (0.0), :natural (1.0), :idm (2.0), :industrial (3.0)."
   [m]
   (case (keyword (or m :analog))
     (:analog :classic :808 :909) 0.0

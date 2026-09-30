@@ -6,8 +6,7 @@
    [app.ui.instrument-browser.state :as state]))
 
 (defn osc-section
-  "Render oscillator waveform, sub-level, pulse width, and voicing controls.
-  Examples: [osc-section :saw-bass cur-spec]."
+  "Render oscillator waveform, sub-level, pulse width, and voicing controls."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "OSCILLATOR + VOICING (:osc)"]
@@ -23,7 +22,7 @@
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :pulse-width]
                           :label "Pulse Width:" :min 0.05 :max 0.95 :step 0.02 :default 0.5 :decimals 2}]]
 
-   [:div.inst-grid-2col-bottom
+   [:div.inst-grid-2col
     [comps/pill-selector
      {:label    "VOICING MODE:"
       :items    [:mono :poly]
@@ -32,15 +31,19 @@
                    (if (= mode :poly)
                      (do
                        (state/patch-param! cur-sel-key :type :poly cur-spec)
-                       (state/patch-param! cur-sel-key :polyphony 16 cur-spec)
-                       (state/patch-param! cur-sel-key :maxPolyphony 16 cur-spec))
+                       (state/patch-param! cur-sel-key :polyphony (or (:polyphony cur-spec) 16) cur-spec))
                      (do
                        (state/patch-param! cur-sel-key :type :mono cur-spec)
-                       (state/patch-param! cur-sel-key :polyphony 1 cur-spec)
-                       (state/patch-param! cur-sel-key :maxPolyphony 1 cur-spec))))}]
+                       (state/patch-param! cur-sel-key :polyphony 1 cur-spec))))}]
 
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :glide
                           :label "Portamento Glide:" :min 0.0 :max 0.5 :step 0.005 :default 0.0 :unit "s" :decimals 3}]]
+
+   (when (= (:type cur-spec) :poly)
+     [:div.inst-grid-2col
+      [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :polyphony
+                            :label "Max Polyphony Voices:" :min 2 :max 16 :step 1 :default 16 :decimals 0}]
+      [:div]])
 
    [:div.inst-grid-2col
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key [:osc :noise]
@@ -49,8 +52,7 @@
                           :label "VCO Analog Drift:" :min 0.0 :max 1.0 :step 0.05 :default 0.0 :pct? true}]]])
 
 (defn filter-section
-  "Render filter topology, cutoff, resonance, env amount, and key tracking controls.
-  Examples: [filter-section :saw-bass cur-spec]."
+  "Render filter topology, cutoff, resonance, env amount, and key tracking controls."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "FILTER (:filter)"]
@@ -78,8 +80,7 @@
     [:div]]])
 
 (defn pitch-snap-section
-  "Render physical pitch transient attack envelope controls.
-  Examples: [pitch-snap-section :saw-bass cur-spec]."
+  "Render physical pitch transient attack envelope controls."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "PITCH TRANSIENT SNAP (:pitch-env)"]
@@ -90,8 +91,7 @@
                           :label "Snap Decay:" :min 0.005 :max 0.100 :step 0.005 :default 0.015 :unit "s" :decimals 3}]]])
 
 (defn amp-section
-  "Render 4-column amplifier ADSR envelope controls.
-  Examples: [amp-section :saw-bass cur-spec]."
+  "Render 4-column amplifier ADSR envelope controls."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "AMPLIFIER ENVELOPE (:amp-env)"]
@@ -106,8 +106,7 @@
                           :label "Release:" :min 0.01 :max 4.0 :step 0.02 :default 0.4 :unit "s" :decimals 2}]]])
 
 (defn mod-section
-  "Render filter modulation envelope controls.
-  Examples: [mod-section :saw-bass cur-spec]."
+  "Render filter modulation envelope controls."
   [cur-sel-key cur-spec]
   (let [default-atk (or (get-in cur-spec [:amp-env :attack]) 0.01)
         default-dec (or (get-in cur-spec [:amp-env :decay]) 0.25)]
@@ -120,8 +119,7 @@
                             :label "Mod Decay:" :min 0.01 :max 3.0 :step 0.02 :default default-dec :unit "s" :decimals 2}]]]))
 
 (defn synth-inspector
-  "Render complete modular sound design suite for synth voices.
-  Examples: [synth-inspector :saw-bass cur-spec]."
+  "Render complete modular sound design suite for synth voices."
   [cur-sel-key cur-spec]
   [:div.inst-section
    [:div.inst-spec-header

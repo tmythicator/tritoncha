@@ -7,8 +7,7 @@
    [clojure.string :as str]))
 
 (defn inspector-header
-  "Render inspector header with title, badges and FX routing summary.
-  Examples: [inspector-header :saw-bass spec drum?]."
+  "Render inspector header with title, badges and FX routing summary."
   [cur-sel-key cur-spec drum?]
   [:div.inst-inspector-header
    [:div.inst-inspector-title-row
@@ -31,13 +30,12 @@
       (cond
         drum? "ANALOG DRUM"
         (= (:type cur-spec) :poly)
-        (let [poly (or (:polyphony cur-spec) (:maxPolyphony cur-spec) (:max-polyphony cur-spec) 16)]
+        (let [poly (or (:polyphony cur-spec) 16)]
           (str "POLY (" poly "x)"))
         :else "MONOPHONIC")]]]])
 
 (defn audition-bar
-  "Render quick test trigger buttons and continuous audition loop toggle.
-  Examples: [audition-bar :saw-bass cur-spec drum? looping?]."
+  "Render quick test trigger buttons and continuous audition loop toggle."
   [cur-sel-key cur-spec drum? looping?]
   (let [cat (audition/sound-family cur-sel-key cur-spec)
         fx? (= cat :fx)]

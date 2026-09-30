@@ -78,24 +78,21 @@
       (three/Mesh. geom mat))))
 
 (defn- dispose-geom-mat!
-  "Disposes geometry and material attached to a Three.js mesh safely.
-  Examples: (dispose-geom-mat! mesh)."
+  "Disposes geometry and material attached to a Three.js mesh safely."
   [^js m]
   (when m
     (when-let [g (.-geometry m)] (.dispose ^js g))
     (when-let [mat (.-material m)] (.dispose ^js mat))))
 
 (defn- dispose-mesh-entry!
-  "Disposes Three.js mesh geometry and material safely and removes mesh from scene.
-  Examples: (dispose-mesh-entry! scene mesh)."
+  "Disposes Three.js mesh geometry and material safely and removes mesh from scene."
   [^js scene ^js m]
   (when m
     (when scene (.remove scene m))
     (dispose-geom-mat! m)))
 
 (defn- parse-color-pair
-  "Extracts mesh and wire hex colors from a string, map or default fallback.
-  Examples: (parse-color-pair \"#ff0000\") -> [\"#ff0000\" \"#00ffff\"]."
+  "Extracts mesh and wire hex colors from a string, map or default fallback."
   [colors]
   (let [def-mesh (:mesh cfg/default-scene-colors)
         def-wire (:wire cfg/default-scene-colors)]
@@ -106,8 +103,7 @@
       :else            [def-mesh def-wire])))
 
 (defn- parse-rot-speed
-  "Normalizes rotation speed specification into a 3-element vector [rx ry rz].
-  Examples: (parse-rot-speed 0.01) -> [0.015 0.02 0.0]."
+  "Normalizes rotation speed specification into a 3-element vector [rx ry rz]."
   [speed-spec]
   (cond
     (vector? speed-spec) (coll/vec3 speed-spec 0.0)

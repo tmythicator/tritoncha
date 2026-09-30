@@ -38,6 +38,27 @@
         escaped (map #(str/replace % #"([.*+?^${}()|\[\]/\\])" "\\\\$1") aliases)]
     (re-pattern (str "(?:" (str/join "|" escaped) "|[a-zA-Z0-9.-])[!_]?"))))
 
+(def ^:private accent-scale 1.28)
+(def ^:private ghost-scale  0.39)
+
+(defn extract-articulation
+  "Splits a string or keyword into [clean-token vel].
+  Supports '!' suffix for accents and '_' suffix for ghost notes.
+  Examples: (extract-articulation :snare!) -> [\"snare\" 1.15]."
+  ([token] (extract-articulation token 0.9))
+  ([token default-vel]
+   (let [s        (if (keyword? token) (name token) (str token))
+         base-vel (float (or default-vel 0.9))]
+     (cond
+       (str/ends-with? s "!")
+       [(subs s 0 (dec (count s))) (min 1.25 (* base-vel accent-scale))]
+
+       (and (> (count s) 1) (str/ends-with? s "_"))
+       [(subs s 0 (dec (count s))) (* base-vel ghost-scale)]
+
+       :else
+       [s base-vel]))))
+
 (defn- token-with-suffix? [tok]
   (let [clean (cond
                 (str/ends-with? tok "!")

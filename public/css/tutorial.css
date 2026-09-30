@@ -4,15 +4,15 @@
     right: var(--tutorial-card-right);
     left: auto;
     width: var(--modal-tutorial-width);
-    max-width: calc(100vw - 20px);
+    max-width: calc(100vw - 16px);
     gap: var(--space-md);
 
-    @media (max-width: 768px) {
-        left: var(--space-xs);
-        right: var(--space-xs);
+    @media (max-width: 640px) {
+        left: var(--space-md);
+        right: var(--space-md);
         width: auto;
-        padding: var(--space-sm) var(--space-md);
-        gap: var(--space-xs);
+        max-width: none;
+        gap: var(--space-sm);
     }
 }
 

@@ -36,42 +36,40 @@
   []
   (let [^js ctx       (worklet/get-audio-context)
         sample-rate   (when ctx (.-sampleRate ctx))
-        base-lat      (when (and ctx (number? (.-baseLatency ctx))) (sec->ms (.-baseLatency ctx)))
-        out-lat       (when (and ctx (number? (.-outputLatency ctx))) (sec->ms (.-outputLatency ctx)))
+        raw-base-lat  (when (and ctx (number? (.-baseLatency ctx)) (pos? (.-baseLatency ctx)))
+                        (sec->ms (.-baseLatency ctx)))
+        out-lat       (when (and ctx (number? (.-outputLatency ctx)) (pos? (.-outputLatency ctx)))
+                        (sec->ms (.-outputLatency ctx)))
         ctx-state     (if ctx (.-state ctx) "uninitialized")
         bpm-val       (:bpm @audio-state cfg/default-bpm)
         bpm-str       (if (number? bpm-val) (.toFixed bpm-val 0) (str bpm-val))
         active?       (:active? @audio-state false)
         transport-st  (if active? "running" "stopped")
-        hw-now        (if ctx (.-currentTime ctx) 0.0)
-        sys-now       (if (exists? js/performance) (ms->sec (.now js/performance)) 0.0)
-        pos           (calculate-transport-position active? bpm-val hw-now (:transport-start @audio-state))
-
-        ;; Dedicated WebAudio AudioWorklet block latency: 128 samples (< 2.7 ms at 48 kHz)
-        block-lat-ms  (* 1000.0 (/ 128.0 (or sample-rate 48000.0)))
-        lookahead-ms  block-lat-ms
+        hw-now        (when ctx (.-currentTime ctx))
+        sys-now       (when (exists? js/performance) (ms->sec (.now js/performance)))
+        pos           (calculate-transport-position active? bpm-val (or hw-now 0.0) (:transport-start @audio-state))
 
         drift-str     (if-let [{:keys [t-hw-start t-sys-start]} (:clock-origin @audio-metrics)]
-                        (if (pos? hw-now)
+                        (if (and hw-now (pos? hw-now) sys-now)
                           (let [elapsed-hw   (- hw-now t-hw-start)
                                 elapsed-sys  (- sys-now t-sys-start)
                                 drift-ms     (sec->ms (- elapsed-hw elapsed-sys))]
                             (str (if (pos? drift-ms) "+" "") (.toFixed drift-ms 3) " ms"))
-                          "0.000 ms")
-                        (do
-                          (when (pos? hw-now)
-                            (swap! audio-metrics assoc :clock-origin {:t-hw-start hw-now :t-sys-start sys-now}))
-                          "0.000 ms (calibrated)"))
+                          "N/A")
+                        (if (and hw-now (pos? hw-now) sys-now)
+                          (do
+                            (swap! audio-metrics assoc :clock-origin {:t-hw-start hw-now :t-sys-start sys-now})
+                            "0.000 ms")
+                          "N/A"))
 
-        min-headroom  (or (:min-headroom-ms @audio-metrics) lookahead-ms)
         xruns         (:xrun-count @audio-metrics 0)]
-    {:engine          "Rust WASM (AudioWorklet)"
+    {:version         cfg/app-version
+     :engine          (str "Rust WASM (AudioWorklet) v" cfg/app-version)
      :block-size      128
      :ctx-state       ctx-state
      :sample-rate     sample-rate
-     :base-latency    base-lat
+     :base-latency    raw-base-lat
      :output-latency  out-lat
-     :lookahead       lookahead-ms
      :latency-hint    "interactive"
      :bpm             bpm-val
      :bpm-str         bpm-str
@@ -79,11 +77,10 @@
      :transport-state transport-st
      :hardware-clock  hw-now
      :clock-drift     drift-str
-     :headroom-ms     lookahead-ms
-     :min-headroom-ms min-headroom
+     :min-headroom-ms (:min-headroom-ms @audio-metrics)
      :xrun-count      xruns
-     :reverb-mode     (str/upper-case (name (or (:reverb-mode @audio-state) :fdn)))
-     :drive-mode      (str/upper-case (name (or (:drive-mode @audio-state) :adaa)))
+     :reverb-mode     (some-> (:reverb-mode @audio-state) name str/upper-case)
+     :drive-mode      (some-> (:drive-mode @audio-state) name str/upper-case)
      :active-tracks   (format-active-loops-summary (:active-tracks @audio-state))}))
 
 (defn reset-telemetry-metrics!
@@ -99,12 +96,12 @@
   "Prints WebAudio hardware telemetry, clock drift, and active loop status to console."
   []
   (let [snap (telemetry-snapshot)]
-    (println "--- WebAudio Engine Diagnostics ---")
+    (println (str "--- WebAudio Engine Diagnostics (v" (:version snap) ") ---"))
     (println (str "Engine:         " (:engine snap)))
-    (println (str "DSP Modes:      Reverb: " (:reverb-mode snap) " | Drive: " (:drive-mode snap)))
+    (println (str "DSP Modes:      Reverb: " (or (:reverb-mode snap) "N/A") " | Drive: " (or (:drive-mode snap) "N/A")))
     (println (str "Context:        " (:ctx-state snap)))
     (println (str "Sample Rate:    " (if-let [sr (:sample-rate snap)] (str sr " Hz") "N/A")))
-    (println (str "Hardware Clock: " (.toFixed (:hardware-clock snap) 4) " s"))
+    (println (str "Hardware Clock: " (if-let [hc (:hardware-clock snap)] (str (.toFixed hc 4) " s") "N/A")))
     (println (str "Clock Drift:    " (:clock-drift snap)))
     (println (str "Base Latency:   " (if-let [bl (:base-latency snap)] (str (.toFixed bl 2) " ms") "unavailable")))
     (println (str "X-Runs (Drops): " (:xrun-count snap)))

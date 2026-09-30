@@ -1,16 +1,21 @@
 (ns app.api
   "Unified public live-coding API, shortcuts, and orchestrator facade."
   (:require [app.audio.control.looper :as looper]
+            [app.audio.control.metronome :as metronome]
             [app.audio.control.mixer :as mixer]
             [app.audio.control.session :as session]
+            [app.audio.control.stacker :as stacker]
             [app.audio.control.tracker :as tracker]
+            [app.audio.control.transport :as transport]
             [app.audio.dsp.busses :as busses]
             [app.audio.dsp.fx :as fx]
             [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.routing :as routing]
             [app.audio.dsp.telemetry :as telemetry]
+            [app.audio.dsp.worklet.transport :as worklet-transport]
             [app.audio.theory.harmony :as harmony]
             [app.audio.theory.patterns :as patterns]
+            [app.config :as config]
             [app.state :as state]
             [app.utils.coll :as coll]
             [app.visuals.engine :as visuals]))
@@ -30,22 +35,25 @@
 (def prev-jam tracker/prev-jam!)
 (def prevjam tracker/prev-jam!)
 (def jam-list tracker/jam-list)
-(def stop! looper/stop!)
-(def b! looper/set-bpm!)
-(def set-bpm! looper/set-bpm!)
-(def click! looper/click!)
-(def toggle-click! looper/toggle-click!)
-(def set-click! looper/set-click!)
+(def stop! transport/stop!)
+(def b! transport/set-bpm!)
+(def set-bpm! transport/set-bpm!)
+(def click! metronome/click!)
+(def toggle-click! metronome/toggle-click!)
+(def set-click! metronome/set-click!)
 
 ;; Looper, Scheduler + Multi-Track Stacking
 (def loop! looper/loop!)
 (def l! looper/loop!)
 (def stop-loop! looper/stop-loop!)
-(def clear-loops! looper/clear-loops!)
-(def stack! looper/stack!)
-(def unstack! looper/unstack!)
-(def set-drum-mode! looper/set-drum-mode!)
-(def mod! looper/mod!)
+(def clear-loops! transport/clear-loops!)
+(def stack! stacker/stack!)
+(def unstack! stacker/unstack!)
+(def set-drum-mode! transport/set-drum-mode!)
+(def mod! transport/mod!)
+(def drum-mode? inst/drum-mode?)
+(def composite-drums? inst/composite-drums?)
+(def individual-drum? inst/individual-drum?)
 (def set-track-vel! looper/set-track-vel!)
 (def vel! looper/set-track-vel!)
 
@@ -109,14 +117,14 @@
 (def toggle-pads! mixer/toggle-pads!)
 
 ;; Sound Classification and Bus Introspection Helpers
-(def drum? busses/drum?)
-(def bass? busses/bass?)
-(def sub? busses/sub?)
-(def lead? busses/lead?)
-(def pad? busses/pad?)
-(def fx? busses/fx?)
-(def synth? busses/synth?)
-(def sound-category busses/sound-category)
+(def drum? inst/drum?)
+(def bass? inst/bass?)
+(def sub? inst/sub?)
+(def lead? inst/lead?)
+(def pad? inst/pad?)
+(def fx? inst/fx?)
+(def synth? inst/synth?)
+(def sound-category inst/sound-category)
 (def category-bus busses/category-default-bus)
 (def bus busses/instrument-bus)
 
@@ -219,3 +227,17 @@
 (defn instruments! [] (swap! state/ui-state update :instrument-browser-open? not))
 (def inst! instruments!)
 (defn jams! [] (swap! state/ui-state update :track-browser-open? not))
+
+;; System Build and Version Diagnostics
+(def app-version config/app-version)
+
+(defn version
+  "Returns runtime build version info for ClojureScript and Rust WASM DSP engine."
+  []
+  {:app-version  config/app-version
+   :wasm-version (worklet-transport/get-wasm-version)
+   :author       "Alexandr Timchenko"})
+
+(def ver version)
+(def info version)
+

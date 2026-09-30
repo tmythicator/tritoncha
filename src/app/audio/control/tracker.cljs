@@ -2,9 +2,8 @@
   "Track presets registry, playback orchestrator, and instrument preview demos."
   (:require [app.audio.control.looper :refer [loop! set-bpm! set-drum-mode! stop! stop-loop!]]
             [app.audio.control.session :as session]
-            [app.audio.dsp.busses :as busses]
             [app.audio.dsp.engine :refer [init-audio!]]
-            [app.audio.dsp.instruments :refer [reload-instruments!]]
+            [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.routing :as routing]
             [app.audio.theory.harmony :as harmony :refer [chord]]
             [app.audio.theory.patterns :refer [pattern]]
@@ -55,7 +54,7 @@
 (defn- resolve-track-scale-notes
   "Resolves deferred scale degrees or raw degree vectors against preset track scale."
   [track-opts scale]
-  (let [orig-notes (:notes track-opts)
+  (let [orig-notes (or (:notes track-opts) (:pattern track-opts) (:pat track-opts) (:hits track-opts))
         resolved   (harmony/resolve-track-notes orig-notes scale (or (:oct track-opts) (:octave track-opts)))]
     (cond-> (assoc track-opts :notes resolved)
       (or (:progression (meta resolved))
@@ -162,7 +161,7 @@
 (defn refresh!
   "Refreshes both custom sound design synth nodes and current track playback."
   []
-  (reload-instruments!)
+  (inst/reload-instruments!)
   (reload-track!)
   :ok)
 
@@ -173,10 +172,10 @@
   (let [kw   (keyword inst-key)
         root (:root (session/current-key) :e)]
     (cond
-      (busses/drum? kw)
+      (inst/drum? kw)
       (loop! :demo {:inst kw :notes (pattern "k . . .  k . . .  . . k .  . . . .") :step cfg/default-step})
 
-      (busses/pad? kw)
+      (inst/pad? kw)
       (loop! :demo {:inst kw :notes [(chord root :min9 3) (chord root :maj7 3)] :step "1m" :dur "1m" :vel 0.4})
 
       :else
