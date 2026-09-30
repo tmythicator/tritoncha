@@ -6,10 +6,10 @@
 
 .track-browser-list {
     overflow-y: auto;
-    padding: var(--space-sm);
+    padding: var(--space-xs);
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     max-height: calc(85vh - 90px);
     scrollbar-width: thin;
     scrollbar-color: var(--border-primary-subtle) transparent;
@@ -34,12 +34,14 @@
 
 .track-browser-item {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-md) var(--space-lg);
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
     background: var(--bg-surface-subtle);
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
     flex-shrink: 0;
@@ -47,55 +49,151 @@
     &:hover {
         border-color: var(--border-primary-subtle);
         background: var(--bg-interactive-hover);
+
+        .track-item-title {
+            color: var(--text-primary);
+        }
     }
 
     &.active {
         background: var(--bg-primary-tint);
         border-color: var(--color-primary);
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+
+        .track-item-title {
+            color: var(--color-primary);
+            font-weight: 700;
+        }
+
+        .track-item-num {
+            color: var(--color-primary);
+        }
+
+        .track-item-meta {
+            color: var(--text-secondary);
+        }
+    }
+
+    @media (min-width: 641px) {
+        padding: var(--space-xs) var(--space-md);
+        gap: var(--space-md);
     }
 }
 
-.track-item-left {
+.track-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+
+    @media (min-width: 641px) {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-md);
+    }
+}
+
+.track-item-title-row {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--space-xs);
+    min-width: 0;
+
+    @media (min-width: 641px) {
+        min-width: 170px;
+        flex-shrink: 0;
+    }
 }
 
 .track-item-num {
     color: var(--color-primary);
     font-weight: 700;
     font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    opacity: 0.85;
 }
 
 .track-item-title {
     color: var(--text-secondary);
-    font-size: var(--font-size-lg);
-    font-weight: 500;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--transition-fast);
 
     &.active {
-        color: var(--text-primary);
+        color: var(--color-primary);
         font-weight: 700;
     }
 }
 
-.track-item-right {
+.track-item-meta {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (min-width: 641px) {
+        font-size: var(--font-size-xs);
+        gap: 8px;
+        margin-left: auto;
+    }
+}
+
+.track-meta-bpm {
+    color: var(--text-brand);
+    font-weight: 600;
+}
+
+.track-meta-dot {
+    color: var(--border-subtle);
+    user-select: none;
+    font-weight: 700;
+}
+
+.track-meta-scale {
+    color: var(--text-secondary);
+}
+
+.track-meta-geom {
+    color: var(--text-muted);
 }
 
 .track-item-btn {
-    padding: var(--space-2xs) var(--space-md);
-    font-size: var(--font-size-base);
+    padding: var(--space-3xs) var(--space-xs);
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: var(--radius-xs, 2px);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 68px;
+    text-align: center;
 
     &.active {
         background: var(--color-primary);
         color: var(--text-inverse);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
     }
 }
 
 .track-browser-footer {
     display: flex;
     justify-content: space-between;
-    padding: var(--space-sm) var(--space-lg);
+    align-items: center;
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--font-size-2xs);
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-muted);
 }

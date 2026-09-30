@@ -1,7 +1,6 @@
 (ns app.ui.track-browser.item
   "Track card item row subcomponent for preset catalog list."
   (:require
-   [app.ui.common :as common]
    [app.ui.track-browser.formatters :as fmt]
    [clojure.string :as str]))
 
@@ -17,17 +16,19 @@
   (let [{:keys [id name bpm scale geom]} item
         num-str   (track-index-str idx)
         scale-str (fmt/format-scale scale)
-        geom-str  (str/upper-case (clojure.core/name (or geom :torus)))]
+        geom-str  (clojure.core/name (or geom :torus))]
     [:div.track-browser-item
      {:class    (when active? "active")
       :on-click #(on-select id)}
-     [:div.track-item-left
-      [:span.track-item-num num-str]
-      [:span.track-item-title {:class (when active? "active")} name]]
-
-     [:div.track-item-right
-      [common/badge (str bpm " BPM")]
-      [common/badge scale-str]
-      [common/badge geom-str]
-      [:button.neo-btn-stats.track-item-btn {:class (when active? "active")}
-       (if active? "PLAYING" "LOAD ▶")]]]))
+     [:div.track-item-info
+      [:div.track-item-title-row
+       [:span.track-item-num num-str]
+       [:span.track-item-title {:class (when active? "active")} name]]
+      [:div.track-item-meta
+       [:span.track-meta-bpm (str bpm " BPM")]
+       [:span.track-meta-dot "·"]
+       [:span.track-meta-scale scale-str]
+       [:span.track-meta-dot "·"]
+       [:span.track-meta-geom (str/capitalize geom-str)]]]
+     [:button.neo-btn-stats.track-item-btn {:class (when active? "active")}
+      (if active? "PLAYING" "LOAD ▶")]]))
