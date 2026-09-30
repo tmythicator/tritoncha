@@ -63,7 +63,8 @@
                           "N/A"))
 
         xruns         (:xrun-count @audio-metrics 0)]
-    {:engine          "Rust WASM (AudioWorklet)"
+    {:version         cfg/app-version
+     :engine          (str "Rust WASM (AudioWorklet) v" cfg/app-version)
      :block-size      128
      :ctx-state       ctx-state
      :sample-rate     sample-rate
@@ -95,7 +96,7 @@
   "Prints WebAudio hardware telemetry, clock drift, and active loop status to console."
   []
   (let [snap (telemetry-snapshot)]
-    (println "--- WebAudio Engine Diagnostics ---")
+    (println (str "--- WebAudio Engine Diagnostics (v" (:version snap) ") ---"))
     (println (str "Engine:         " (:engine snap)))
     (println (str "DSP Modes:      Reverb: " (or (:reverb-mode snap) "N/A") " | Drive: " (or (:drive-mode snap) "N/A")))
     (println (str "Context:        " (:ctx-state snap)))

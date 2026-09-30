@@ -45,5 +45,5 @@
             [routing-graph-component]
             [active-loops-component tracks-map]]
            [common/modal-footer
-            {:cmd  "> ./tritoncha --stats"
+            {:cmd  (str "> ./tritoncha --stats v" cfg/app-version)
              :hint "[Press I or click [X] to close]"}]]))})))

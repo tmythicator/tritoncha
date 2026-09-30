@@ -9,6 +9,7 @@
    [app.audio.dsp.engine :refer [init-audio! resume-audio-context!]]
    [app.audio.dsp.fx :refer [trigger-sub-drop!]]
    [app.audio.dsp.instruments]
+   [app.config :as config]
    [app.custom.drums]
    [app.custom.routes]
    [app.custom.scenes]
@@ -83,16 +84,20 @@
     (.addEventListener js/window "resize" resize-viewport!)))
 
 (defn ^:export init! []
-  (js/console.log "Initializing Tritoncha Live Studio...")
+  (when (exists? js/window)
+    (set! (.-__TRITONCHA_VERSION__ js/window) config/app-version))
+  (js/console.log (str "Initializing Tritoncha Live Studio v" config/app-version "..."))
   (render-ui!)
   (init-three!)
   (render-loop!)
   (bind-events!)
   (init-audio!)
-  (js/console.log "Audio + WebGL Engines Ready. Connect REPL or evaluate live in app.live.jam."))
+  (js/console.log (str "Tritoncha v" config/app-version " Audio + WebGL Engines Ready. Connect REPL or evaluate live.")))
 
 (defn ^:dev/after-load ^:export reload! []
-  (js/console.log "Hot Reloading ClojureScript app.core...")
+  (when (exists? js/window)
+    (set! (.-__TRITONCHA_VERSION__ js/window) config/app-version))
+  (js/console.log (str "Hot Reloading ClojureScript app.core v" config/app-version "..."))
   (render-ui!)
   (when (and (:active? @audio-state) (seq (:active-tracks @audio-state)))
     (looper/sync-all-active-tracks!))

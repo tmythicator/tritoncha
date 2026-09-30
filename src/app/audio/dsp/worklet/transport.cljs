@@ -54,8 +54,8 @@
 
 (defn- notify-worklet-ready!
   "Marks worklet state as ready and invokes registered ready callbacks."
-  []
-  (swap! worklet-state assoc :ready? true)
+  [wasm-version]
+  (swap! worklet-state assoc :ready? true :wasm-version (or wasm-version config/app-version))
   (let [cbs @ready-callbacks]
     (reset! ready-callbacks [])
     (doseq [cb cbs]
@@ -82,7 +82,7 @@
               (let [t (.-type d)]
                 (cond
                   (= t "ready")
-                  (notify-worklet-ready!)
+                  (notify-worklet-ready! (.-version d))
 
                   (= t "triggers")
                   (let [mask (.-mask d)
@@ -93,6 +93,11 @@
     (swap! worklet-state assoc :node node)
     (flush-pending-messages! node)
     true))
+
+(defn get-wasm-version
+  "Returns the loaded Rust WebAssembly DSP engine build version."
+  []
+  (:wasm-version @worklet-state config/app-version))
 
 (defn- create-audio-context
   "Instantiates and stores the native WebAudio context, resuming immediately if suspended."

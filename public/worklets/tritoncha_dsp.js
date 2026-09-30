@@ -44,7 +44,16 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             this.ensureMemoryViews();
 
             this.useWasm = true;
-            this.port.postMessage({ type: 'ready' });
+            let wasmVersion = '1.7.0';
+            if (this.wasmExports.tritoncha_dsp_version_ptr && this.wasmExports.tritoncha_dsp_version_len) {
+              try {
+                const ptr = this.wasmExports.tritoncha_dsp_version_ptr();
+                const len = this.wasmExports.tritoncha_dsp_version_len();
+                wasmVersion = new TextDecoder('utf-8').decode(new Uint8Array(this.wasmExports.memory.buffer, ptr, len));
+              } catch (_) {}
+            }
+            this.wasmVersion = wasmVersion;
+            this.port.postMessage({ type: 'ready', version: wasmVersion });
 
             if (this.pendingMessages.length > 0) {
               const queued = this.pendingMessages;
@@ -485,6 +494,14 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
               data.mode !== undefined ? data.mode : 1
             );
           }
+          break;
+
+        case 'getVersion':
+          this.port.postMessage({
+            type: 'version',
+            reqId: data.reqId,
+            version: this.wasmVersion || '1.7.0'
+          });
           break;
       }
   }

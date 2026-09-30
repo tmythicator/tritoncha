@@ -12,8 +12,10 @@
             [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.routing :as routing]
             [app.audio.dsp.telemetry :as telemetry]
+            [app.audio.dsp.worklet.transport :as worklet-transport]
             [app.audio.theory.harmony :as harmony]
             [app.audio.theory.patterns :as patterns]
+            [app.config :as config]
             [app.state :as state]
             [app.utils.coll :as coll]
             [app.visuals.engine :as visuals]))
@@ -225,3 +227,17 @@
 (defn instruments! [] (swap! state/ui-state update :instrument-browser-open? not))
 (def inst! instruments!)
 (defn jams! [] (swap! state/ui-state update :track-browser-open? not))
+
+;; System Build and Version Diagnostics
+(def app-version config/app-version)
+
+(defn version
+  "Returns runtime build version info for ClojureScript and Rust WASM DSP engine."
+  []
+  {:app-version  config/app-version
+   :wasm-version (worklet-transport/get-wasm-version)
+   :author       "Alexandr Timchenko"})
+
+(def ver version)
+(def info version)
+

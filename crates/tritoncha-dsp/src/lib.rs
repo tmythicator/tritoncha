@@ -754,3 +754,21 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_compressor(
         engine.update_bus_compressor(b, config);
     }
 }
+
+// Engine Version and Build Metadata
+
+pub const TRITONCHA_DSP_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const TRITONCHA_DSP_BUILD_INFO: &str =
+    "tritoncha-dsp 1.7.0 (Alexandr Timchenko <tmythicator>, AGPL-3.0-or-later)";
+
+/// Returns a pointer to the static DSP engine build info string.
+#[no_mangle]
+pub extern "C" fn tritoncha_dsp_version_ptr() -> *const u8 {
+    TRITONCHA_DSP_BUILD_INFO.as_ptr()
+}
+
+/// Returns the byte length of the static DSP engine build info string.
+#[no_mangle]
+pub extern "C" fn tritoncha_dsp_version_len() -> usize {
+    TRITONCHA_DSP_BUILD_INFO.len()
+}
