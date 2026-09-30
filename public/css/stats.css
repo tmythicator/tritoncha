@@ -9,6 +9,8 @@
     @media (max-width: 640px) {
         left: var(--space-md);
         right: var(--space-md);
+        width: auto;
+        max-width: none;
         gap: var(--space-sm);
     }
 }

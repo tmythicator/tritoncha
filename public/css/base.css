@@ -64,15 +64,25 @@ html, body {
     max-height: var(--modal-max-height);
     overflow: hidden;
 
-    @media (max-width: 768px) {
-        top: var(--modal-top-mobile, clamp(168px, 22vh, 188px));
-        max-height: calc(100dvh - 275px);
+    @media (max-width: 640px) {
+        top: var(--modal-top-mobile, clamp(136px, 17vh, 146px));
+        left: var(--space-md);
+        right: var(--space-md);
+        width: auto;
+        max-width: none;
+        max-height: calc(100dvh - 235px);
+        transform: none;
     }
 }
 
 :is(.instrument-browser-modal, .track-browser-modal) {
     left: 50%;
     transform: translateX(-50%);
+
+    @media (max-width: 640px) {
+        left: var(--space-md);
+        transform: none;
+    }
 }
 
 /* Modal headers and controls */

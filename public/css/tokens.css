@@ -181,9 +181,9 @@
     --z-modal:                 60;
 
     --modal-top:               clamp(130px, 15vh, 145px);
-    --modal-top-mobile:        clamp(168px, 22vh, 188px);
+    --modal-top-mobile:        clamp(136px, 17vh, 146px);
     --modal-bottom:            clamp(105px, 14vh, 125px);
-    --modal-max-height:        calc(100dvh - 260px);
+    --modal-max-height:        calc(100dvh - 240px);
 
     --stats-card-width:        var(--modal-stats-width);
     --stats-card-right:        clamp(8px, 2vw, 24px);
@@ -191,7 +191,7 @@
     --stats-grid-cols:         repeat(auto-fit, minmax(180px, 1fr));
 
     --modal-stats-width:       min(480px, calc(100vw - 16px));
-    --modal-tutorial-width:    min(760px, calc(100vw - 32px));
+    --modal-tutorial-width:    min(760px, calc(100vw - 16px));
     --modal-inst-width:        min(1080px, 96vw);
     --modal-track-width:       min(680px, 94vw);
     --modal-card-padding:      clamp(8px, 1.5vw, 16px);
