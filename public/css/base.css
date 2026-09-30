@@ -63,6 +63,11 @@ html, body {
     flex-direction: column;
     max-height: var(--modal-max-height);
     overflow: hidden;
+
+    @media (max-width: 768px) {
+        top: var(--modal-top-mobile, clamp(168px, 22vh, 188px));
+        max-height: calc(100dvh - 275px);
+    }
 }
 
 :is(.instrument-browser-modal, .track-browser-modal) {
