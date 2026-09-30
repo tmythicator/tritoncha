@@ -6,15 +6,13 @@
    [clojure.string :as str]))
 
 (defn- track-index-str
-  "Format 0-based index into padded two-digit track number string.
-  Examples: (track-index-str 0) -> \"01\"."
+  "Format 0-based index into padded two-digit track number string."
   [idx]
   (let [n (inc idx)]
     (if (< n 10) (str "0" n) (str n))))
 
 (defn track-item
-  "Render a single track row in preset browser catalog.
-  Examples: [track-item {:idx 0 :item track-map :active? true :on-select f}]."
+  "Render a single track row in preset browser catalog."
   [{:keys [idx item active? on-select]}]
   (let [{:keys [id name bpm scale geom]} item
         num-str   (track-index-str idx)

@@ -27,8 +27,7 @@
 ;; Individual Processor Parameter Compilers
 
 (defn compile-filter-spec
-  "Compiles filter parameters from number, vector, or map into canonical spec map.
-  Examples: (compile-filter-spec 3500), (compile-filter-spec [4000 0.2]), (compile-filter-spec {:cutoff 5000})."
+  "Compiles filter parameters from number, vector, or map into canonical spec map."
   [v]
   (cond
     (number? v)
@@ -46,8 +45,7 @@
     :else nil))
 
 (defn compile-distort-spec
-  "Compiles distortion parameters from number or map into canonical spec map.
-  Examples: (compile-distort-spec 0.25), (compile-distort-spec {:drive 0.3 :algo :adaa})."
+  "Compiles distortion parameters from number or map into canonical spec map."
   [v]
   (cond
     (number? v)
@@ -64,8 +62,7 @@
     :else nil))
 
 (defn compile-crusher-spec
-  "Compiles bitcrusher parameters from number, vector, or map into canonical spec map.
-  Examples: (compile-crusher-spec 8), (compile-crusher-spec [6 2.0 0.8])."
+  "Compiles bitcrusher parameters from number, vector, or map into canonical spec map."
   [v]
   (cond
     (number? v)
@@ -87,8 +84,7 @@
     :else nil))
 
 (defn compile-chorus-spec
-  "Compiles chorus parameters from number or map into canonical spec map.
-  Examples: (compile-chorus-spec 0.4), (compile-chorus-spec {:rate 0.5 :depth 0.6 :wet 0.3})."
+  "Compiles chorus parameters from number or map into canonical spec map."
   [v]
   (cond
     (number? v)
@@ -103,8 +99,7 @@
     :else nil))
 
 (defn compile-delay-spec
-  "Compiles stereo delay parameters from number, vector, or map into canonical spec map.
-  Examples: (compile-delay-spec 0.3), (compile-delay-spec [\"8n.\" 0.4 0.25])."
+  "Compiles stereo delay parameters from number, vector, or map into canonical spec map."
   [v]
   (cond
     (number? v)
@@ -128,8 +123,7 @@
     :else nil))
 
 (defn compile-reverb-spec
-  "Compiles reverb parameters from number or map into canonical spec map.
-  Examples: (compile-reverb-spec 0.4), (compile-reverb-spec {:algo :fdn :size 0.8 :wet 0.3})."
+  "Compiles reverb parameters from number or map into canonical spec map."
   [v]
   (cond
     (number? v)
@@ -145,8 +139,7 @@
     :else nil))
 
 (defn compile-compressor-spec
-  "Compiles compressor parameters from boolean or map into canonical spec map.
-  Examples: (compile-compressor-spec true), (compile-compressor-spec {:threshold -18.0 :ratio 4.0})."
+  "Compiles compressor parameters from boolean or map into canonical spec map."
   [v]
   (cond
     (boolean? v)
@@ -162,9 +155,7 @@
 ;; Bus Insert Serialization for Rust WASM Worklet
 
 (defn compile-bus-insert
-  "Compiles a processor keyword and its parameters into the map format expected by the Rust WASM worklet.
-  Examples: (compile-bus-insert :filter {:filter {:frequency 3500 :q 0.0}})
-            -> {:type \"filter\" :cutoffHz 3500.0 :resonance 0.0}."
+  "Compiles a processor keyword and its parameters into the map format expected by the Rust WASM worklet."
   [proc-key proc-specs]
   (let [spec (get proc-specs proc-key)]
     (case proc-key

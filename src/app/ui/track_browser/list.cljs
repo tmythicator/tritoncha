@@ -3,8 +3,7 @@
   (:require [app.ui.track-browser.item :refer [track-item]]))
 
 (defn track-list
-  "Render list of catalog tracks.
-  Examples: [track-list jams cur-jam on-select]."
+  "Render list of catalog tracks."
   [jams cur-jam on-select]
   (into [:div.track-browser-list]
         (map-indexed

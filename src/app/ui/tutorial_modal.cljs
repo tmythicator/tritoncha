@@ -23,8 +23,7 @@
     (set! (.-selectionEnd el) 0)))
 
 (defn tutorial-modal-component
-  "Render interactive tutorial and in-browser live REPL modal dialog.
-  Examples: [tutorial-modal-component {:on-close f}]."
+  "Render interactive tutorial and in-browser live REPL modal dialog."
   [{:keys [on-close]}]
   [:div.neo-tutorial-card {:role "dialog" :aria-modal true :aria-label "Interactive Livecoding Tutorial and REPL"}
    [common/modal-header

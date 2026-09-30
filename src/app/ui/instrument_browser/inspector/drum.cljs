@@ -6,8 +6,7 @@
    [app.ui.instrument-browser.state :as state]))
 
 (defn- kick-params-section
-  "Render kick drum physical model tuning parameters.
-  Examples: [kick-params-section :kick cur-spec]."
+  "Render kick drum physical model tuning parameters."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "KICK DRUM SYNTHESIS PARAMETERS"]
@@ -30,8 +29,7 @@
                           :label "Analog Saturation Drive:" :min 0.0 :max 4.0 :step 0.1 :default 1.6 :decimals 2}]]])
 
 (defn- snare-params-section
-  "Render snare drum physical model tuning parameters.
-  Examples: [snare-params-section :snare cur-spec]."
+  "Render snare drum physical model tuning parameters."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "SNARE DRUM SYNTHESIS PARAMETERS"]
@@ -52,8 +50,7 @@
                           :label "Snappy Balance:" :min 0.0 :max 1.0 :step 0.02 :default 0.85 :decimals 2}]]])
 
 (defn- hat-params-section
-  "Render hi-hat metallic noise and decay parameters.
-  Examples: [hat-params-section :hat cur-spec]."
+  "Render hi-hat metallic noise and decay parameters."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "HI-HAT SYNTHESIS PARAMETERS"]
@@ -68,8 +65,7 @@
                           :label "Open Decay (s):" :min 0.05 :max 0.80 :step 0.01 :default 0.24 :unit "s" :decimals 2}]]])
 
 (defn- membrane-params-section
-  "Render membrane drum voice tuning parameters for toms and tuned percussions.
-  Examples: [membrane-params-section :tom cur-spec]."
+  "Render membrane drum voice tuning parameters for toms and tuned percussions."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "MEMBRANE DRUM SYNTHESIS PARAMETERS"]
@@ -90,8 +86,7 @@
                           :label "Membrane Saturation Drive:" :min 0.5 :max 3.0 :step 0.05 :default 1.10 :decimals 2}]]])
 
 (defn- metallic-params-section
-  "Render metallic voice tuning parameters for cymbals, rides, and bells.
-  Examples: [metallic-params-section :ride-bell cur-spec]."
+  "Render metallic voice tuning parameters for cymbals, rides, and bells."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "METALLIC CYMBAL + PERCUSSION PARAMETERS"]
@@ -108,8 +103,7 @@
                           :label "Inharmonic Drive:" :min 0.2 :max 3.0 :step 0.1 :default 1.0 :decimals 2}]]])
 
 (defn- clap-params-section
-  "Render clap synthesis parameters.
-  Examples: [clap-params-section :clap cur-spec]."
+  "Render clap synthesis parameters."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "HAND CLAP SYNTHESIS PARAMETERS"]
@@ -126,8 +120,7 @@
                           :label "Saturation Drive:" :min 0.2 :max 3.0 :step 0.1 :default 1.0 :decimals 2}]]])
 
 (defn drum-inspector
-  "Render drum voice parameter studio, reset controls, and mini-notation generator.
-  Examples: [drum-inspector :kick cur-spec]."
+  "Render drum voice parameter studio, reset controls, and mini-notation generator."
   [cur-sel-key cur-spec]
   (let [drum-type (or (:type cur-spec) cur-sel-key)]
     [:div.inst-section

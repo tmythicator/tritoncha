@@ -15,8 +15,7 @@
    [:session "SESSION"]])
 
 (defn- select-category!
-  "Update active category filter and synchronize selected instrument cursor.
-  Examples: (select-category! :leads) -> nil."
+  "Update active category filter and synchronize selected instrument cursor."
   [cat-key]
   (reset! state/active-category cat-key)
   (let [all-insts (instruments/all-instruments)
@@ -30,8 +29,7 @@
         (reset! state/selected-inst (first (first matches)))))))
 
 (defn category-tabs
-  "Render category filter tabs bar.
-  Examples: [category-tabs]."
+  "Render category filter tabs bar."
   []
   (let [cat-filter @state/active-category]
     [:div.inst-tabs-container
@@ -44,8 +42,7 @@
           label]))]))
 
 (defn search-input
-  "Render sound search input box.
-  Examples: [search-input]."
+  "Render sound search input box."
   []
   [:input.inst-search-input
    {:type        "text"

@@ -13,8 +13,7 @@
    [reagent.core :as r]))
 
 (defn stats-panel-component
-  "Render system audio status and telemetry diagnostic panel.
-  Examples: [stats-panel-component {:on-close f}]."
+  "Render system audio status and telemetry diagnostic panel."
   [_props]
   (let [live-snap (r/atom (telemetry-snapshot))
         timer-id  (atom nil)]

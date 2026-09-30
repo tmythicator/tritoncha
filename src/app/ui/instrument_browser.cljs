@@ -10,14 +10,12 @@
    [clojure.string :as str]))
 
 (defn stop-audition-loop!
-  "Halt active audition looper playback.
-  Examples: (stop-audition-loop!) -> nil."
+  "Halt active audition looper playback."
   []
   (audition/stop-audition-loop!))
 
 (defn instrument-browser-component
-  "Render interactive instrument studio modal overlay.
-  Examples: [instrument-browser-component {:on-close f}]."
+  "Render interactive instrument studio modal overlay."
   [{:keys [on-close]}]
   (let [cat-filter    @state/active-category
         query       (str/trim (str/lower-case @state/search-query))

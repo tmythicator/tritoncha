@@ -4,15 +4,13 @@
    [app.ui.instrument-browser.list.card :refer [instrument-card]]))
 
 (defn- empty-query-view
-  "Render empty state when search or category filter yields no results.
-  Examples: [empty-query-view]."
+  "Render empty state when search or category filter yields no results."
   []
   [:div.inst-empty-view {:key "empty-query"}
    "No instruments match query"])
 
 (defn instrument-list-panel
-  "Render scrollable left instrument catalog panel.
-  Examples: [instrument-list-panel filtered-instruments selected-key cat-key]."
+  "Render scrollable left instrument catalog panel."
   [filtered-insts cur-sel-key cat-key]
   (into
    [:div.inst-catalog-panel {:key (str "inst-list-" cat-key)}]

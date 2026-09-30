@@ -7,8 +7,7 @@
 ;; Modal Shell Components
 
 (defn modal-close-btn
-  "Render modal close button.
-  Examples: [modal-close-btn {:on-click f :aria-label \"Close modal\"}]."
+  "Render modal close button."
   [{:keys [on-click aria-label]
     :or   {aria-label "Close modal"}}]
   [:button.neo-btn-close
@@ -18,8 +17,7 @@
 
 (defn modal-header
   "Render standardized cyber-terminal modal header.
-  Supports title prompt, optional right-aligned controls, and close button.
-  Examples: [modal-header {:title \"SYSTEM STATUS\" :on-close f}]."
+  Supports title prompt, optional right-aligned controls, and close button."
   [{:keys [title on-close close-label right-content right-class]
     :or   {right-class "neo-header-right"}}]
   [:div.neo-header
@@ -37,8 +35,7 @@
      (modal-close-btn {:on-click on-close :aria-label close-label}))])
 
 (defn modal-footer
-  "Render standardized cyber-terminal modal footer with command prompt and shortcut hint.
-  Examples: [modal-footer {:cmd \"> ./tritoncha --stats\" :hint \"[Press I to close]\"}]."
+  "Render standardized cyber-terminal modal footer with command prompt and shortcut hint."
   [{:keys [cmd hint class cmd-class hint-class]}]
   [:div.neo-footer {:class class}
    [:span.neo-foot-cmd {:class cmd-class} cmd]
@@ -47,16 +44,14 @@
 ;; Badges and Status Indicators
 
 (defn status-badge
-  "Render online or offline status pill badge with pulsing dot.
-  Examples: [status-badge {:online? true}]."
+  "Render online or offline status pill badge with pulsing dot."
   [{:keys [online?]}]
   [:div.neo-status-badge
    [:span.neo-dot {:class (if online? "online" "offline")}]
    [:span (if online? "ONLINE" "OFFLINE")]])
 
 (defn badge
-  "Render cyberpunk terminal badge.
-  Examples: [badge \"174 BPM\"] or [badge {:variant :cyan} \"D MINOR\"]."
+  "Render cyberpunk terminal badge."
   ([text]
    [:span.neo-badge text])
   ([{:keys [variant class]} text]
@@ -69,8 +64,7 @@
        [tag text]))))
 
 (defn bus-badge-class
-  "Return CSS class for bus badge styling based on normalized bus keyword.
-  Examples: (bus-badge-class :bus/bass) -> \"bus-bass\"."
+  "Return CSS class for bus badge styling based on normalized bus keyword."
   [bus-key]
   (case (busses/normalize-bus-key bus-key)
     :bus/drums  "bus-drums"
@@ -83,8 +77,7 @@
       "bus-direct")))
 
 (defn bus-label
-  "Format bus keyword to short uppercase display title.
-  Examples: (bus-label :bus/direct) -> \"CLICK\"."
+  "Format bus keyword to short uppercase display title."
   [bus-key]
   (case (busses/normalize-bus-key bus-key)
     :bus/drums  "DRUMS"
@@ -96,8 +89,7 @@
     (-> (name bus-key) (str/replace #"-bus$" "") str/upper-case)))
 
 (defn bus-tag
-  "Render styled bus badge tag with color coding.
-  Examples: [bus-tag :bus/drums] or [bus-tag {:bus :bus/drums :mini? true}]."
+  "Render styled bus badge tag with color coding."
   [opts-or-bus]
   (let [{:keys [bus label mini? class]} (if (map? opts-or-bus) opts-or-bus {:bus opts-or-bus})
         b-class                         (bus-badge-class bus)
@@ -110,8 +102,7 @@
 ;; Generic Interactive Controls
 
 (defn param-slider
-  "Render slider input with numeric readout.
-  Examples: [param-slider {:label \"Cutoff\" :val-str \"2400 Hz\" :min 40 :max 14000 :step 50 :value 2400}]."
+  "Render slider input with numeric readout."
   [{:keys [label val-str min max step value on-down on-change]}]
   [:div.inst-param-slider
    [:div.inst-slider-header
@@ -126,8 +117,7 @@
             :on-change       on-change}]])
 
 (defn pill-selector
-  "Render compact pill button selector.
-  Examples: [pill-selector {:label \"WAVEFORM\" :items [:saw :pulse] :current :saw :on-select f}]."
+  "Render compact pill button selector."
   [{:keys [label items current on-select]}]
   [:div.inst-pill-selector
    (when label

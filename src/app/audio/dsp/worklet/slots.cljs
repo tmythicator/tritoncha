@@ -7,8 +7,7 @@
   (atom {}))
 
 (defn track-slot
-  "Returns the hardware sequencer track slot index for a track keyword.
-  Examples: (track-slot :kick) -> 0."
+  "Returns the hardware sequencer track slot index for a track keyword."
   [track-key]
   (let [tk (keyword track-key)]
     (or (get @track-slot-assignments tk)
@@ -24,14 +23,12 @@
           (get @track-slot-assignments :click)))))
 
 (defn all-track-slots
-  "Returns the complete map of track keyword to hardware slot assignments.
-  Examples: (all-track-slots) -> {:kick 0, :bass 1}."
+  "Returns the complete map of track keyword to hardware slot assignments."
   []
   @track-slot-assignments)
 
 (defn track-slots-for
-  "Returns all sequencer slot indices assigned to a track keyword, including chord voice sub-slots.
-  Examples: (track-slots-for :pad) -> [4 5 6 7]."
+  "Returns all sequencer slot indices assigned to a track keyword, including chord voice sub-slots."
   [track-key]
   (let [tk   (keyword track-key)
         pfx  (str (name tk) "-v")
@@ -45,8 +42,7 @@
                          @track-slot-assignments))))))
 
 (defn get-or-assign-track-slot!
-  "Retrieves existing track slot or allocates a free hardware slot in 0..15.
-  Examples: (get-or-assign-track-slot! :lead) -> 2."
+  "Retrieves existing track slot or allocates a free hardware slot in 0..15."
   [track-key]
   (let [tk (keyword track-key)]
     (if-let [slot (get @track-slot-assignments tk)]
@@ -57,7 +53,6 @@
         (or free 0)))))
 
 (defn clear-track-slots!
-  "Resets all hardware sequencer slot assignments.
-  Examples: (clear-track-slots!)."
+  "Resets all hardware sequencer slot assignments."
   []
   (reset! track-slot-assignments {}))

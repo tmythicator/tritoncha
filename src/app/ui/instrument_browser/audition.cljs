@@ -10,23 +10,20 @@
 (defonce ^:private last-slider-preview-time (atom 0))
 
 (defn sound-family
-  "Resolve intrinsic sound family (:drums, :fx, :bass, :pads, :leads).
-  Examples: (sound-family :fx-laser spec) -> :fx."
+  "Resolve intrinsic sound family (:drums, :fx, :bass, :pads, :leads)."
   [inst-key spec]
   (let [resolved (or spec (inst/resolve-instrument-spec inst-key))]
     (inst/sound-category (or resolved inst-key))))
 
 (defn stop-audition-loop!
-  "Halt active audition looper playback.
-  Examples: (stop-audition-loop!) -> nil."
+  "Halt active audition looper playback."
   []
   (when @audition-loop-active?
     (looper/stop-loop! :inst-audition)
     (reset! audition-loop-active? false)))
 
 (defn start-audition-loop!
-  "Start continuous audition looper for the given instrument.
-  Examples: (start-audition-loop! :saw-bass) -> nil."
+  "Start continuous audition looper for the given instrument."
   [inst-key]
   (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
@@ -78,16 +75,14 @@
                      :vel 0.45}))))
 
 (defn toggle-audition-loop!
-  "Toggle audition looper for active instrument.
-  Examples: (toggle-audition-loop! :saw-bass) -> nil."
+  "Toggle audition looper for active instrument."
   [inst-key]
   (if @audition-loop-active?
     (stop-audition-loop!)
     (start-audition-loop! inst-key)))
 
 (defn touch-preview-note!
-  "Trigger quick throttled audition note when adjusting sliders.
-  Examples: (touch-preview-note! :bass) -> nil."
+  "Trigger quick throttled audition note when adjusting sliders."
   [inst-key]
   (when-not @audition-loop-active?
     (let [now (.now js/Date)]
@@ -105,8 +100,7 @@
             :leads (inst/trigger-note! inst-key "E4" "2n" 0.75)))))))
 
 (defn play-test-note!
-  "Audition single note for selected instrument.
-  Examples: (play-test-note! :kick) -> nil."
+  "Audition single note for selected instrument."
   [inst-key]
   (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
@@ -120,8 +114,7 @@
       :leads (inst/trigger-note! inst-key "E4" "16n" 0.92))))
 
 (defn play-test-run!
-  "Audition melodic 5-note phrase or drum roll.
-  Examples: (play-test-run! :acid-bass) -> nil."
+  "Audition melodic 5-note phrase or drum roll."
   [inst-key]
   (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
@@ -171,8 +164,7 @@
            (* idx 95)))))))
 
 (defn play-test-arp!
-  "Audition 8-step rhythmic arpeggio or drum fill across instrument families.
-  Examples: (play-test-arp! :bass-analog) -> nil."
+  "Audition 8-step rhythmic arpeggio or drum fill across instrument families."
   [inst-key]
   (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)]
@@ -223,8 +215,7 @@
            (* idx 75)))))))
 
 (defn play-test-chord!
-  "Audition harmonic chord: simultaneous polyphonic chord or fast broken strum for mono synths.
-  Examples: (play-test-chord! :pad-cinema) -> nil."
+  "Audition harmonic chord: simultaneous polyphonic chord or fast broken strum for mono synths."
   [inst-key]
   (let [spec   (inst/resolve-instrument-spec inst-key)
         family (sound-family inst-key spec)

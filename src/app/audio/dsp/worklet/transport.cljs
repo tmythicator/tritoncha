@@ -15,28 +15,24 @@
   (atom []))
 
 (defn worklet-ready?
-  "Returns true if the AudioWorklet WASM engine is initialized and ready.
-  Examples: (worklet-ready?) -> true."
+  "Returns true if the AudioWorklet WASM engine is initialized and ready."
   []
   (:ready? @worklet-state))
 
 (defn get-audio-context
-  "Returns the active WebAudio AudioContext instance.
-  Examples: (get-audio-context) -> #object[AudioContext]."
+  "Returns the active WebAudio AudioContext instance."
   []
   (:ctx @worklet-state))
 
 (defn on-worklet-ready!
-  "Registers a callback to execute when the AudioWorklet WASM engine reports ready.
-  Examples: (on-worklet-ready! (fn [] (println \"Ready\")))."
+  "Registers a callback to execute when the AudioWorklet WASM engine reports ready."
   [cb]
   (if (:ready? @worklet-state)
     (cb)
     (swap! ready-callbacks conj cb)))
 
 (defn on-trigger-event!
-  "Registers a callback to receive hardware sequencer trigger bitmask events.
-  Examples: (on-trigger-event! (fn [mask] ...))."
+  "Registers a callback to receive hardware sequencer trigger bitmask events."
   [cb]
   (swap! trigger-callbacks conj cb))
 

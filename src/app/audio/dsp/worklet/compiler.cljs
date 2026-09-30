@@ -21,8 +21,7 @@
      {:inst-id id :note (int note) :vel (float vel)})))
 
 (defn parse-step-hit
-  "Parses a step hit into {:inst-id :note :vel} map respecting default-vel.
-  Examples: (parse-step-hit \"C3\" :bass 0.4) -> {:inst-id 4, :note 48, :vel 0.4}."
+  "Parses a step hit into {:inst-id :note :vel} map respecting default-vel."
   ([hit default-inst-key] (parse-step-hit hit default-inst-key 0.9))
   ([hit default-inst-key default-vel]
    (let [def-v  (float (or default-vel 0.9))

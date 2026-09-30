@@ -16,8 +16,7 @@
    :fx    :bus/lead})
 
 (defn category-default-bus
-  "Resolves the canonical default audio bus for an instrument category keyword.
-  Examples: (category-default-bus :bass) -> :bus/bass, (category-default-bus :pads) -> :bus/space."
+  "Resolves the canonical default audio bus for an instrument category keyword."
   [cat]
   (get category-default-busses (normalize-category cat) :bus/master))
 
@@ -25,8 +24,7 @@
   {:click :bus/direct})
 
 (defn normalize-bus-key
-  "Ensures a keyword is in the :bus/<name> format and maps :bus/click to :bus/direct.
-  Examples: (normalize-bus-key :drums) -> :bus/drums, (normalize-bus-key :click) -> :bus/direct."
+  "Ensures a keyword is in the :bus/<name> format and maps :bus/click to :bus/direct."
   [k]
   (when k
     (let [norm (if (keyword? k)
@@ -36,8 +34,7 @@
       (if (= norm :bus/click) :bus/direct norm))))
 
 (defn valid-bus?
-  "Checks if a keyword represents a valid registered audio bus.
-  Examples: (valid-bus? :bus/drums) -> true, (valid-bus? :bus/unknown) -> false."
+  "Checks if a keyword represents a valid registered audio bus."
   [k]
   (contains? valid-busses (normalize-bus-key k)))
 

@@ -10,8 +10,7 @@
 
 (defn patch-slider
   "Render a parameter slider declaratively bound to an instrument patch property.
-  Supports both root keys (:decay) and nested section paths ([:filter :cutoff]).
-  Examples: [patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :decay :label \"Decay:\" :min 0.05 :max 1.0 :step 0.01 :default 0.28 :unit \"s\"}]."
+  Supports both root keys (:decay) and nested section paths ([:filter :cutoff])."
   [{:keys [inst-key spec param-key label min max step default unit decimals pct?]
     :or   {decimals 2 default 0.0 unit "" pct? false}}]
   (let [nested?  (vector? param-key)
@@ -43,8 +42,7 @@
                        (state/patch-param! inst-key param-key v spec))))}]))
 
 (defn bus-section
-  "Render target bus selector and dynamic FX send chain summary.
-  Examples: [bus-section :saw-bass cur-spec]."
+  "Render target bus selector and dynamic FX send chain summary."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "MIXER BUS"]
@@ -58,8 +56,7 @@
     [:span.neo-v.v-cyan (comps/bus-fx-summary (:bus cur-spec))]]])
 
 (defn code-spec-section
-  "Render declarative code specification block ready for custom/synth.cljs or custom/drums.cljs.
-  Examples: [code-spec-section cur-sel-key cur-spec] or [code-spec-section cur-sel-key cur-spec drum?]."
+  "Render declarative code specification block ready for custom/synth.cljs or custom/drums.cljs."
   ([cur-sel-key cur-spec]
    (code-spec-section cur-sel-key cur-spec (inst/drum? (or cur-spec cur-sel-key))))
   ([cur-sel-key cur-spec drum?]

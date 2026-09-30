@@ -39,20 +39,17 @@
 
 ;; Master Clock and Sequencer Commands
 (defn set-bpm!
-  "Configures master tempo in Beats Per Minute for the WASM sequencer.
-  Examples: (set-bpm! 174)."
+  "Configures master tempo in Beats Per Minute for the WASM sequencer."
   [^number bpm]
   (transport/send-msg! #js {:type "setBpm" :bpm bpm}))
 
 (defn set-playing!
-  "Starts or stops the hardware sample-accurate WASM sequencer clock.
-  Examples: (set-playing! true), (set-playing! false)."
+  "Starts or stops the hardware sample-accurate WASM sequencer clock."
   [playing?]
   (transport/send-msg! #js {:type "setPlaying" :playing (boolean playing?)}))
 
 (defn set-track!
-  "Sends a track's hits into the Rust WASM sequencer with note durations and velocities.
-  Examples: (set-track! 0 :kick [true nil true nil] 1 0.2 0.9)."
+  "Sends a track's hits into the Rust WASM sequencer with note durations and velocities."
   ([track-idx default-inst-key hits-vec step-mult]
    (set-track! track-idx default-inst-key hits-vec step-mult 0.2 0.9))
   ([track-idx default-inst-key hits-vec step-mult dur-s]
@@ -85,27 +82,23 @@
                                :stepMult (or step-mult 1)}))))
 
 (defn clear-tracks!
-  "Clears all hardware sequencer tracks and resets slot assignments.
-  Examples: (clear-tracks!)."
+  "Clears all hardware sequencer tracks and resets slot assignments."
   []
   (slots/clear-track-slots!)
   (transport/send-msg! #js {:type "clearTracks"}))
 
 (defn deactivate-track!
-  "Silences and deactivates a specific hardware sequencer slot.
-  Examples: (deactivate-track! 3)."
+  "Silences and deactivates a specific hardware sequencer slot."
   [track-idx]
   (transport/send-msg! #js {:type "deactivateTrack" :trackIdx (int track-idx)}))
 
 (defn mute-track!
-  "Mutes or unmutes a specific hardware sequencer slot.
-  Examples: (mute-track! 0 true), (mute-track! 0 false)."
+  "Mutes or unmutes a specific hardware sequencer slot."
   [track-idx muted?]
   (transport/send-msg! #js {:type "muteTrack" :trackIdx (int track-idx) :muted (boolean muted?)}))
 
 (defn solo-track!
-  "Solos or unsolos a specific hardware sequencer slot.
-  Examples: (solo-track! 1 true)."
+  "Solos or unsolos a specific hardware sequencer slot."
   [track-idx solo?]
   (transport/send-msg! #js {:type "soloTrack" :trackIdx (int track-idx) :solo (boolean solo?)}))
 
@@ -127,15 +120,13 @@
         (swap! slots/track-slot-assignments dissoc sub-tk)))))
 
 (defn set-worklet-voice-patch!
-  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP.
-  Examples: (set-worklet-voice-patch! 4 {:osc {:type :saw} :filter {:cutoff 2000}})."
+  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP."
   [patch-id patch-spec]
   (transport/send-msg! (compiler/compile-voice-patch-msg patch-id patch-spec)))
 
 (defn resolve-track-inst
   "Resolves the effective instrument key for a track, dynamically creating and compiling
-  a derived DSP voice patch when the track specifies a custom audio bus override for a synth.
-  Examples: (resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass}) -> :lead-8bit--bass."
+  a derived DSP voice patch when the track specifies a custom audio bus override for a synth."
   [tk pat-data]
   (let [inst-k      (or (:inst pat-data) tk)
         custom-bus  (when-let [b (:bus pat-data)] (busses/normalize-bus-key b))
@@ -155,8 +146,7 @@
 
 (defn sync-track-to-worklet!
   "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords.
-  Resolves scale degrees against the active musical key if not already resolved.
-  Examples: (sync-track-to-worklet! :bass {:notes ['C2' 'E2'] :step '16n'})."
+  Resolves scale degrees against the active musical key if not already resolved."
   [tk pat-data]
   (let [inst-k   (resolve-track-inst tk pat-data)
         raw-hits (or (:notes pat-data) [true])
@@ -191,8 +181,7 @@
 
 ;; Mixer Bus and Patch Routing Commands
 (defn set-bus-params!
-  "Configures gain, FX send routing, and master FX bypass status for a specific audio bus.
-  Examples: (set-bus-params! :bus/drums -3.0 false 0.05 0.10 false)."
+  "Configures gain, FX send routing, and master FX bypass status for a specific audio bus."
   ([bus-key gain-db muted? send-delay send-reverb]
    (set-bus-params! bus-key gain-db muted? send-delay send-reverb false))
   ([bus-key gain-db muted? send-delay send-reverb bypass-master-fx?]
@@ -206,31 +195,27 @@
                                :bypassMasterFx (boolean bypass-master-fx?)}))))
 
 (defn set-worklet-master-volume!
-  "Adjusts master output volume in decibels (-60.0 dB to +6.0 dB) in Rust WASM.
-  Examples: (set-worklet-master-volume! 0.0), (set-worklet-master-volume! -3.0)."
+  "Adjusts master output volume in decibels (-60.0 dB to +6.0 dB) in Rust WASM."
   [^number gain-db]
   (transport/send-msg! #js {:type "setVolume"
                             :gainDb (float (or gain-db 0.0))}))
 
 (defn set-drum-mode!
   "Configures character synthesis mode across all drum voices in Rust WASM.
-  Supported modes: :analog, :natural, :idm, :industrial.
-  Examples: (set-drum-mode! :idm), (set-drum-mode! :natural)."
+  Supported modes: :analog, :natural, :idm, :industrial."
   [mode-kw]
   (let [mode-id (protocol/drum-mod->id mode-kw)]
     (transport/send-msg! #js {:type "setDrumMode"
                               :mode mode-id})))
 
 (defn set-worklet-drum-patch!
-  "Transmits drum sound design parameters into the Rust WASM drum synthesis engine.
-  Examples: (set-worklet-drum-patch! :kick {:base-pitch 48 :decay 0.28 :click 0.35 :drive 1.6 :mod :idm})."
+  "Transmits drum sound design parameters into the Rust WASM drum synthesis engine."
   [drum-key drum-spec]
   (when-let [msg (compiler/compile-drum-patch-msg drum-key drum-spec)]
     (transport/send-msg! msg)))
 
 (defn trigger-worklet-note!
-  "Plays a live note on the Rust WASM modular synth or drum engine.
-  Examples: (trigger-worklet-note! :bass-analog \"C2\" 0.9 0.4)."
+  "Plays a live note on the Rust WASM modular synth or drum engine."
   ([pitch] (trigger-worklet-note! :bass-analog pitch 0.9 0.0))
   ([inst-key pitch] (trigger-worklet-note! inst-key pitch 0.9 0.0))
   ([inst-key pitch vel] (trigger-worklet-note! inst-key pitch vel 0.0))
@@ -247,16 +232,14 @@
 
 ;; DSP Effects and Automations
 (defn set-worklet-filter!
-  "Sets cutoff frequency and resonance on the TPT state-variable filter.
-  Examples: (set-worklet-filter! 4200.0 0.70)."
+  "Sets cutoff frequency and resonance on the TPT state-variable filter."
   [^number cutoff-hz ^number resonance]
   (transport/send-msg! #js {:type "setFilter"
                             :cutoffHz cutoff-hz
                             :resonance resonance}))
 
 (defn sweep-worklet-filter!
-  "Initiates an automated filter frequency sweep over a time window.
-  Examples: (sweep-worklet-filter! 400.0 6000.0 4.0)."
+  "Initiates an automated filter frequency sweep over a time window."
   [^number from-hz ^number to-hz ^number duration-secs]
   (transport/send-msg! #js {:type "sweepFilter"
                             :fromHz from-hz
@@ -264,8 +247,7 @@
                             :durationSecs duration-secs}))
 
 (defn set-worklet-drive-bitcrush!
-  "Adjusts master bus saturation drive, bit depth reduction, and sample-rate decimation.
-  Examples: (set-worklet-drive-bitcrush! 1.2 12.0 2.0)."
+  "Adjusts master bus saturation drive, bit depth reduction, and sample-rate decimation."
   [drive bit-depth sample-hold]
   (transport/send-msg! #js {:type "setDriveBitcrush"
                             :drive (float (or drive 0.0))
@@ -273,8 +255,7 @@
                             :sampleHold (float (or sample-hold 1.0))}))
 
 (defn set-worklet-chorus!
-  "Configures stereo chorus modulation rate, depth, and mix level.
-  Examples: (set-worklet-chorus! 0.8 0.4 0.25)."
+  "Configures stereo chorus modulation rate, depth, and mix level."
   [rate-hz depth mix]
   (transport/send-msg! #js {:type "setChorus"
                             :rateHz (float (or rate-hz 0.8))
@@ -282,15 +263,13 @@
                             :mix (float (or mix 0.0))}))
 
 (defn set-worklet-sidechain!
-  "Sets drum kick sidechain ducking compression depth.
-  Examples: (set-worklet-sidechain! 0.85)."
+  "Sets drum kick sidechain ducking compression depth."
   [amount]
   (transport/send-msg! #js {:type "setSidechain"
                             :amount (float (or amount 0.0))}))
 
 (defn set-worklet-delay!
-  "Configures master ping-pong stereo delay line parameters.
-  Examples: (set-worklet-delay! 0.35 0.60 0.40)."
+  "Configures master ping-pong stereo delay line parameters."
   [^number time-s ^number feedback ^number wet]
   (transport/send-msg! #js {:type "setDelay"
                             :timeS time-s
@@ -298,16 +277,14 @@
                             :wet wet}))
 
 (defn set-worklet-reverb!
-  "Configures master algorithmic warehouse reverb space and wet mix.
-  Examples: (set-worklet-reverb! 0.85 0.30)."
+  "Configures master algorithmic warehouse reverb space and wet mix."
   [^number room-size ^number wet]
   (transport/send-msg! #js {:type "setReverb"
                             :roomSize room-size
                             :wet wet}))
 
 (defn set-worklet-drive-mode!
-  "Configures saturation algorithm mode (0 = Classic Pade, 1 = ADAA-1 Antialiased).
-  Examples: (set-worklet-drive-mode! :adaa), (set-worklet-drive-mode! :classic)."
+  "Configures saturation algorithm mode (0 = Classic Pade, 1 = ADAA-1 Antialiased)."
   [mode-kw]
   (let [norm (if (= (keyword mode-kw) :classic) :classic :adaa)
         mode-id (if (= norm :classic) 0 1)]
@@ -315,8 +292,7 @@
     norm))
 
 (defn set-worklet-reverb-mode!
-  "Configures reverb algorithm mode (0 = Freeverb, 1 = 8-Channel Householder FDN).
-  Examples: (set-worklet-reverb-mode! :fdn), (set-worklet-reverb-mode! :freeverb)."
+  "Configures reverb algorithm mode (0 = Freeverb, 1 = 8-Channel Householder FDN)."
   [mode-kw]
   (let [norm (if (= (keyword mode-kw) :freeverb) :freeverb :fdn)
         mode-id (if (= norm :freeverb) 0 1)]
@@ -324,8 +300,7 @@
     norm))
 
 (defn set-worklet-compressor!
-  "Configures stereo bus glue compressor parameters.
-  Examples: (set-worklet-compressor! true -12.0 4.0 0.010 0.100 2.5 1.0)."
+  "Configures stereo bus glue compressor parameters."
   ([enabled?]
    (set-worklet-compressor! enabled? -12.0 4.0 0.010 0.100 2.5 1.0))
   ([enabled? threshold-db ratio attack-s release-s makeup-db mix]
@@ -339,8 +314,7 @@
                              :mix (float (or mix 1.0))})))
 
 (defn set-worklet-bus-chain!
-  "Configures the modular insert effects chain and output routing for an audio bus in the Rust WASM engine.
-  Examples: (set-worklet-bus-chain! 0 false [{:type \"filter\" :cutoffHz 3500 :resonance 0.0}])."
+  "Configures the modular insert effects chain and output routing for an audio bus in the Rust WASM engine."
   [bus-idx target-out? inserts]
   (let [inserts-js (clj->js (or inserts []))]
     (transport/send-msg! #js {:type "setBusChain"
@@ -349,8 +323,7 @@
                               :inserts inserts-js})))
 
 (defn update-worklet-bus-processor!
-  "Updates parameters for a specific processor type on a bus (or globally if bus-idx is -1).
-  Examples: (update-worklet-bus-processor! -1 :filter {:cutoffHz 3000 :resonance 0.5})."
+  "Updates parameters for a specific processor type on a bus (or globally if bus-idx is -1)."
   [bus-idx processor params]
   (let [msg (clj->js (merge {:type "updateBusProcessor"
                              :busIdx (int (or bus-idx -1))

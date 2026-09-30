@@ -7,8 +7,7 @@
    [app.ui.track-browser.list :refer [track-list]]))
 
 (defn track-browser-component
-  "Render track preset catalog browser modal dialog.
-  Examples: [track-browser-component {:on-close f}]."
+  "Render track preset catalog browser modal dialog."
   [{:keys [on-close]}]
   (let [cur-jam (:current-jam @audio-state)
         jams    (tracker/jam-list)

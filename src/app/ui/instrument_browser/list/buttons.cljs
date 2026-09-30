@@ -5,8 +5,7 @@
    [app.ui.instrument-browser.state :as state]))
 
 (defn- audition-btn
-  "Render a single styled audition button with click isolation and state selection.
-  Examples: [audition-btn :lead-pluck \"♪ NOTE\" \"Single note\" #(audition/play-test-note! :lead-pluck) false]."
+  "Render a single styled audition button with click isolation and state selection."
   [inst-key label tooltip-title action wide?]
   [:button.neo-btn-stats.inst-audition-btn
    {:class    (when wide? "wide")
@@ -18,8 +17,7 @@
    label])
 
 (defn- drum-audition-buttons
-  "Render 3 quick audition buttons for drum sound voices.
-  Examples: [drum-audition-buttons :analog-kick]."
+  "Render 3 quick audition buttons for drum sound voices."
   [inst-key]
   [:<>
    [audition-btn inst-key "♪ HIT" "Audition single drum hit" audition/play-test-note! false]
@@ -27,8 +25,7 @@
    [audition-btn inst-key "≋ FILL" "Audition 8-step drum fill" audition/play-test-arp! true]])
 
 (defn- fx-audition-buttons
-  "Render 4 quick audition buttons for FX sound effects and one-shots.
-  Examples: [fx-audition-buttons :fx-laser]."
+  "Render 4 quick audition buttons for FX sound effects and one-shots."
   [inst-key]
   [:<>
    [audition-btn inst-key "♪ SHOT" "Audition single one-shot FX" audition/play-test-note! false]
@@ -37,8 +34,7 @@
    [audition-btn inst-key "≈ CHORD" "Audition FX burst" audition/play-test-chord! true]])
 
 (defn- tonal-audition-buttons
-  "Render 4 uniform audition buttons for musical synth voices.
-  Examples: [tonal-audition-buttons :lead-pluck true]."
+  "Render 4 uniform audition buttons for musical synth voices."
   [inst-key poly?]
   [:<>
    [audition-btn inst-key "♪ NOTE" "Audition single sustained note" audition/play-test-note! false]
@@ -51,8 +47,7 @@
     audition/play-test-chord! true]])
 
 (defn card-audition-buttons
-  "Render unified quick audition buttons on instrument catalog cards.
-  Examples: [card-audition-buttons :saw-bass :bass false]."
+  "Render unified quick audition buttons on instrument catalog cards."
   [inst-key cat poly?]
   [:div.inst-audition-btn-group
    (cond

@@ -8,20 +8,17 @@
             [app.state :refer [repl-registry]]))
 
 (defn all-drums
-  "Returns a merged map of core built-in drums, user custom drums, and REPL drums.
-  Examples: (all-drums)."
+  "Returns a merged map of core built-in drums, user custom drums, and REPL drums."
   []
   (merge core-drums user-drums (:instruments @repl-registry)))
 
 (defn all-synths
-  "Returns a merged map of core built-in synthesizers, user custom synths, and REPL synths.
-  Examples: (all-synths)."
+  "Returns a merged map of core built-in synthesizers, user custom synths, and REPL synths."
   []
   (merge core-synths user-synths (:instruments @repl-registry)))
 
 (defn all-instruments
-  "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments.
-  Examples: (all-instruments)."
+  "Returns a merged map of core built-in instruments, user custom instruments, and REPL instruments."
   []
   (merge core-synths user-synths core-drums user-drums (:instruments @repl-registry)))
 
@@ -116,8 +113,7 @@
    :fx         :fx})
 
 (defn normalize-category
-  "Normalizes category keyword to standard plural form (:pads, :leads, :bass, :drums, :fx).
-  Examples: (normalize-category :lead) -> :leads, (normalize-category :pad) -> :pads."
+  "Normalizes category keyword to standard plural form (:pads, :leads, :bass, :drums, :fx)."
   [cat]
   (get category-aliases cat cat))
 
@@ -134,8 +130,7 @@
   #{:sub :sub-pure :sub-808 :808 :sub-moog :moog-sub})
 
 (defn find-instrument-spec
-  "Looks up an instrument specification map across REPL, custom, and core catalogs.
-  Examples: (find-instrument-spec :bass) -> {:title \"Analog Saw\" ...}."
+  "Looks up an instrument specification map across REPL, custom, and core catalogs."
   [x]
   (cond
     (map? x) x
@@ -156,8 +151,7 @@
 
 (defn sound-category
   "Resolves the high-level category keyword for an instrument or track:
-  :drums, :bass, :leads, :pads, or :fx based fundamentally on its explicit :category declaration.
-  Examples: (sound-category :kick) -> :drums, (sound-category :fx-laser) -> :fx."
+  :drums, :bass, :leads, :pads, or :fx based fundamentally on its explicit :category declaration."
   [x]
   (cond
     (nil? x) nil
@@ -186,14 +180,12 @@
           :else nil)))))
 
 (defn drum?
-  "Returns true if key or spec belongs to the :drums category.
-  Examples: (drum? :kick) -> true, (drum? :bass-analog) -> false."
+  "Returns true if key or spec belongs to the :drums category."
   [x]
   (= (sound-category x) :drums))
 
 (defn drum-keyword?
-  "Checks if a keyword represents a drum instrument or drum hit.
-  Examples: (drum-keyword? :kick) -> true, (drum-keyword? :bass-analog) -> false."
+  "Checks if a keyword represents a drum instrument or drum hit."
   [k]
   (or (contains? drum-keywords (keyword k))
       (drum? k)))
@@ -203,50 +195,42 @@
   #{:analog :natural :idm :industrial})
 
 (defn drum-mode?
-  "Checks if a value represents a known drum character synthesis mode.
-  Examples: (drum-mode? :idm) -> true, (drum-mode? :bass) -> false."
+  "Checks if a value represents a known drum character synthesis mode."
   [x]
   (and (keyword? x) (contains? drum-modes x)))
 
 (defn composite-drums?
-  "Returns true if the track key represents an all-in-one composite drum pattern (:drums, :drum, :kit, :break).
-  Examples: (composite-drums? :drums) -> true, (composite-drums? :kick) -> false."
+  "Returns true if the track key represents an all-in-one composite drum pattern (:drums, :drum, :kit, :break)."
   [k]
   (and (some? k) (contains? #{:drums :drum :break :kit} (keyword k))))
 
 (defn individual-drum?
-  "Returns true if the track or key is an individual drum voice (kick, snare, hi-hat, toms, cymbals, etc.).
-  Examples: (individual-drum? :kick) -> true, (individual-drum? :drums) -> false."
+  "Returns true if the track or key is an individual drum voice (kick, snare, hi-hat, toms, cymbals, etc.)."
   [k]
   (boolean (and (drum? k) (not (composite-drums? k)))))
 
 (defn bass?
-  "Returns true if key or spec belongs to the :bass category.
-  Examples: (bass? :bass-analog) -> true, (bass? :lead-pluck) -> false."
+  "Returns true if key or spec belongs to the :bass category."
   [x]
   (= (sound-category x) :bass))
 
 (defn lead?
-  "Returns true if key or spec belongs to the :leads category.
-  Examples: (lead? :lead-pluck) -> true, (lead? :kick) -> false."
+  "Returns true if key or spec belongs to the :leads category."
   [x]
   (= (sound-category x) :leads))
 
 (defn pad?
-  "Returns true if key or spec belongs to the :pads category.
-  Examples: (pad? :pad-cinema) -> true, (pad? :bass-analog) -> false."
+  "Returns true if key or spec belongs to the :pads category."
   [x]
   (= (sound-category x) :pads))
 
 (defn fx?
-  "Returns true if key or spec belongs to the :fx category.
-  Examples: (fx? :fx-laser) -> true, (fx? :bass-analog) -> false."
+  "Returns true if key or spec belongs to the :fx category."
   [x]
   (= (sound-category x) :fx))
 
 (defn sub?
-  "Returns true if key, spec, or track corresponds to a sub-bass voice.
-  Examples: (sub? :sub-pure) -> true, (sub? :lead-pluck) -> false."
+  "Returns true if key, spec, or track corresponds to a sub-bass voice."
   [x]
   (let [spec (if (map? x) x (find-instrument-spec x))
         k    (cond
@@ -258,14 +242,12 @@
              (= (get-in spec [:osc :type]) :sine)))))
 
 (defn synth?
-  "Returns true if key or spec is any tonal or FX synthesizer voice (non-drum).
-  Examples: (synth? :bass-analog) -> true, (synth? :kick) -> false."
+  "Returns true if key or spec is any tonal or FX synthesizer voice (non-drum)."
   [x]
   (and (some? x) (not (drum? x))))
 
 (defn inst-base-type
-  "Returns the underlying drum type or instrument spec type for an instrument keyword or token.
-  Examples: (inst-base-type :fat-kick) -> :kick, (inst-base-type \"k\") -> :kick."
+  "Returns the underlying drum type or instrument spec type for an instrument keyword or token."
   [k]
   (when k
     (or (:type (find-instrument-spec k))
@@ -274,9 +256,7 @@
 
 (defn resolve-target-inst
   "Resolves the actual instrument to trigger for a pattern hit.
-  If the hit matches the base drum type of default-inst-key, default-inst-key is used.
-  Examples: (resolve-target-inst :kick :fat-kick) -> :fat-kick,
-            (resolve-target-inst :clap :fat-kick) -> :clap."
+  If the hit matches the base drum type of default-inst-key, default-inst-key is used."
   [hit-kw default-inst-key]
   (if (or (nil? default-inst-key) (= default-inst-key hit-kw))
     hit-kw

@@ -3,8 +3,7 @@
   (:require [clojure.string :as str]))
 
 (defn format-scale
-  "Format root and mode scale specification to human readable label.
-  Examples: (format-scale [:e :phrygian]) -> \"E Phrygian\"."
+  "Format root and mode scale specification to human readable label."
   [scale]
   (if (vector? scale)
     (let [[root mode] scale]
