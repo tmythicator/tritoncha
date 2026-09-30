@@ -58,7 +58,7 @@
     &.active {
         background: var(--bg-primary-tint);
         border-color: var(--color-primary);
-        box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+        box-shadow: 0 0 10px rgba(var(--rgb-cyan), 0.18);
 
         .track-item-title {
             color: var(--color-primary);
@@ -184,7 +184,7 @@
         background: var(--color-primary);
         color: var(--text-inverse);
         border-color: var(--color-primary);
-        box-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+        box-shadow: var(--glow-primary);
     }
 }
 

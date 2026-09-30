@@ -99,8 +99,8 @@
       [:span.track-deck-idx (str idx-str "/" tot-str)]
       [:button.player-track-badge
        {:on-click   (or toggle-track-browser! cycle-jam!)
-        :aria-label "Open track presets library"
-        :title      "Open track presets library (J)"}
+        :aria-label (str "Open presets library. Current track: " cur-title)
+        :title      (str cur-title " | Open track presets library (J)")}
        [:span.track-deck-name cur-title]]]
 
      [:button.player-btn-nav
