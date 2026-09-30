@@ -40,7 +40,8 @@
         (mute! kw)))))
 
 (defn hud-component []
-  (let [{:keys [hud-visible? stats-visible? tutorial-visible? track-browser-open? instrument-browser-open? mobile-notice-dismissed?]} @ui-state]
+  (let [{:keys [hud-visible? stats-visible? tutorial-visible? track-browser-open?
+                instrument-browser-open? mobile-notice-dismissed?]} @ui-state]
     [:div
      (when-not hud-visible?
        [:button.hud-restore-btn {:on-click toggle-hud!
