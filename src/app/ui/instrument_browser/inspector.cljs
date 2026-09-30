@@ -39,9 +39,16 @@
 (defn inspector-panel
   "Render right parameter inspector and fine-tuning studio panel."
   [cur-sel-key cur-spec drum? looping?]
-  [:div.inst-inspector-panel
-   [header/inspector-header cur-sel-key cur-spec drum?]
-   [header/audition-bar cur-sel-key cur-spec drum? looping?]
-   (if drum?
-     [drum/drum-inspector cur-sel-key cur-spec]
-     [synth/synth-inspector cur-sel-key cur-spec])])
+  (let [title (or (:title cur-spec) (name cur-sel-key))]
+    [:div.inst-inspector-section
+     [:div.inst-section-bar.inspector-bar
+      [:div.inst-section-title-wrap
+       [:span.inst-section-prompt "> "]
+       [:span.inst-section-title "ACTIVE PATCH: "]
+       [:span.inst-section-badge.active-badge title]]]
+     [:div.inst-inspector-panel
+      [header/inspector-header cur-sel-key cur-spec drum?]
+      [header/audition-bar cur-sel-key cur-spec drum? looping?]
+      (if drum?
+        [drum/drum-inspector cur-sel-key cur-spec]
+        [synth/synth-inspector cur-sel-key cur-spec])]]))
