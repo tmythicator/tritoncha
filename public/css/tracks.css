@@ -11,6 +11,25 @@
     flex-direction: column;
     gap: var(--space-sm);
     max-height: calc(85vh - 90px);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-primary-subtle) transparent;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--border-primary-subtle);
+        border-radius: 3px;
+
+        &:hover {
+            background: var(--color-primary);
+        }
+    }
 }
 
 .track-browser-item {
