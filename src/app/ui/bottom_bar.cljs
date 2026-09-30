@@ -3,8 +3,7 @@
   (:require [app.state :refer [audio-state ui-state]]))
 
 (defn- hotkey-button
-  "Render hotkey shortcut action button with active and danger states.
-  Examples: [hotkey-button {:label \"[T] TUTORIAL\" :on-click f :active? true :aria-label \"Toggle tutorial\"}]."
+  "Render hotkey shortcut action button with active and danger states."
   [{:keys [label on-click active? danger? aria-label]}]
   [:button.neo-action-btn
    {:on-click   on-click
@@ -13,8 +12,7 @@
    label])
 
 (defn- author-link
-  "Render external author credit link.
-  Examples: [author-link]."
+  "Render external author credit link."
   []
   [:div.neo-links-group
    [:a.neo-link-btn {:href "https://timcha.dev" :target "_blank" :rel "noreferrer"}
@@ -22,8 +20,7 @@
     "timcha.dev"]])
 
 (defn bottom-bar-component
-  "Render bottom HUD bar with quick performance keyboard shortcuts and developer info.
-  Examples: [bottom-bar-component props]."
+  "Render bottom HUD bar with quick performance keyboard shortcuts and developer info."
   [{:keys [toggle-tutorial! toggle-drums! toggle-click! toggle-instrument-browser! toggle-stats! toggle-hud!]}]
   (let [{:keys [drums-muted? active-tracks]} @audio-state
         {:keys [tutorial-visible? instrument-browser-open? stats-visible? hud-visible?]} @ui-state

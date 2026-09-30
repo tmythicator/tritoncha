@@ -1,11 +1,11 @@
 (ns app.ui.top-bar.controls
-  "Top bar engine playback, track scrubbing, tempo slider, musical key/scale selectors, preset reset, and scene controls."
+  "Top bar engine playback, track scrubbing, tempo slider, musical key/scale selectors and preset reset controls."
   (:require
    [app.audio.control.session :as session]
    [app.audio.control.tracker :as tracker :refer [next-jam! prev-jam!]]
    [app.audio.control.transport :as transport]
    [app.config :as cfg]
-   [app.state :refer [audio-state visual-state]]
+   [app.state :refer [audio-state]]
    [clojure.string :as str]))
 
 (def ^:private scale-options
@@ -35,16 +35,14 @@
    [:path {:d "M6 3l5 5-5 5" :fill "none" :stroke "currentColor" :stroke-width "2" :stroke-linecap "round" :stroke-linejoin "round"}]])
 
 (defn- track-orig-bpm
-  "Retrieve original declared tempo for the active track preset.
-  Examples: (track-orig-bpm :orbital-roller) -> 160."
+  "Retrieve original declared tempo for the active track preset."
   [cur-jam]
   (let [tracks-map (tracker/all-tracks)
         t          (get tracks-map cur-jam)]
     (or (:bpm t) cfg/default-bpm)))
 
 (defn- track-orig-scale
-  "Retrieve original declared [root mode octave] vector for the active track preset.
-  Examples: (track-orig-scale :orbital-roller) -> [:e :minor 1]."
+  "Retrieve original declared [root mode octave] vector for the active track preset."
   [cur-jam]
   (let [tracks-map (tracker/all-tracks)
         t          (get tracks-map cur-jam)
@@ -54,15 +52,13 @@
       [(:root cfg/default-key :e) (:mode cfg/default-key :phrygian) (:octave cfg/default-key 1)])))
 
 (defn- reset-to-original!
-  "Restore playback tempo and harmonize all melodic loops back to original track preset values.
-  Examples: (reset-to-original! 160 :e :minor 1)."
+  "Restore playback tempo and harmonize all melodic loops back to original track preset values."
   [orig-bpm orig-root orig-mode orig-oct]
   (transport/set-bpm! orig-bpm)
   (session/modulate-all! orig-root orig-mode (or orig-oct 1)))
 
 (defn- track-deck
-  "Render interactive track scrubber deck with index counter, chevron steppers, and wheel scrolling.
-  Examples: [track-deck opts]."
+  "Render interactive track scrubber deck with index counter, chevron steppers, and wheel scrolling."
   [{:keys [cur-idx total-count cur-title toggle-track-browser! cycle-jam!]}]
   (let [idx-str (let [n (inc cur-idx)] (if (< n 10) (str "0" n) (str n)))
         tot-str (if (< total-count 10) (str "0" total-count) (str total-count))]
@@ -86,8 +82,7 @@
        {:on-click   (or toggle-track-browser! cycle-jam!)
         :aria-label "Open track presets library"
         :title      "Open track presets library (J)"}
-       [:span.track-deck-name cur-title]
-       [:span.track-deck-arrow "▾"]]]
+       [:span.track-deck-name cur-title]]]
 
      [:button.player-btn-nav
       {:on-click   next-jam!
@@ -96,19 +91,16 @@
       [icon-chevron-right]]]))
 
 (defn master-deck-component
-  "Render primary master transport, track scrubber deck, and 3D scene switcher.
-  Examples: [master-deck-component props]."
-  [{:keys [toggle-play! cycle-jam! toggle-track-browser! cycle-scene!]}]
+  "Render primary master transport and track scrubber deck."
+  [{:keys [toggle-play! cycle-jam! toggle-track-browser!]}]
   (let [{:keys [active? current-jam]} @audio-state
-        {:keys [current-scene]}       @visual-state
         tks         (tracker/track-keys)
         cur-jam     (or current-jam (tracker/default-track-key))
         cur-idx     (let [i (.indexOf tks cur-jam)] (if (neg? i) 0 i))
         total-count (count tks)
         all-t       (tracker/all-tracks)
         cur-t       (get all-t cur-jam)
-        cur-title   (or (:name cur-t) (-> cur-jam name str/upper-case))
-        scene-name  (-> (or current-scene :cyber-torus) name str/upper-case)]
+        cur-title   (or (:name cur-t) (-> cur-jam name str/upper-case))]
     [:div.hud-master-deck
      [:button.player-play-btn
       {:on-click   toggle-play!
@@ -120,20 +112,10 @@
                   :total-count           total-count
                   :cur-title             cur-title
                   :toggle-track-browser! toggle-track-browser!
-                  :cycle-jam!            cycle-jam!})
-
-     [:button.neo-btn-stats.btn-swap-scene
-      {:on-click   cycle-scene!
-       :on-wheel   (fn [e]
-                     (.preventDefault e)
-                     (cycle-scene!))
-       :aria-label "Swap 3D visual scene"
-       :title      (str "3D Scene: " scene-name "\nClick or scroll wheel to swap scene (G)")}
-      (str "⟳ SCENE: " scene-name)]]))
+                  :cycle-jam!            cycle-jam!})]))
 
 (defn tweaks-deck-component
-  "Render sound design, tempo slider with wheel support, key/scale selects, and preset reset button.
-  Examples: [tweaks-deck-component props]."
+  "Render sound design, tempo slider with wheel support, key/scale selects, and preset reset button."
   [_props]
   (let [{:keys [bpm key current-jam]} @audio-state
         root-kw   (:root key :e)
@@ -200,9 +182,10 @@
       "↺ RESET"]]))
 
 (defn controls-component
-  "Render top bar master and tweaks control decks.
-  Examples: [controls-component props]."
+  "Render top bar master and tweaks control decks."
   [props]
-  [:div.top-bar-controls
-   [master-deck-component props]
-   [tweaks-deck-component props]])
+  (let [active? (boolean (:active? @audio-state))]
+    [:div.top-bar-controls
+     [master-deck-component props]
+     (when active?
+       [tweaks-deck-component props])]))

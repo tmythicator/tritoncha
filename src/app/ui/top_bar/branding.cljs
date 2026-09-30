@@ -3,8 +3,7 @@
   (:require [app.state :refer [audio-state]]))
 
 (defn branding-component
-  "Render top bar brand title and real-time audio engine status dot indicator.
-  Examples: [branding-component]."
+  "Render top bar brand title and real-time audio engine status dot indicator."
   []
   (let [active? (boolean (:active? @audio-state))]
     [:div.top-bar-branding

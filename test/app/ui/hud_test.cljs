@@ -1,7 +1,7 @@
 (ns app.ui.hud-test
-  "Unit tests for HUD top bar, status badges, scene controls and bottom bar layout."
+  "Unit tests for HUD top bar, status badges, and bottom bar layout."
   (:require [cljs.test :refer [deftest is testing]]
-            [app.state :refer [audio-state visual-state]]
+            [app.state :refer [audio-state]]
             [app.ui.bottom-bar :refer [bottom-bar-component]]
             [app.ui.top-bar.branding :refer [branding-component]]
             [app.ui.top-bar.controls :refer [controls-component master-deck-component tweaks-deck-component]]
@@ -17,20 +17,16 @@
       (is (not (some #(= :div.top-bar-status (first %)) (rest hiccup)))))))
 
 (deftest master-deck-component-test
-  (testing "Renders play engine button, track scrubber deck with chevrons and index, and scene button"
+  (testing "Renders play engine button and track scrubber deck with chevrons and index"
     (swap! audio-state assoc :active? false :current-jam :orbital-roller)
-    (swap! visual-state assoc :current-scene :acid-sphere)
-    (let [hiccup    (master-deck-component {})
-          children  (rest hiccup)
-          play-btn  (first children)
-          track-dk  (second children)
-          scene-btn (nth children 2)]
+    (let [hiccup   (master-deck-component {})
+          children (rest hiccup)
+          play-btn (first children)
+          track-dk (second children)]
       (is (= :div.hud-master-deck (first hiccup)))
       (is (= :button.player-play-btn (first play-btn)))
       (is (str/includes? (last play-btn) "PLAY ENGINE"))
-      (is (= :div.player-track-deck (first track-dk)))
-      (is (= :button.neo-btn-stats.btn-swap-scene (first scene-btn)))
-      (is (str/includes? (last scene-btn) "SCENE: ACID-SPHERE")))))
+      (is (= :div.player-track-deck (first track-dk))))))
 
 (deftest tweaks-deck-component-test
   (testing "Renders BPM tempo slider, KEY and SCALE selects, and RESET button in top-bar-tools"
@@ -53,10 +49,15 @@
       (is (str/includes? (last reset-button) "RESET")))))
 
 (deftest controls-component-test
-  (testing "Renders both master and tweaks decks in top-bar-controls"
+  (testing "Renders master deck when stopped, and both master and tweaks decks when active"
+    (swap! audio-state assoc :active? false)
     (let [hiccup (controls-component {})]
       (is (= :div.top-bar-controls (first hiccup)))
-      (is (= 2 (count (rest hiccup)))))))
+      (is (= 1 (count (filter vector? (rest hiccup))))))
+    (swap! audio-state assoc :active? true)
+    (let [hiccup (controls-component {})]
+      (is (= :div.top-bar-controls (first hiccup)))
+      (is (= 2 (count (filter vector? (rest hiccup))))))))
 
 (deftest bottom-bar-component-test
   (testing "Renders hotkey hints on the left and website link on the right"
