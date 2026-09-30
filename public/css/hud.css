@@ -54,6 +54,10 @@
     gap: var(--space-xs);
     width: fit-content;
     max-width: 100%;
+
+    @media (max-width: 640px) {
+        gap: var(--space-sm);
+    }
 }
 
 .top-bar-branding {
@@ -324,17 +328,19 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .tool-tempo-box {
     display: inline-flex;
     align-items: center;
+    height: 24px;
+    box-sizing: border-box;
     gap: var(--space-xs);
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
-    padding: var(--space-2xs) var(--space-sm);
+    padding: 0 var(--space-xs);
     transition: all var(--transition-fast);
 
     &:hover {
@@ -349,13 +355,13 @@
     letter-spacing: 0.5px;
     color: var(--text-brand);
     white-space: nowrap;
-    min-width: 58px;
+    min-width: 52px;
 }
 
 .neo-tempo-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 80px;
+    width: 70px;
     height: 4px;
     background: var(--bg-surface-elevated, #161624);
     border-radius: 2px;
@@ -363,6 +369,10 @@
     cursor: pointer;
     border: 1px solid var(--border-subtle);
     transition: all var(--transition-fast);
+
+    @media (max-width: 640px) {
+        width: 50px;
+    }
 
     &:hover {
         border-color: var(--color-primary);
@@ -400,13 +410,17 @@
     font-size: var(--font-size-xs);
     font-weight: 600;
     letter-spacing: 0.5px;
-    padding: var(--space-2xs) var(--space-xs);
+    height: 24px;
+    line-height: 22px;
+    box-sizing: border-box;
+    padding: 0 var(--space-xs);
     border: 1px solid var(--border-subtle);
     background: var(--bg-surface);
     color: var(--text-brand);
     border-radius: var(--radius-sm);
     cursor: pointer;
     outline: none;
+    vertical-align: middle;
     transition: all var(--transition-fast);
 
     &:hover,
@@ -424,22 +438,33 @@
 
 .neo-select-key {
     font-family: var(--font-mono);
-    min-width: 46px;
+    min-width: 40px;
     text-align: center;
 }
 
 .neo-select-scale {
-    min-width: 100px;
+    min-width: 85px;
+    max-width: 125px;
 }
 
 .btn-reset {
     font-family: inherit;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    line-height: 22px;
     letter-spacing: 0.5px;
-    padding: var(--space-2xs) var(--space-sm);
+    height: 24px;
+    box-sizing: border-box;
+    padding: 0 var(--space-xs);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
     color: var(--text-tertiary);
     transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    flex-shrink: 0;
 
     &:hover {
         color: var(--text-primary);
@@ -468,9 +493,11 @@
     padding: var(--space-3xs) var(--space-2xs);
 
     @media (max-width: 640px) {
+        margin-top: 2px;
         overflow-x: auto;
         max-width: 100%;
-        padding-bottom: 2px;
+        padding-top: 2px;
+        padding-bottom: 4px;
         scrollbar-width: none;
 
         &::-webkit-scrollbar {
