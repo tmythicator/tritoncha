@@ -19,6 +19,11 @@ Shape algorithmic music with ClojureScript, driven by a real-time Rust WebAssemb
 |                                                   ![Visual Synth Studio](assets/synth_studio.png)                                                   |
 | Tweak oscillators, filters, and envelopes with live sliders. Audition sounds in real time and export ClojureScript code straight into your session. |
 
+|                                            HUD Player Deck                                            |
+| :---------------------------------------------------------------------------------------------------: |
+|                              ![HUD Player Deck](assets/player_panel.png)                              |
+| Real-time playback engine toggle, preset track navigation, tempo slider, harmonic root + mode tuning. |
+
 |       System Audio Status + Mixer Matrix        |               Track Presets Library                |
 | :---------------------------------------------: | :------------------------------------------------: |
 | ![System Audio Status](assets/audio_status.png) | ![Track Presets Library](assets/track_presets.png) |
