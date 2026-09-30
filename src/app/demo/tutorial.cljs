@@ -183,7 +183,7 @@
                      (pat)
                      (fast 2)
                      (shift 4))
-       :step "64n"})
+       :step "32n"})
 
   ;; Polyrhythmic truncation with :hat-open
   (l! :hat
@@ -210,7 +210,7 @@
   (set-key! :e :phrygian 1)
 
   ;; Scale Degree Sequences on CS-80 :lead-blade
-  (l! :blade {:inst :lead-blade :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n"})
+  (l! :blade {:inst :lead-blade :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] 3) :step "16n"})
 
   ;; Chords and Voicings on deep :pad-drone atmosphere
   (chord :e :min9 3)

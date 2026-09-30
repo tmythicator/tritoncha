@@ -12,18 +12,26 @@
 (defn- resolve-track-notes
   "Resolves note pitches from scale degrees or explicit notes, applying rhythm masks."
   [pat notes-in degs oct]
-  (let [raw  (if (and degs (not notes-in))
+  (let [raw  (cond
+               (seq notes-in)
+               notes-in
+
+               degs
                (session/d degs (if oct {:octave oct} {}))
-               (or notes-in [true]))
+
+               (seq (:mask pat))
+               [true]
+
+               :else
+               nil)
         hits (to-vec raw)
         mask (to-vec (:mask pat))]
-    (if (seq mask)
+    (if (and hits (seq mask))
       (patterns/apply-mask hits mask)
       hits)))
 
 (defn normalize-pattern-data
-  "Pure transform that canonicalizes pattern specifications, resolving degrees and masks into a canonical track pattern map.
-  Examples: (normalize-pattern-data :bass {:notes ['C2' 'E2'] :step '16n'})."
+  "Pure transform that canonicalizes pattern specifications, resolving degrees and masks into a canonical track pattern map."
   [track-key pattern-map]
   (let [tk       (keyword track-key)
         pat      (pattern/canonicalize-pattern tk pattern-map)

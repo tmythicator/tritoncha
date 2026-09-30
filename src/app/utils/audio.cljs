@@ -120,6 +120,10 @@
            ("16n.")               (* beat-s 0.375)
            ("16t")                (* beat-s (/ 0.5 3.0))
            ("32n" "thirtysecond") (* beat-s 0.125)
+           ("32n.")               (* beat-s 0.1875)
+           ("32t")                (* beat-s (/ 0.25 3.0))
+           ("64n" "sixtyfourth")  (* beat-s 0.0625)
+           ("64n.")               (* beat-s 0.09375)
            (* beat-s 0.25)))))))
 
 (defn step->mult

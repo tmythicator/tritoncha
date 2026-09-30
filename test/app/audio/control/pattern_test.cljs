@@ -35,4 +35,28 @@
       (is (true? (pattern/valid-pattern? pat)))
       (is (= :lead-8bit (:inst pat)))
       (is (= "8n" (:dur pat)))
-      (is (= 2 (:oct pat))))))
+      (is (= 2 (:oct pat)))))
+
+  (testing "Normalizes :pattern alias into canonical :notes"
+    (let [pat (sched/normalize-pattern-data :snare {:pattern [:snare! :snare_ nil :sn-rs!]
+                                                    :step "32n"})]
+      (is (true? (pattern/valid-pattern? pat)))
+      (is (= :snare (:inst pat)))
+      (is (= [:snare! :snare_ nil :sn-rs!] (:notes pat)))
+      (is (= "32n" (:step pat)))))
+
+  (testing "Normalizes string mini-notation directly into :notes"
+    (let [pat (sched/normalize-pattern-data :snare {:pattern "s! s_ . rs!"
+                                                    :step "16n"})]
+      (is (true? (pattern/valid-pattern? pat)))
+      (is (= [:snare! :snare_ nil :sn-rs!] (:notes pat)))))
+
+  (testing "Normalizes raw mini-notation string as direct argument"
+    (let [pat (sched/normalize-pattern-data :kick "k . . .  k . . .")]
+      (is (true? (pattern/valid-pattern? pat)))
+      (is (= :kick (:inst pat)))
+      (is (= [:kick nil nil nil :kick nil nil nil] (:notes pat)))))
+
+  (testing "Rejects empty map without notes or mask"
+    (let [pat (sched/normalize-pattern-data :snare {})]
+      (is (false? (pattern/valid-pattern? pat))))))

@@ -54,7 +54,7 @@
 (defn- resolve-track-scale-notes
   "Resolves deferred scale degrees or raw degree vectors against preset track scale."
   [track-opts scale]
-  (let [orig-notes (:notes track-opts)
+  (let [orig-notes (or (:notes track-opts) (:pattern track-opts) (:pat track-opts) (:hits track-opts))
         resolved   (harmony/resolve-track-notes orig-notes scale (or (:oct track-opts) (:octave track-opts)))]
     (cond-> (assoc track-opts :notes resolved)
       (or (:progression (meta resolved))
