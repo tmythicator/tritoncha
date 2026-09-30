@@ -19,8 +19,7 @@
   "Render interactive instrument studio modal overlay.
   Examples: [instrument-browser-component {:on-close f}]."
   [{:keys [on-close]}]
-  (let [_rev        @state/patch-revision
-        cat-filter  @state/active-category
+  (let [cat-filter    @state/active-category
         query       (str/trim (str/lower-case @state/search-query))
         all-insts     (inst/all-instruments)
         primary-insts all-insts

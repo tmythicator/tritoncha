@@ -14,7 +14,6 @@
 (defonce active-category (r/atom :all))
 (defonce search-query (r/atom ""))
 (defonce selected-inst (r/atom :bass-analog))
-(defonce patch-revision (r/atom 0))
 
 (defn custom-file-inst?
   "Check whether instrument key is defined in custom/synth.cljs or custom/drums.cljs on disk.
@@ -67,12 +66,10 @@
   Examples: (patch-param! :lead :bus :bus/space cur-spec) -> nil."
   ([inst-key root-param val _cur-spec]
    (instruments/patch! inst-key root-param val)
-   (swap! patch-revision inc)
    (audition/touch-preview-note! inst-key))
   ([inst-key section-key param-key val cur-spec]
    (instruments/patch! inst-key section-key
                        (assoc (or (get cur-spec section-key) {}) param-key val))
-   (swap! patch-revision inc)
    (audition/touch-preview-note! inst-key)))
 
 (defn reset-param!
@@ -80,5 +77,4 @@
   Examples: (reset-param! :saw-bass) -> nil."
   [inst-key]
   (instruments/reset-instrument! inst-key)
-  (swap! patch-revision inc)
   (audition/touch-preview-note! inst-key))
