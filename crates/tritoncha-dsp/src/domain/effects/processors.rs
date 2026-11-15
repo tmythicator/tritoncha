@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_chorus_mix_passthrough_when_zero() {
-        use crate::engine::DEFAULT_SAMPLE_RATE;
+        use crate::domain::DEFAULT_SAMPLE_RATE;
 
         let mut chorus = StereoChorus::new();
         chorus.mix = 0.0;

@@ -162,14 +162,8 @@ pub const MIN_HOLD_SEC: f32 = 0.005;
 pub const MAX_HOLD_SEC: f32 = 10.0;
 pub const DEFAULT_MONO_HOLD_SEC: f32 = 0.15;
 pub const DEFAULT_POLY_HOLD_SEC: f32 = 0.40;
-pub const MIN_ATTACK_SEC: f32 = 0.001;
 pub const MIN_DECAY_SEC: f32 = 0.005;
-pub const MIN_RELEASE_SEC: f32 = 0.005;
-
-pub const MIN_PITCH_SNAP_SEMITONES: f32 = 0.0;
-pub const MAX_PITCH_SNAP_SEMITONES: f32 = 48.0;
 pub const MIN_PITCH_SNAP_DECAY_SEC: f32 = 0.002;
-pub const MAX_PITCH_SNAP_DECAY_SEC: f32 = 0.150;
 pub const DEFAULT_PITCH_SNAP_DECAY_SEC: f32 = 0.015;
 pub const MAX_ANALOG_DRIFT_SEMITONES: f32 = 0.15;
 

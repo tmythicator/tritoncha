@@ -19,22 +19,17 @@ pub use crate::domain::drums::{
     DRUM_SPLASH, DRUM_TOM, DRUM_TOM_HIGH, DRUM_TOM_LOW, DRUM_TOM_MID,
 };
 pub use crate::domain::sequencer::{
-    DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, INST_CLICK, MIN_AUDIBLE_VELOCITY,
-    SEQUENCER_TICK_MODULO,
+    DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, DEFAULT_SAMPLE_RATE, INST_CLICK,
+    MIN_AUDIBLE_VELOCITY, SEQUENCER_TICK_MODULO,
 };
 pub use crate::services::mixer::*;
 
-pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
 pub const NUM_VOICES: usize = 32;
 
-// Master Filter Cutoff and Resonance Boundaries
+// Master Filter Cutoff Boundaries and Headroom
 pub const MIN_MASTER_CUTOFF_HZ: f32 = 40.0;
 pub const MAX_MASTER_CUTOFF_HZ: f32 = 18000.0;
 pub const DEFAULT_MASTER_CUTOFF_HZ: f32 = 18000.0;
-pub const MASTER_FILTER_BYPASS_CUTOFF_HZ: f32 = 16000.0;
-pub const MAX_MASTER_RESONANCE: f32 = 0.95;
-pub const MIN_AUDIBLE_RESONANCE: f32 = 0.01;
-pub const MIN_SWEEP_DURATION_S: f32 = 0.01;
 pub const MASTER_HEADROOM_GAIN: f32 = 0.95;
 
 /// Tritoncha Real-Time Audio Engine.
@@ -282,10 +277,16 @@ impl TritonchaEngine {
         }
     }
 
-    pub fn add_bus_filter(&mut self, bus: impl Into<BusId>, cutoff_hz: f32, resonance: f32) {
-        let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-        let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
-        self.push_bus_effect(bus, BusEffectNode::Filter(StereoSvfFilter::new(f_hz, res)));
+    pub fn add_bus_filter(
+        &mut self,
+        bus: impl Into<BusId>,
+        cutoff_hz: impl Into<CutoffHz>,
+        resonance: impl Into<Resonance>,
+    ) {
+        self.push_bus_effect(
+            bus,
+            BusEffectNode::Filter(StereoSvfFilter::new(cutoff_hz, resonance)),
+        );
     }
 
     pub fn add_bus_delay(&mut self, bus: impl Into<BusId>, time_s: f32, feedback: f32, wet: f32) {

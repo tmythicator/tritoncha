@@ -2,8 +2,7 @@
 
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
 use crate::core::math::{soft_clip, t60_decay_coeff, wrap_phase};
-use crate::domain::{AdsrTime, Drive, DrumPitch, PitchSnapDecay};
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::{AdsrTime, Drive, DrumPitch, PitchSnapDecay, DEFAULT_SAMPLE_RATE};
 use std::f32::consts::PI;
 
 // Tuned frequency ranges for membrane toms

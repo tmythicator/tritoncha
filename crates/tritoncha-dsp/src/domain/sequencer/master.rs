@@ -9,7 +9,7 @@ use crate::core::math::midi_to_freq;
 use crate::domain::drums::{is_drum_inst, DRUM_TOM};
 use crate::domain::Bpm;
 
-pub use crate::engine::DEFAULT_SAMPLE_RATE;
+pub use crate::domain::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_BPM: f32 = 168.0;
 pub const MIN_BPM: f32 = 30.0;
 pub const MAX_BPM: f32 = 300.0;

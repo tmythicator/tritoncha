@@ -5,8 +5,7 @@ use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
 use crate::domain::effects::StateVariableFilter;
-use crate::domain::{AdsrTime, CutoffHz};
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::{AdsrTime, CutoffHz, DEFAULT_SAMPLE_RATE};
 
 /// Hi-hat synthesis parameters.
 #[derive(Clone, Copy, Debug, PartialEq)]

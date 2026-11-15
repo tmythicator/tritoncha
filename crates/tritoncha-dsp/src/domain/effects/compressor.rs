@@ -1,7 +1,7 @@
 //! Stereo VCA-style studio bus compressor with soft-knee dynamic gain reduction.
 
 use crate::core::math::{db_to_gain, gain_to_db, lerp};
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::DEFAULT_SAMPLE_RATE;
 
 pub const DEFAULT_COMP_THRESHOLD_DB: f32 = -12.0;
 pub const DEFAULT_COMP_RATIO: f32 = 4.0;

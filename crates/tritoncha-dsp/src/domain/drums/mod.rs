@@ -180,12 +180,13 @@ pub trait DrumVoice {
     fn is_active(&self) -> bool;
     fn process(&mut self, sample_rate: f32) -> f32;
     fn set_mode(&mut self, mode: DrumMode);
+    fn reset(&mut self);
 }
 
 macro_rules! impl_drum_voice {
-    ($($t:ident),* $(,)?) => {
+    ($($t:ident $(<$n:ident>)?),* $(,)?) => {
         $(
-            impl DrumVoice for $t {
+            impl $(<const $n: usize>)? DrumVoice for $t $(<$n>)? {
                 #[inline(always)]
                 fn is_active(&self) -> bool {
                     self.active
@@ -197,6 +198,10 @@ macro_rules! impl_drum_voice {
                 #[inline(always)]
                 fn set_mode(&mut self, mode: DrumMode) {
                     self.mode = mode;
+                }
+                #[inline(always)]
+                fn reset(&mut self) {
+                    self.reset();
                 }
             }
         )*
@@ -211,22 +216,8 @@ impl_drum_voice!(
     MembraneVoice,
     RideVoice,
     RideBellVoice,
+    MetallicVoice<N>,
 );
-
-impl<const N: usize> DrumVoice for MetallicVoice<N> {
-    #[inline(always)]
-    fn is_active(&self) -> bool {
-        self.active
-    }
-    #[inline(always)]
-    fn process(&mut self, sample_rate: f32) -> f32 {
-        self.process(sample_rate)
-    }
-    #[inline(always)]
-    fn set_mode(&mut self, mode: DrumMode) {
-        self.mode = mode;
-    }
-}
 
 #[inline(always)]
 fn render_voice<V: DrumVoice>(voice: &mut V, sample_rate: f32) -> f32 {
@@ -235,6 +226,19 @@ fn render_voice<V: DrumVoice>(voice: &mut V, sample_rate: f32) -> f32 {
     } else {
         0.0
     }
+}
+
+macro_rules! for_all_drum_voices {
+    (@each $self:ident, $v:ident, $body:expr; $($field:ident),+ $(,)?) => {
+        $( { let $v = &mut $self.$field; $body; } )+
+    };
+    ($self:ident, |$v:ident| $body:expr) => {
+        for_all_drum_voices!(
+            @each $self, $v, $body;
+            kick, snare, hat, clap, tom, tom_high, tom_mid, tom_low, ride, ride_bell, crash_16,
+            crash_17, crash_18, splash, china, cowbell
+        )
+    };
 }
 
 /// Drum machine managing all drum voices.
@@ -316,22 +320,7 @@ impl DrumMachine {
 
     pub fn set_mode_all(&mut self, mode: impl Into<DrumMode>) {
         let m = mode.into();
-        self.kick.set_mode(m);
-        self.snare.set_mode(m);
-        self.hat.set_mode(m);
-        self.clap.set_mode(m);
-        self.tom.set_mode(m);
-        self.tom_high.set_mode(m);
-        self.tom_mid.set_mode(m);
-        self.tom_low.set_mode(m);
-        self.ride.set_mode(m);
-        self.ride_bell.set_mode(m);
-        self.crash_16.set_mode(m);
-        self.crash_17.set_mode(m);
-        self.crash_18.set_mode(m);
-        self.splash.set_mode(m);
-        self.china.set_mode(m);
-        self.cowbell.set_mode(m);
+        for_all_drum_voices!(self, |v| v.set_mode(m));
     }
 
     /// Dispatches a trigger to the corresponding drum voice by strongly-typed DrumId.
@@ -382,41 +371,13 @@ impl DrumMachine {
 
     #[inline(always)]
     pub fn process(&mut self, sample_rate: f32) -> f32 {
-        render_voice(&mut self.kick, sample_rate)
-            + render_voice(&mut self.snare, sample_rate)
-            + render_voice(&mut self.hat, sample_rate)
-            + render_voice(&mut self.clap, sample_rate)
-            + render_voice(&mut self.tom, sample_rate)
-            + render_voice(&mut self.tom_high, sample_rate)
-            + render_voice(&mut self.tom_mid, sample_rate)
-            + render_voice(&mut self.tom_low, sample_rate)
-            + render_voice(&mut self.ride, sample_rate)
-            + render_voice(&mut self.ride_bell, sample_rate)
-            + render_voice(&mut self.crash_16, sample_rate)
-            + render_voice(&mut self.crash_17, sample_rate)
-            + render_voice(&mut self.crash_18, sample_rate)
-            + render_voice(&mut self.splash, sample_rate)
-            + render_voice(&mut self.china, sample_rate)
-            + render_voice(&mut self.cowbell, sample_rate)
+        let mut sum = 0.0;
+        for_all_drum_voices!(self, |v| sum += render_voice(v, sample_rate));
+        sum
     }
 
     pub fn reset(&mut self) {
-        self.kick.reset();
-        self.snare.reset();
-        self.hat.reset();
-        self.clap.reset();
-        self.tom.reset();
-        self.tom_high.reset();
-        self.tom_mid.reset();
-        self.tom_low.reset();
-        self.ride.reset();
-        self.ride_bell.reset();
-        self.crash_16.reset();
-        self.crash_17.reset();
-        self.crash_18.reset();
-        self.splash.reset();
-        self.china.reset();
-        self.cowbell.reset();
+        for_all_drum_voices!(self, |v| v.reset());
     }
 }
 
@@ -429,7 +390,7 @@ impl Default for DrumMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::DEFAULT_SAMPLE_RATE;
+    use crate::domain::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_membrane_drum_sweep_and_decay() {

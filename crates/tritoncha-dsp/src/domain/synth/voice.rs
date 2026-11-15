@@ -158,16 +158,16 @@ impl SynthVoice {
         };
 
         self.amp_env.trigger(
-            patch.attack.max(MIN_ATTACK_SEC),
+            *patch.attack,
             patch.decay.max(MIN_DECAY_SEC),
-            patch.sustain.clamp(0.0, 1.0),
-            patch.release.max(MIN_RELEASE_SEC),
+            *patch.sustain,
+            patch.release.max(MIN_DECAY_SEC),
             hold_time,
             sample_rate,
         );
 
         self.mod_env.trigger_ad(
-            patch.mod_attack.max(MIN_ATTACK_SEC),
+            *patch.mod_attack,
             patch.mod_decay.max(MIN_DECAY_SEC),
             sample_rate,
         );
@@ -190,10 +190,11 @@ impl SynthVoice {
         // Pitch attack transient snap
         if *patch.pitch_snap > 0.01 {
             self.pitch_snap_level = 1.0;
-            let decay_s = patch
-                .pitch_snap_decay
-                .clamp(MIN_PITCH_SNAP_DECAY_SEC, MAX_PITCH_SNAP_DECAY_SEC);
-            self.pitch_snap_rate = calc_rate(decay_s, sample_rate, MIN_PITCH_SNAP_DECAY_SEC);
+            self.pitch_snap_rate = calc_rate(
+                *patch.pitch_snap_decay,
+                sample_rate,
+                MIN_PITCH_SNAP_DECAY_SEC,
+            );
         } else {
             self.pitch_snap_level = 0.0;
             self.pitch_snap_rate = 0.0;
@@ -348,7 +349,7 @@ impl Default for SynthVoice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::DEFAULT_SAMPLE_RATE;
+    use crate::domain::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_voice_initial_state() {

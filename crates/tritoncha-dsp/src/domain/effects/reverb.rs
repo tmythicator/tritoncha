@@ -5,8 +5,10 @@ use crate::domain::Normalized;
 
 pub const NUM_COMB_FILTERS: usize = 8;
 pub const NUM_ALLPASS_FILTERS: usize = 4;
+pub const MAX_COMB_LEN: usize = 1640;
+pub const MAX_ALLPASS_LEN: usize = 580;
 
-pub use crate::engine::DEFAULT_SAMPLE_RATE;
+pub use crate::domain::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_REVERB_WET: f32 = 0.35;
 pub const MIN_WET_THRESHOLD: f32 = 0.001;
 pub const COMB_FEEDBACK_DEFAULT: f32 = 0.85;
@@ -27,9 +29,11 @@ pub const FREEVERB_COMB_TUNINGS_R: [usize; NUM_COMB_FILTERS] =
 pub const FREEVERB_ALLPASS_TUNINGS_L: [usize; NUM_ALLPASS_FILTERS] = [556, 441, 341, 225];
 pub const FREEVERB_ALLPASS_TUNINGS_R: [usize; NUM_ALLPASS_FILTERS] = [579, 464, 364, 248];
 
-/// Feedback Comb Filter with lowpass damping.
+/// Feedback Comb Filter with lowpass damping (zero-allocation fixed buffer).
+#[derive(Clone, Copy)]
 pub struct CombFilter {
-    buf: Vec<f32>,
+    buf: [f32; MAX_COMB_LEN],
+    len: usize,
     pos: usize,
     fb: f32,
     damp: f32,
@@ -39,7 +43,8 @@ pub struct CombFilter {
 impl CombFilter {
     pub fn new(size: usize) -> Self {
         Self {
-            buf: vec![0.0; size],
+            buf: [0.0; MAX_COMB_LEN],
+            len: size.clamp(1, MAX_COMB_LEN),
             pos: 0,
             fb: COMB_FEEDBACK_DEFAULT,
             damp: COMB_DAMPING_DEFAULT,
@@ -56,20 +61,22 @@ impl CombFilter {
         let out = self.buf[self.pos];
         self.prev = lerp(out, self.prev, self.damp);
         self.buf[self.pos] = input + self.prev * self.fb;
-        self.pos = (self.pos + 1) % self.buf.len();
+        self.pos = (self.pos + 1) % self.len;
         out
     }
 
     pub fn reset(&mut self) {
-        self.buf.fill(0.0);
+        self.buf[..self.len].fill(0.0);
         self.pos = 0;
         self.prev = 0.0;
     }
 }
 
-/// Allpass filter for dense phase diffusion without magnitude alteration.
+/// Allpass filter for dense phase diffusion without magnitude alteration (zero-allocation fixed buffer).
+#[derive(Clone, Copy)]
 pub struct AllpassFilter {
-    buf: Vec<f32>,
+    buf: [f32; MAX_ALLPASS_LEN],
+    len: usize,
     pos: usize,
     feedback: f32,
 }
@@ -77,7 +84,8 @@ pub struct AllpassFilter {
 impl AllpassFilter {
     pub fn new(size: usize) -> Self {
         Self {
-            buf: vec![0.0; size],
+            buf: [0.0; MAX_ALLPASS_LEN],
+            len: size.clamp(1, MAX_ALLPASS_LEN),
             pos: 0,
             feedback: ALLPASS_FEEDBACK_DEFAULT,
         }
@@ -88,12 +96,12 @@ impl AllpassFilter {
         let buf_out = self.buf[self.pos];
         let out = -input + buf_out;
         self.buf[self.pos] = input + buf_out * self.feedback;
-        self.pos = (self.pos + 1) % self.buf.len();
+        self.pos = (self.pos + 1) % self.len;
         out
     }
 
     pub fn reset(&mut self) {
-        self.buf.fill(0.0);
+        self.buf[..self.len].fill(0.0);
         self.pos = 0;
     }
 }
@@ -162,10 +170,7 @@ impl StereoReverb {
         self.fdn.set_wet(self.wet);
 
         let fb = (COMB_FEEDBACK_OFFSET + rs * COMB_FEEDBACK_SCALE).clamp(0.0, MAX_COMB_FEEDBACK);
-        for c in &mut self.combs_l {
-            c.set_feedback(fb);
-        }
-        for c in &mut self.combs_r {
+        for c in self.combs_l.iter_mut().chain(self.combs_r.iter_mut()) {
             c.set_feedback(fb);
         }
     }
@@ -181,15 +186,8 @@ impl StereoReverb {
             ReverbMode::Freeverb => {
                 let mono_in = (in_l + in_r) * STEREO_TO_MONO_SCALE;
 
-                let mut out_l = 0.0;
-                let mut out_r = 0.0;
-
-                for c in &mut self.combs_l {
-                    out_l += c.process(mono_in);
-                }
-                for c in &mut self.combs_r {
-                    out_r += c.process(mono_in);
-                }
+                let mut out_l: f32 = self.combs_l.iter_mut().map(|c| c.process(mono_in)).sum();
+                let mut out_r: f32 = self.combs_r.iter_mut().map(|c| c.process(mono_in)).sum();
 
                 for ap in &mut self.allpasses_l {
                     out_l = ap.process(out_l);
@@ -210,47 +208,21 @@ impl StereoReverb {
             return (in_l, in_r);
         }
 
-        let mono_in = (in_l + in_r) * STEREO_TO_MONO_SCALE;
-
-        // Parallel comb filters
-        let mut out_l = 0.0;
-        let mut out_r = 0.0;
-
-        for c in &mut self.combs_l {
-            out_l += c.process(mono_in);
-        }
-        for c in &mut self.combs_r {
-            out_r += c.process(mono_in);
-        }
-
-        // Series allpass diffusers
-        for ap in &mut self.allpasses_l {
-            out_l = ap.process(out_l);
-        }
-        for ap in &mut self.allpasses_r {
-            out_r = ap.process(out_r);
-        }
-
-        let wet_gain = self.wet * REVERB_STEREO_SPREAD_GAIN;
+        let (wet_l, wet_r) = self.process_wet(in_l, in_r);
         let dry_gain = 1.0 - self.wet * REVERB_DRY_MIX_FACTOR;
-
-        (
-            in_l * dry_gain + out_l * wet_gain,
-            in_r * dry_gain + out_r * wet_gain,
-        )
+        (in_l * dry_gain + wet_l, in_r * dry_gain + wet_r)
     }
 
     pub fn reset(&mut self) {
-        for c in &mut self.combs_l {
+        self.fdn.reset();
+        for c in self.combs_l.iter_mut().chain(self.combs_r.iter_mut()) {
             c.reset();
         }
-        for c in &mut self.combs_r {
-            c.reset();
-        }
-        for ap in &mut self.allpasses_l {
-            ap.reset();
-        }
-        for ap in &mut self.allpasses_r {
+        for ap in self
+            .allpasses_l
+            .iter_mut()
+            .chain(self.allpasses_r.iter_mut())
+        {
             ap.reset();
         }
     }

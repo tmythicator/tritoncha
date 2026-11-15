@@ -1,5 +1,7 @@
 //! Strongly-typed domain parameters and clamped value types for synthesizer patches.
 
+pub const DEFAULT_SAMPLE_RATE: f32 = 48000.0;
+
 macro_rules! clamped_f32 {
     ($name:ident, $min:expr, $max:expr, $default:expr) => {
         #[derive(Copy, Clone, Debug, PartialEq)]

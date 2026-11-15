@@ -1,7 +1,7 @@
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
 use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::DEFAULT_SAMPLE_RATE;
 
 pub use super::cymbals::PercussionParams as ClapParams;
 

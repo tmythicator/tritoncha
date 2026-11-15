@@ -2,8 +2,7 @@
 
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
 use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase};
-use crate::domain::{AdsrTime, Drive, DrumPitch, PitchDrop, PitchSnapDecay};
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::{AdsrTime, Drive, DrumPitch, PitchDrop, PitchSnapDecay, DEFAULT_SAMPLE_RATE};
 
 // Default Tuning and Acoustic Physical Modeling Constants
 pub const DEFAULT_KICK_PITCH_HZ: f32 = 48.0; // Deep sub fundamental

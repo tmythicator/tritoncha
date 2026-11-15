@@ -7,7 +7,7 @@ use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
 use crate::domain::effects::StateVariableFilter;
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::DEFAULT_SAMPLE_RATE;
 
 use super::{ModalFilter, PercussionParams};
 

@@ -24,7 +24,7 @@ pub const MIN_DELAY_LINE_LENGTH: usize = 64;
 pub const DELAY_LINE_SAFETY_HEADROOM: usize = 64;
 
 /// Reference standard audio sample rate in Hz.
-pub use crate::engine::DEFAULT_SAMPLE_RATE;
+pub use crate::domain::DEFAULT_SAMPLE_RATE;
 
 /// Minimum valid audio sample rate in Hz.
 pub const MIN_VALID_SAMPLE_RATE: f32 = 1000.0;
