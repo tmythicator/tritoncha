@@ -5,6 +5,7 @@ pub mod effects;
 pub mod sequencer;
 pub mod synth;
 
+pub use crate::services::mixer::BusTarget;
 pub use effects::BusId;
 pub use sequencer::TrackId;
 pub use synth::PatchId;

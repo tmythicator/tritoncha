@@ -36,6 +36,16 @@ pub enum DriveMode {
     Adaa = 1,
 }
 
+impl From<u8> for DriveMode {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            0 => DriveMode::Classic,
+            _ => DriveMode::Adaa,
+        }
+    }
+}
+
 /// Bitcrusher and analog drive / saturation effect with selectable ADAA-1 antialiased core.
 pub struct BitcrusherDrive {
     pub drive: f32,       // 0.0 to 1.0

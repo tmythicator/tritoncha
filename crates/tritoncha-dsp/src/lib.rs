@@ -3,9 +3,10 @@ pub mod domain;
 pub mod engine;
 pub mod services;
 
-use crate::domain::effects::CompressorConfig;
-use crate::domain::synth::ModularPatch;
+use crate::domain::effects::{CompressorConfig, FilterMode};
+use crate::domain::synth::OscillatorType;
 use crate::domain::BusId;
+use crate::services::mixer::BusTarget;
 pub use engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
@@ -396,11 +397,11 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch(
     analog_drift: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let patch = ModularPatch {
-            osc_type: osc_type as u8,
+        let patch = modular_patch! {
+            osc_type: OscillatorType::from(osc_type as u8),
             sub_level,
             pulse_width,
-            filter_type: filter_type as u8,
+            filter_type: FilterMode::from(filter_type as u8),
             cutoff_base,
             cutoff_env_amt,
             cutoff_key_track,
@@ -411,7 +412,7 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch(
             release,
             mod_attack,
             mod_decay,
-            bus_id: bus_id as u8,
+            bus_id: BusTarget::from(bus_id as u8),
             polyphony: polyphony as u8,
             glide,
             filter_drive,

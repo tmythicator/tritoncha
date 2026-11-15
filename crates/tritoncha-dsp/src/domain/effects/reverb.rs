@@ -106,6 +106,16 @@ pub enum ReverbMode {
     Fdn = 1,
 }
 
+impl From<u8> for ReverbMode {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            0 => ReverbMode::Freeverb,
+            _ => ReverbMode::Fdn,
+        }
+    }
+}
+
 /// Studio-Quality Stereo Reverb with selectable Freeverb and 8-channel Householder FDN modes.
 pub struct StereoReverb {
     pub mode: ReverbMode,

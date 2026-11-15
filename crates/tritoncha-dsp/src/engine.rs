@@ -180,7 +180,7 @@ impl TritonchaEngine {
 
     pub fn set_voice_patch(&mut self, patch_id: impl Into<PatchId>, patch: ModularPatch) {
         if let Some(target) = self.patch_mut(patch_id) {
-            *target = patch.sanitized();
+            *target = patch;
         }
     }
 
@@ -188,8 +188,8 @@ impl TritonchaEngine {
         self.drums.set_drum_patch(drum_id, params);
     }
 
-    pub fn set_drum_mode(&mut self, mode: u8) {
-        self.drums.set_mode_all(DrumMode::from(mode));
+    pub fn set_drum_mode(&mut self, mode: impl Into<DrumMode>) {
+        self.drums.set_mode_all(mode);
     }
 
     pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
@@ -201,17 +201,17 @@ impl TritonchaEngine {
                 self.drums.trigger_drum(drum, vel, freq);
             }
             InstrumentId::Synth(patch_id) => {
-                let pid = patch_id.clamped().as_usize();
-                let patch = self.patches[pid];
-                let target_bus = patch.bus_id as usize;
+                let pid = patch_id.clamped();
+                let patch = self.patches[pid.as_usize()];
+                let target_bus = patch.bus_id.as_usize();
 
-                match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
+                match VoiceAllocator::allocate(&self.voices, pid, *patch.polyphony, *patch.glide) {
                     VoiceAllocation::LegatoGlide { voice_idx } => {
                         self.voices[voice_idx].glide_to(
                             freq,
                             vel,
                             self.sample_rate,
-                            patch.glide,
+                            *patch.glide,
                             dur_s,
                         );
                     }
@@ -390,12 +390,8 @@ impl TritonchaEngine {
         self.update_bus_distort(None, drive, bit_depth, sample_hold);
     }
 
-    pub fn set_drive_mode(&mut self, mode: u8) {
-        let m = if mode == 0 {
-            DriveMode::Classic
-        } else {
-            DriveMode::Adaa
-        };
+    pub fn set_drive_mode(&mut self, mode: impl Into<DriveMode>) {
+        let m = mode.into();
         self.for_bus_chains_mut(None, |chain| chain.set_drive_mode(m));
     }
 
@@ -415,12 +411,8 @@ impl TritonchaEngine {
         self.update_bus_reverb(None, room_size, wet);
     }
 
-    pub fn set_reverb_mode(&mut self, mode: u8) {
-        let m = if mode == 0 {
-            ReverbMode::Freeverb
-        } else {
-            ReverbMode::Fdn
-        };
+    pub fn set_reverb_mode(&mut self, mode: impl Into<ReverbMode>) {
+        let m = mode.into();
         self.for_bus_chains_mut(None, |chain| chain.set_reverb_mode(m));
     }
 
@@ -457,7 +449,7 @@ impl TritonchaEngine {
             for v_idx in 0..NUM_VOICES {
                 let voice = &mut self.voices[v_idx];
                 if voice.active {
-                    let pid = voice.patch_id;
+                    let pid = voice.patch_id.as_usize();
                     let patch = &self.patches[pid];
                     let s = voice.process_sample(patch, self.sample_rate);
                     let target_bus = self.voice_bus_map[v_idx];

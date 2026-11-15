@@ -1,12 +1,13 @@
 //! Default presets for modular synth patches.
 
 use super::patch::*;
+use crate::modular_patch;
 
 pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     let mut patches = [ModularPatch::default(); MAX_PATCHES];
 
     // Patch 4: Saw Bass (Classic Phrygian Roller Bass)
-    patches[PATCH_SAW_BASS] = ModularPatch {
+    patches[PATCH_SAW_BASS] = modular_patch! {
         osc_type: OSC_SAW,
         sub_level: 0.55,
         pulse_width: 0.5,
@@ -32,7 +33,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 5: Acid Bass (Resonant 303 Screamer)
-    patches[PATCH_ACID_BASS] = ModularPatch {
+    patches[PATCH_ACID_BASS] = modular_patch! {
         osc_type: OSC_SAW,
         sub_level: 0.3,
         pulse_width: 0.5,
@@ -58,7 +59,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 6: Sub Sine (Deep seismic 808 sub)
-    patches[PATCH_SUB_SINE] = ModularPatch {
+    patches[PATCH_SUB_SINE] = modular_patch! {
         osc_type: OSC_SINE,
         sub_level: 0.8,
         pulse_width: 0.5,
@@ -84,7 +85,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 7: Dark Pad (Atmospheric minor chord pad)
-    patches[PATCH_DARK_PAD] = ModularPatch {
+    patches[PATCH_DARK_PAD] = modular_patch! {
         osc_type: OSC_SUPERSAW,
         sub_level: 0.3,
         pulse_width: 0.5,
@@ -113,7 +114,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     patches[PATCH_LEAD] = ModularPatch::default_lead();
 
     // Patch 9: FM Chime / Metallic Perc
-    patches[PATCH_FM] = ModularPatch {
+    patches[PATCH_FM] = modular_patch! {
         osc_type: OSC_FM,
         sub_level: 0.0,
         pulse_width: 0.5,
@@ -139,7 +140,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 10: Reese Bass (Dark detuned jungle reese)
-    patches[PATCH_REESE] = ModularPatch {
+    patches[PATCH_REESE] = modular_patch! {
         osc_type: OSC_REESE,
         sub_level: 0.45,
         pulse_width: 0.5,
@@ -165,7 +166,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 11: Click (Metronome click downbeat/beat)
-    patches[PATCH_CLICK] = ModularPatch {
+    patches[PATCH_CLICK] = modular_patch! {
         osc_type: OSC_CLICK,
         sub_level: 0.0,
         pulse_width: 0.5,
@@ -191,7 +192,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 12: Supersaw (Trance/Hardcore detuned stack)
-    patches[PATCH_SUPERSAW] = ModularPatch {
+    patches[PATCH_SUPERSAW] = modular_patch! {
         osc_type: OSC_SUPERSAW,
         sub_level: 0.35,
         pulse_width: 0.5,
@@ -217,7 +218,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 13: Blade Runner Brass Lead
-    patches[PATCH_BLADE] = ModularPatch {
+    patches[PATCH_BLADE] = modular_patch! {
         osc_type: OSC_BLADE,
         sub_level: 0.2,
         pulse_width: 0.5,
@@ -243,7 +244,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 14: Hoover Synth (Alpha Juno Mentasm)
-    patches[PATCH_HOOVER] = ModularPatch {
+    patches[PATCH_HOOVER] = modular_patch! {
         osc_type: OSC_HOOVER,
         sub_level: 0.4,
         pulse_width: 0.4,
@@ -269,7 +270,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 15: Karplus-Strong Acoustic Pluck
-    patches[PATCH_KARPLUS] = ModularPatch {
+    patches[PATCH_KARPLUS] = modular_patch! {
         osc_type: OSC_KARPLUS,
         sub_level: 0.0,
         pulse_width: 0.5,
@@ -295,7 +296,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 16: Tonewheel Organ (Gospel / House Organ)
-    patches[PATCH_ORGAN] = ModularPatch {
+    patches[PATCH_ORGAN] = modular_patch! {
         osc_type: OSC_ORGAN,
         sub_level: 0.5,
         pulse_width: 0.5,
@@ -321,7 +322,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 17: Chiptune NES Square (8-bit Arpeggiator Lead)
-    patches[PATCH_CHIPTUNE] = ModularPatch {
+    patches[PATCH_CHIPTUNE] = modular_patch! {
         osc_type: OSC_CHIPTUNE,
         sub_level: 0.0,
         pulse_width: 0.25,
@@ -347,7 +348,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 19: Ambient Glass Drift (Shimmering crystal pad)
-    patches[PATCH_AMBIENT_GLASS] = ModularPatch {
+    patches[PATCH_AMBIENT_GLASS] = modular_patch! {
         osc_type: OSC_SINE,
         sub_level: 0.2,
         pulse_width: 0.5,
@@ -373,7 +374,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 27: Ethereal Pad
-    patches[PATCH_ETHEREAL_PAD] = ModularPatch {
+    patches[PATCH_ETHEREAL_PAD] = modular_patch! {
         osc_type: OSC_SUPERSAW,
         sub_level: 0.3,
         pulse_width: 0.5,
@@ -399,7 +400,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 28: Ice Pad (Cold, sharp digital pad)
-    patches[PATCH_ICE_PAD] = ModularPatch {
+    patches[PATCH_ICE_PAD] = modular_patch! {
         osc_type: OSC_PULSE,
         sub_level: 0.1,
         pulse_width: 0.2,
@@ -425,7 +426,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 29: Warm Strings (Analog polyphonic string ensemble)
-    patches[PATCH_WARM_STRINGS] = ModularPatch {
+    patches[PATCH_WARM_STRINGS] = modular_patch! {
         osc_type: OSC_SAW,
         sub_level: 0.25,
         pulse_width: 0.5,
@@ -451,7 +452,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 30: Choir Pad (Vocal formant simulation)
-    patches[PATCH_CHOIR_PAD] = ModularPatch {
+    patches[PATCH_CHOIR_PAD] = modular_patch! {
         osc_type: OSC_PULSE,
         sub_level: 0.3,
         pulse_width: 0.35,
@@ -477,7 +478,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 31: Space Drone (Continuous atmospheric evolving drone)
-    patches[PATCH_SPACE_DRONE] = ModularPatch {
+    patches[PATCH_SPACE_DRONE] = modular_patch! {
         osc_type: OSC_SUPERSAW,
         sub_level: 0.6,
         pulse_width: 0.5,
@@ -503,7 +504,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 32: Pluck Lead (Bright fast EDM/Trance pluck)
-    patches[PATCH_PLUCK_LEAD] = ModularPatch {
+    patches[PATCH_PLUCK_LEAD] = modular_patch! {
         osc_type: OSC_PULSE,
         sub_level: 0.2,
         pulse_width: 0.5,
@@ -529,7 +530,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 33: Neuro Bass (Heavy distorted modulated neurofunk bass)
-    patches[PATCH_NEURO_BASS] = ModularPatch {
+    patches[PATCH_NEURO_BASS] = modular_patch! {
         osc_type: OSC_REESE,
         sub_level: 0.5,
         pulse_width: 0.5,
@@ -555,7 +556,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 34: 808 Sub (Pure sub-bass with punchy pitch envelope)
-    patches[PATCH_808_SUB] = ModularPatch {
+    patches[PATCH_808_SUB] = modular_patch! {
         osc_type: OSC_SINE,
         sub_level: 0.9,
         pulse_width: 0.5,
@@ -581,7 +582,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 35: Slap Bass (Percussive funk slap bass)
-    patches[PATCH_SLAP_BASS] = ModularPatch {
+    patches[PATCH_SLAP_BASS] = modular_patch! {
         osc_type: OSC_PULSE,
         sub_level: 0.3,
         pulse_width: 0.4,
@@ -607,7 +608,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 36: Organ Bass (Deep house M1-style organ bass)
-    patches[PATCH_ORGAN_BASS] = ModularPatch {
+    patches[PATCH_ORGAN_BASS] = modular_patch! {
         osc_type: OSC_ORGAN,
         sub_level: 0.4,
         pulse_width: 0.5,
@@ -633,7 +634,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 37: Acid Lead (High resonant squealing 303 lead)
-    patches[PATCH_ACID_LEAD] = ModularPatch {
+    patches[PATCH_ACID_LEAD] = modular_patch! {
         osc_type: OSC_SAW,
         sub_level: 0.1,
         pulse_width: 0.5,
@@ -659,7 +660,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 38: FM Bell (Bright crystalline FM bell)
-    patches[PATCH_FM_BELL] = ModularPatch {
+    patches[PATCH_FM_BELL] = modular_patch! {
         osc_type: OSC_FM,
         sub_level: 0.0,
         pulse_width: 0.5,
@@ -685,7 +686,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 39: Glass Keys (Delicate ambient electric piano keys)
-    patches[PATCH_GLASS_KEYS] = ModularPatch {
+    patches[PATCH_GLASS_KEYS] = modular_patch! {
         osc_type: OSC_SINE,
         sub_level: 0.25,
         pulse_width: 0.5,
@@ -711,7 +712,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 40: Siren (Dub sound system laser siren)
-    patches[PATCH_SIREN] = ModularPatch {
+    patches[PATCH_SIREN] = modular_patch! {
         osc_type: OSC_SAW,
         sub_level: 0.3,
         pulse_width: 0.5,
@@ -737,7 +738,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 41: Laser (High sci-fi arcade zap)
-    patches[PATCH_LASER] = ModularPatch {
+    patches[PATCH_LASER] = modular_patch! {
         osc_type: OSC_PULSE,
         sub_level: 0.0,
         pulse_width: 0.5,
@@ -763,7 +764,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 44: Noisy Bell Lead
-    patches[PATCH_LEAD_NBELL] = ModularPatch {
+    patches[PATCH_LEAD_NBELL] = modular_patch! {
         osc_type: OSC_PULSE,
         sub_level: 0.45,
         pulse_width: 0.87,
@@ -789,7 +790,7 @@ pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
     };
 
     // Patch 45: Analog Zap Shot
-    patches[PATCH_ZAP] = ModularPatch {
+    patches[PATCH_ZAP] = modular_patch! {
         osc_type: OSC_TRIANGLE,
         sub_level: 0.0,
         pulse_width: 0.5,

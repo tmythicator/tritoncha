@@ -1,6 +1,6 @@
 //! Voice allocation and polyphony voice-stealing strategies.
 
-use crate::domain::synth::SynthVoice;
+use crate::domain::synth::{PatchId, SynthVoice};
 
 pub const MIN_LEGATO_GLIDE_SEC: f32 = 0.001;
 
@@ -21,14 +21,15 @@ impl VoiceAllocator {
     /// Determines the voice index and allocation strategy for a new note event.
     pub fn allocate<const N: usize>(
         voices: &[SynthVoice; N],
-        patch_id: usize,
+        patch_id: impl Into<PatchId>,
         polyphony: u8,
         glide_time: f32,
     ) -> VoiceAllocation {
+        let pid = patch_id.into();
         if polyphony <= 1 {
             // 1. Monophonic mode: find existing active voice for this patch
             for (i, v) in voices.iter().enumerate() {
-                if v.active && v.patch_id == patch_id {
+                if v.active && v.patch_id == pid {
                     return if glide_time > MIN_LEGATO_GLIDE_SEC {
                         VoiceAllocation::LegatoGlide { voice_idx: i }
                     } else {
@@ -41,7 +42,7 @@ impl VoiceAllocator {
             let mut patch_voice_indices = [0usize; N];
             let mut patch_count = 0;
             for (i, v) in voices.iter().enumerate() {
-                if v.active && v.patch_id == patch_id {
+                if v.active && v.patch_id == pid {
                     patch_voice_indices[patch_count] = i;
                     patch_count += 1;
                 }
@@ -98,7 +99,7 @@ mod tests {
     fn test_monophonic_legato_glide_vs_retrigger() {
         let mut voices: [SynthVoice; 4] = std::array::from_fn(|_| SynthVoice::new());
         voices[1].active = true;
-        voices[1].patch_id = 2;
+        voices[1].patch_id = PatchId(2);
 
         // With glide > 0.001 -> Legato
         let alloc_glide = VoiceAllocator::allocate(&voices, 2, 1, 0.05);
@@ -113,11 +114,11 @@ mod tests {
     fn test_per_patch_polyphony_stealing() {
         let mut voices: [SynthVoice; 4] = std::array::from_fn(|_| SynthVoice::new());
         voices[0].active = true;
-        voices[0].patch_id = 1;
+        voices[0].patch_id = PatchId(1);
         voices[0].age = 100;
 
         voices[1].active = true;
-        voices[1].patch_id = 1;
+        voices[1].patch_id = PatchId(1);
         voices[1].age = 500; // Oldest for patch 1
 
         // Polyphony limit is 2 for patch 1 -> should steal voice 1 (age 500)
@@ -130,7 +131,7 @@ mod tests {
         let mut voices: [SynthVoice; 4] = std::array::from_fn(|_| SynthVoice::new());
         for (i, v) in voices.iter_mut().enumerate() {
             v.active = true;
-            v.patch_id = i;
+            v.patch_id = PatchId(i);
             v.age = (i as u32 + 1) * 100;
         }
         voices[2].age = 1000; // Globally oldest

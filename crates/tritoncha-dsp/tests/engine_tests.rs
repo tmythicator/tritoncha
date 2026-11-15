@@ -4,9 +4,13 @@ use tritoncha_dsp::domain::effects::{
     BitcrusherDrive, SidechainPump, StateVariableFilter, StereoChorus, StereoDelay, StereoReverb,
 };
 use tritoncha_dsp::domain::sequencer::track::TrackPattern;
-use tritoncha_dsp::domain::synth::patch::ModularPatch;
+use tritoncha_dsp::domain::synth::patch::{
+    ModularPatch, BUS_BASS, BUS_LEAD, FILTER_LOWPASS, OSC_PULSE, OSC_SAW,
+};
 use tritoncha_dsp::domain::synth::voice::SynthVoice;
+use tritoncha_dsp::domain::{BusTarget, PatchId};
 use tritoncha_dsp::engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
+use tritoncha_dsp::modular_patch;
 
 #[test]
 fn test_dsp_defaults() {
@@ -104,11 +108,11 @@ fn test_synth_voices_trigger_and_decay() {
 fn test_custom_voice_patch_reconfiguration() {
     let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Configure patch 20 as custom resonant square lead
-    let patch20 = ModularPatch {
-        osc_type: 1, // osc_type = pulse
+    let patch20 = modular_patch! {
+        osc_type: OSC_PULSE,
         sub_level: 0.2,
         pulse_width: 0.3,
-        filter_type: 0, // filter_type = lowpass
+        filter_type: FILTER_LOWPASS,
         cutoff_base: 1800.0,
         cutoff_env_amt: 4000.0,
         cutoff_key_track: 2.0,
@@ -119,7 +123,7 @@ fn test_custom_voice_patch_reconfiguration() {
         release: 0.15,
         mod_attack: 0.01,
         mod_decay: 0.25,
-        bus_id: 3, // bus_id = lead
+        bus_id: BUS_LEAD,
         polyphony: 8,
         glide: 0.0,
         filter_drive: 0.35,
@@ -143,27 +147,27 @@ fn test_custom_voice_patch_reconfiguration() {
 fn test_analog_primitives_drive_noise_pitch_snap() {
     let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Configure patch 21 with heavy drive, noise and pitch snap
-    let patch21 = ModularPatch {
-        osc_type: 0, // osc_type = saw
+    let patch21 = modular_patch! {
+        osc_type: OSC_SAW,
         sub_level: 0.3,
         pulse_width: 0.5,
-        filter_type: 0, // filter_type = lowpass
+        filter_type: FILTER_LOWPASS,
         cutoff_base: 1200.0,
         cutoff_env_amt: 2000.0,
         cutoff_key_track: 1.0,
-        resonance: 0.85, // high resonance
+        resonance: 0.85,
         attack: 0.005,
         decay: 0.2,
         sustain: 0.5,
         release: 0.2,
         mod_attack: 0.005,
         mod_decay: 0.2,
-        bus_id: 1,    // bus_id = bass
-        polyphony: 1, // mono
+        bus_id: BUS_BASS,
+        polyphony: 1,
         glide: 0.02,
-        filter_drive: 0.80, // heavy filter_drive
-        noise_level: 0.10,  // audible noise
-        pitch_snap: 24.0,   // strong 2-octave pitch attack punch
+        filter_drive: 0.80,
+        noise_level: 0.10,
+        pitch_snap: 24.0,
         pitch_snap_decay: 0.018,
         analog_drift: 0.50,
     };
@@ -196,7 +200,7 @@ fn test_monophonic_glide_and_stealing() {
     let active_mono_voices = engine
         .voices
         .iter()
-        .filter(|v| v.active && v.patch_id == 5)
+        .filter(|v| v.active && v.patch_id == PatchId(5))
         .count();
     assert_eq!(
         active_mono_voices, 1,
@@ -351,10 +355,12 @@ fn test_sequencer_track_trigger_mask() {
 #[test]
 fn test_ladder_24db_filter_in_synth_voice() {
     let mut voice = SynthVoice::new();
-    let mut patch = ModularPatch::default_lead();
-    patch.filter_type = tritoncha_dsp::domain::synth::patch::FILTER_LADDER_24DB;
-    patch.resonance = 0.85;
-    patch.cutoff_base = 600.0;
+    let patch = ModularPatch {
+        filter_type: tritoncha_dsp::domain::synth::patch::FILTER_LADDER_24DB,
+        resonance: 0.85.into(),
+        cutoff_base: 600.0.into(),
+        ..ModularPatch::default_lead()
+    };
     let sr = DEFAULT_SAMPLE_RATE;
 
     voice.trigger(220.0, 0.9, 5, &patch, sr, 0.2);
@@ -518,14 +524,14 @@ fn test_default_routing_contains_only_compressor_on_master() {
 
 #[test]
 fn test_audio_flows_through_all_individual_busses() {
-    use tritoncha_dsp::domain::effects::{BUS_ID_BASS, BUS_ID_LEAD, BUS_ID_MASTER, BUS_ID_SPACE};
+    use tritoncha_dsp::domain::effects::BUS_ID_MASTER;
     use tritoncha_dsp::domain::sequencer::INST_CLICK;
 
     let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
     // Clear master compressor to test pure dry bus throughput
     engine.clear_bus_chain(BUS_ID_MASTER);
 
-    // 1. Test Drums bus (BUS_ID_DRUMS = 0)
+    // Drums bus
     engine.trigger_note(0, 55.0, 1.0, 0.2); // Kick
     let mut out_l = [0.0; 128];
     let mut out_r = [0.0; 128];
@@ -533,27 +539,27 @@ fn test_audio_flows_through_all_individual_busses() {
     let drum_amp = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
     assert!(drum_amp > 0.05, "Drums bus must pass audio");
 
-    // 2. Test Bass bus (BUS_ID_BASS = 1)
+    // Bass bus
     let mut patch_bass = ModularPatch::default_for(tritoncha_dsp::domain::synth::PATCH_SAW_BASS);
-    patch_bass.bus_id = BUS_ID_BASS as u8;
+    patch_bass.bus_id = BusTarget::Bass;
     engine.set_voice_patch(4, patch_bass);
     engine.trigger_note(4, 110.0, 1.0, 0.2);
     engine.process_block(&mut out_l, &mut out_r);
     let bass_amp = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
     assert!(bass_amp > 0.05, "Bass bus must pass audio");
 
-    // 3. Test Space bus (BUS_ID_SPACE = 2)
+    // Space bus
     let mut patch_space = ModularPatch::default_for(tritoncha_dsp::domain::synth::PATCH_DARK_PAD);
-    patch_space.bus_id = BUS_ID_SPACE as u8;
+    patch_space.bus_id = BusTarget::Space;
     engine.set_voice_patch(5, patch_space);
     engine.trigger_note(5, 220.0, 1.0, 0.2);
     engine.process_block(&mut out_l, &mut out_r);
     let space_amp = out_l.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
     assert!(space_amp > 0.05, "Space bus must pass audio");
 
-    // 4. Test Lead bus (BUS_ID_LEAD = 3)
+    // Lead bus
     let mut patch_lead = ModularPatch::default_for(tritoncha_dsp::domain::synth::PATCH_LEAD);
-    patch_lead.bus_id = BUS_ID_LEAD as u8;
+    patch_lead.bus_id = BusTarget::Lead;
     engine.set_voice_patch(6, patch_lead);
     engine.trigger_note(6, 440.0, 1.0, 0.2);
     engine.process_block(&mut out_l, &mut out_r);
@@ -607,11 +613,11 @@ fn test_modular_routing_graph_dsl_isolation_and_bypass() {
 
     // Configure voices for Lead and Bass
     let mut patch_lead = ModularPatch::default_for(PATCH_LEAD);
-    patch_lead.bus_id = BUS_ID_LEAD as u8;
+    patch_lead.bus_id = BusTarget::Lead;
     engine.set_voice_patch(6, patch_lead);
 
     let mut patch_bass = ModularPatch::default_for(PATCH_SAW_BASS);
-    patch_bass.bus_id = BUS_ID_BASS as u8;
+    patch_bass.bus_id = BusTarget::Bass;
     engine.set_voice_patch(4, patch_bass);
 
     // Proof 1: Lead (target_out = true) must bypass master chorus completely!

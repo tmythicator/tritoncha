@@ -123,37 +123,37 @@ impl From<u8> for OscillatorType {
 }
 
 // Oscillator Types
-pub const OSC_SAW: u8 = OscillatorType::Saw as u8;
-pub const OSC_PULSE: u8 = OscillatorType::Pulse as u8;
-pub const OSC_TRIANGLE: u8 = OscillatorType::Triangle as u8;
-pub const OSC_SINE: u8 = OscillatorType::Sine as u8;
-pub const OSC_SUPERSAW: u8 = OscillatorType::Supersaw as u8;
-pub const OSC_KARPLUS: u8 = OscillatorType::Karplus as u8;
-pub const OSC_ORGAN: u8 = OscillatorType::Organ as u8;
-pub const OSC_CHIPTUNE: u8 = OscillatorType::Chiptune as u8;
-pub const OSC_FM: u8 = OscillatorType::Fm as u8;
-pub const OSC_REESE: u8 = OscillatorType::Reese as u8;
-pub const OSC_BLADE: u8 = OscillatorType::Blade as u8;
-pub const OSC_HOOVER: u8 = OscillatorType::Hoover as u8;
-pub const OSC_CLICK: u8 = OscillatorType::Click as u8;
+pub const OSC_SAW: OscillatorType = OscillatorType::Saw;
+pub const OSC_PULSE: OscillatorType = OscillatorType::Pulse;
+pub const OSC_TRIANGLE: OscillatorType = OscillatorType::Triangle;
+pub const OSC_SINE: OscillatorType = OscillatorType::Sine;
+pub const OSC_SUPERSAW: OscillatorType = OscillatorType::Supersaw;
+pub const OSC_KARPLUS: OscillatorType = OscillatorType::Karplus;
+pub const OSC_ORGAN: OscillatorType = OscillatorType::Organ;
+pub const OSC_CHIPTUNE: OscillatorType = OscillatorType::Chiptune;
+pub const OSC_FM: OscillatorType = OscillatorType::Fm;
+pub const OSC_REESE: OscillatorType = OscillatorType::Reese;
+pub const OSC_BLADE: OscillatorType = OscillatorType::Blade;
+pub const OSC_HOOVER: OscillatorType = OscillatorType::Hoover;
+pub const OSC_CLICK: OscillatorType = OscillatorType::Click;
 
 pub use crate::domain::effects::FilterMode;
 
 // Filter Types
-pub const FILTER_LOWPASS: u8 = FilterMode::Lowpass as u8;
-pub const FILTER_HIGHPASS: u8 = FilterMode::Highpass as u8;
-pub const FILTER_BANDPASS: u8 = FilterMode::Bandpass as u8;
-pub const FILTER_NOTCH: u8 = FilterMode::Notch as u8;
-pub const FILTER_LADDER_24DB: u8 = FilterMode::Ladder24 as u8;
+pub const FILTER_LOWPASS: FilterMode = FilterMode::Lowpass;
+pub const FILTER_HIGHPASS: FilterMode = FilterMode::Highpass;
+pub const FILTER_BANDPASS: FilterMode = FilterMode::Bandpass;
+pub const FILTER_NOTCH: FilterMode = FilterMode::Notch;
+pub const FILTER_LADDER_24DB: FilterMode = FilterMode::Ladder24;
 
 pub use crate::services::mixer::BusTarget;
 
 // Bus IDs
-pub const BUS_DRUMS: u8 = BusTarget::Drums as u8;
-pub const BUS_BASS: u8 = BusTarget::Bass as u8;
-pub const BUS_SPACE: u8 = BusTarget::Space as u8;
-pub const BUS_LEAD: u8 = BusTarget::Lead as u8;
-pub const BUS_DIRECT: u8 = BusTarget::Direct as u8;
+pub const BUS_DRUMS: BusTarget = BusTarget::Drums;
+pub const BUS_BASS: BusTarget = BusTarget::Bass;
+pub const BUS_SPACE: BusTarget = BusTarget::Space;
+pub const BUS_LEAD: BusTarget = BusTarget::Lead;
+pub const BUS_DIRECT: BusTarget = BusTarget::Direct;
 
 // Audio and Voice Timing Constants
 pub const MIN_FREQ_HZ: f32 = 20.0;
@@ -173,36 +173,49 @@ pub const MAX_PITCH_SNAP_DECAY_SEC: f32 = 0.150;
 pub const DEFAULT_PITCH_SNAP_DECAY_SEC: f32 = 0.015;
 pub const MAX_ANALOG_DRIFT_SEMITONES: f32 = 0.15;
 
+use super::params::*;
+
+#[macro_export]
+macro_rules! modular_patch {
+    (@val $f:ident) => { $f.into() };
+    (@val $f:ident : $v:expr) => { ($v).into() };
+    ($($field:ident $(: $val:expr)?),* $(,)?) => {
+        $crate::domain::synth::ModularPatch {
+            $( $field: $crate::modular_patch!(@val $field $(: $val)?), )*
+        }
+    };
+}
+
 /// Modular sound design patch parameters.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ModularPatch {
-    pub osc_type: u8,          // OSC_* constants / OscillatorType
-    pub sub_level: f32,        // 0.0 .. 1.0
-    pub pulse_width: f32,      // 0.05 .. 0.95
-    pub filter_type: u8,       // FILTER_* constants
-    pub cutoff_base: f32,      // 20.0 .. 20000.0 Hz
-    pub cutoff_env_amt: f32,   // envelope to cutoff modulation in Hz
-    pub cutoff_key_track: f32, // key tracking multiplier
-    pub resonance: f32,        // 0.0 .. 0.98
-    pub attack: f32,           // seconds
-    pub decay: f32,            // seconds
-    pub sustain: f32,          // level 0.0 .. 1.0
-    pub release: f32,          // seconds
-    pub mod_attack: f32,       // seconds
-    pub mod_decay: f32,        // seconds
-    pub bus_id: u8,            // BUS_* constants
-    pub polyphony: u8,         // 1=Mono, >1=Max polyphony voices (e.g. 8)
-    pub glide: f32,            // Portamento / pitch slide time in seconds (e.g. 0.04)
-    pub filter_drive: f32,     // 0.0 .. 1.0 (analog saturation in SVF integrator feedback)
-    pub noise_level: f32,      // 0.0 .. 1.0 (analog noise injection)
-    pub pitch_snap: f32,       // 0.0 .. 48.0 semitones (laser/punch initial transient)
-    pub pitch_snap_decay: f32, // seconds (pitch snap exponential decay rate)
-    pub analog_drift: f32,     // 0.0 .. 1.0 (subtle LFO pitch drift modeling analog VCOs)
+    pub osc_type: OscillatorType,
+    pub sub_level: Normalized,
+    pub pulse_width: PulseWidth,
+    pub filter_type: FilterMode,
+    pub cutoff_base: CutoffHz,
+    pub cutoff_env_amt: CutoffEnvAmt,
+    pub cutoff_key_track: CutoffKeyTrack,
+    pub resonance: Resonance,
+    pub attack: AdsrTime,
+    pub decay: AdsrTime,
+    pub sustain: Normalized,
+    pub release: AdsrTime,
+    pub mod_attack: AdsrTime,
+    pub mod_decay: AdsrTime,
+    pub bus_id: BusTarget,
+    pub polyphony: Polyphony,
+    pub glide: GlideTime,
+    pub filter_drive: Normalized,
+    pub noise_level: Normalized,
+    pub pitch_snap: PitchSnap,
+    pub pitch_snap_decay: PitchSnapDecay,
+    pub analog_drift: Normalized,
 }
 
 impl ModularPatch {
     pub fn default_lead() -> Self {
-        Self {
+        modular_patch! {
             osc_type: OSC_SAW,
             sub_level: 0.25,
             pulse_width: 0.5,
@@ -225,38 +238,6 @@ impl ModularPatch {
             pitch_snap: 0.0,
             pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
             analog_drift: 0.05,
-        }
-    }
-
-    /// Clamps and sanitizes all patch parameters to ensure numerical stability.
-    pub fn sanitized(&self) -> Self {
-        Self {
-            osc_type: OscillatorType::from(self.osc_type) as u8,
-            sub_level: self.sub_level.clamp(0.0, 1.0),
-            pulse_width: self.pulse_width.clamp(0.05, 0.95),
-            filter_type: FilterMode::from(self.filter_type) as u8,
-            cutoff_base: self.cutoff_base.clamp(MIN_FREQ_HZ, 20000.0),
-            cutoff_env_amt: self.cutoff_env_amt.clamp(-20000.0, 20000.0),
-            cutoff_key_track: self.cutoff_key_track.clamp(0.0, 4.0),
-            resonance: self.resonance.clamp(0.0, 0.98),
-            attack: self.attack.clamp(MIN_ATTACK_SEC, 10.0),
-            decay: self.decay.clamp(MIN_DECAY_SEC, 10.0),
-            sustain: self.sustain.clamp(0.0, 1.0),
-            release: self.release.clamp(MIN_RELEASE_SEC, 10.0),
-            mod_attack: self.mod_attack.clamp(0.001, 10.0),
-            mod_decay: self.mod_decay.clamp(0.005, 10.0),
-            bus_id: BusTarget::from(self.bus_id) as u8,
-            polyphony: self.polyphony.clamp(1, 16),
-            glide: self.glide.clamp(0.0, 2.0),
-            filter_drive: self.filter_drive.clamp(0.0, 1.0),
-            noise_level: self.noise_level.clamp(0.0, 1.0),
-            pitch_snap: self
-                .pitch_snap
-                .clamp(MIN_PITCH_SNAP_SEMITONES, MAX_PITCH_SNAP_SEMITONES),
-            pitch_snap_decay: self
-                .pitch_snap_decay
-                .clamp(MIN_PITCH_SNAP_DECAY_SEC, MAX_PITCH_SNAP_DECAY_SEC),
-            analog_drift: self.analog_drift.clamp(0.0, 1.0),
         }
     }
 
@@ -306,8 +287,28 @@ mod tests {
     fn test_init_default_patches() {
         let patches = init_default_patches();
         assert_eq!(patches[PATCH_SAW_BASS].osc_type, OSC_SAW);
-        assert_eq!(patches[PATCH_ACID_BASS].polyphony, 1);
-        assert_eq!(patches[PATCH_DARK_PAD].polyphony, 8);
-        assert!(patches[PATCH_808_SUB].pitch_snap > 0.0);
+        assert_eq!(*patches[PATCH_ACID_BASS].polyphony, 1);
+        assert_eq!(*patches[PATCH_DARK_PAD].polyphony, 8);
+        assert!(*patches[PATCH_808_SUB].pitch_snap > 0.0);
+    }
+
+    #[test]
+    fn test_modular_patch_types_clamp_bounds() {
+        let patch = ModularPatch {
+            cutoff_base: 50000.0.into(), // Above 20000.0
+            resonance: 5.0.into(),       // Above 0.98
+            sub_level: (-2.0).into(),    // Below 0.0
+            pulse_width: 0.01.into(),    // Below 0.05
+            polyphony: 99.into(),        // Above 16
+            glide: (-1.0).into(),        // Below 0.0
+            ..ModularPatch::default()
+        };
+
+        assert_eq!(*patch.cutoff_base, 20000.0);
+        assert_eq!(*patch.resonance, 0.98);
+        assert_eq!(*patch.sub_level, 0.0);
+        assert_eq!(*patch.pulse_width, 0.05);
+        assert_eq!(*patch.polyphony, 16);
+        assert_eq!(*patch.glide, 0.0);
     }
 }
