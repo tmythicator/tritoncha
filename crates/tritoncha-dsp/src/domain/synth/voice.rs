@@ -1,10 +1,8 @@
 //! Modular synthesizer voice DSP implementation with bandlimited anti-aliased oscillators.
 
-pub use super::envelope::{
-    AdsrEnvelope, EnvelopeStage, ENVELOPE_SILENCE_THRESHOLD, SUSTAIN_ACTIVE_THRESHOLD,
-};
-pub use super::oscillator::*;
-pub use super::patch::*;
+use super::envelope::{AdsrEnvelope, EnvelopeStage};
+use super::oscillator::*;
+use super::patch::*;
 use crate::core::math::{
     calc_rate, sin_phase, soft_clip, time_to_samples, wrap_phase, xorshift32_norm,
     SEMITONES_PER_OCTAVE,
