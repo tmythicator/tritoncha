@@ -3,11 +3,9 @@
 //! and a 4-stage Schroeder allpass diffuser network simulating the turbulent wash of B20 bronze.
 
 use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
-use crate::domain::drums::{
-    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
-use crate::domain::DEFAULT_SAMPLE_RATE;
+use crate::domain::{DrumVelocity, DEFAULT_SAMPLE_RATE};
 
 use super::{ModalFilter, PercussionParams};
 
@@ -117,10 +115,9 @@ impl RideVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
-        self.vel = v;
+        self.vel = *vel.into();
         self.click_env = 1.0;
         self.ping_env = 1.0;
         self.wash_env = 0.2; // Start with fast initial excitation

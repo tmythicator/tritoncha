@@ -2,11 +2,11 @@
 
 use super::{
     DrumMode, DRUM_SNARE_BODY, DRUM_SNARE_CRACK, DRUM_SNARE_GHOST, DRUM_SNARE_RIM, DRUM_SNARE_WIRE,
-    MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
+    MIN_AUDIBLE_VELOCITY,
 };
 use crate::core::math::{sin_phase, soft_clip, wrap_phase, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
-use crate::domain::{CutoffHz, Drive, DrumPitch, Normalized};
+use crate::domain::{CutoffHz, Drive, DrumPitch, DrumVelocity, Normalized};
 
 // Default Snare Voice Tuning Constants
 pub const DEFAULT_SNARE_BASE_FREQ: f32 = 185.0;
@@ -202,11 +202,10 @@ impl SnareVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger_styled(&mut self, vel: f32, style: i32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger_styled(&mut self, vel: impl Into<DrumVelocity>, style: i32) {
         self.active = true;
         self.phase = 0.0;
-        self.vel = v;
+        self.vel = *vel.into();
 
         if style == DRUM_SNARE_RIM {
             self.env_rim = 1.0;

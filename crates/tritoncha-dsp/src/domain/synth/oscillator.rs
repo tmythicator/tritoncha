@@ -1,9 +1,10 @@
 //! Anti-aliased bandlimited and physical oscillator waveform generators.
 
 use crate::core::math::{poly_blep, sin_phase, wrap_phase};
+use crate::domain::PulseWidth;
 
-pub const MIN_PULSE_WIDTH: f32 = 0.05;
-pub const MAX_PULSE_WIDTH: f32 = 0.95;
+pub const MIN_PULSE_WIDTH: f32 = PulseWidth::MIN.get();
+pub const MAX_PULSE_WIDTH: f32 = PulseWidth::MAX.get();
 
 pub const NUM_SUPERSAW_VOICES: usize = 7;
 pub const SUPERSAW_DETUNE_OFFSETS: [f32; NUM_SUPERSAW_VOICES] =
@@ -53,8 +54,8 @@ pub fn render_saw(phase: f32, dt: f32) -> f32 {
 
 /// Generates a bandlimited PolyBLEP pulse/square waveform with variable duty cycle.
 #[inline(always)]
-pub fn render_pulse(phase: f32, dt: f32, pulse_width: f32) -> f32 {
-    let pw = pulse_width.clamp(MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
+pub fn render_pulse(phase: f32, dt: f32, pulse_width: impl Into<PulseWidth>) -> f32 {
+    let pw = *pulse_width.into();
     let raw = if phase < pw { 1.0 } else { -1.0 };
     raw - poly_blep(phase, dt) + poly_blep((phase + (1.0 - pw)) % 1.0, dt)
 }
@@ -84,8 +85,7 @@ pub fn advance_supersaw_phases(phases: &mut [f32; NUM_SUPERSAW_VOICES], dt: f32)
 pub fn render_supersaw(phases: &[f32; NUM_SUPERSAW_VOICES], dt: f32) -> f32 {
     let mut sum = 0.0;
     for (i, &d) in SUPERSAW_DETUNE_OFFSETS.iter().enumerate() {
-        let p = phases[i];
-        sum += 2.0 * p - 1.0 - poly_blep(p, dt * (1.0 + d));
+        sum += render_saw(phases[i], dt * (1.0 + d));
     }
     sum * SUPERSAW_NORMALIZATION
 }
@@ -121,20 +121,16 @@ pub fn render_fm(phase: f32, mod_phase: f32, env_level: f32) -> f32 {
 /// Generates a detuned Reese bass dual-sawtooth waveform.
 #[inline(always)]
 pub fn render_reese(phase: f32, dt: f32) -> f32 {
-    let dt1 = dt * REESE_DETUNE_DOWN;
-    let dt2 = dt * REESE_DETUNE_UP;
-    let saw1 = 2.0 * phase - 1.0 - poly_blep(phase, dt1);
-    let p2 = (phase * REESE_PHASE_SPREAD) % 1.0;
-    let saw2 = 2.0 * p2 - 1.0 - poly_blep(p2, dt2);
-    saw1 * REESE_GAIN + saw2 * REESE_GAIN
+    let saw1 = render_saw(phase, dt * REESE_DETUNE_DOWN);
+    let saw2 = render_saw((phase * REESE_PHASE_SPREAD) % 1.0, dt * REESE_DETUNE_UP);
+    (saw1 + saw2) * REESE_GAIN
 }
 
 /// Generates a Yamaha CS-80 Blade Runner brass sawtooth pair.
 #[inline(always)]
 pub fn render_blade(phase: f32, dt: f32) -> f32 {
-    let saw1 = 2.0 * phase - 1.0 - poly_blep(phase, dt);
-    let p2 = (phase * BLADE_PHASE_SPREAD) % 1.0;
-    let saw2 = 2.0 * p2 - 1.0 - poly_blep(p2, dt * BLADE_PHASE_SPREAD);
+    let saw1 = render_saw(phase, dt);
+    let saw2 = render_saw((phase * BLADE_PHASE_SPREAD) % 1.0, dt * BLADE_PHASE_SPREAD);
     (saw1 + saw2) * CS80_BLADE_GAIN
 }
 
@@ -170,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_render_waveforms_bounded() {
-        use crate::engine::DEFAULT_SAMPLE_RATE;
+        use crate::domain::DEFAULT_SAMPLE_RATE;
         let dt = 440.0 / DEFAULT_SAMPLE_RATE;
         let phase = 0.25;
 

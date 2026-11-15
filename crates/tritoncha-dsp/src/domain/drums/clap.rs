@@ -1,7 +1,7 @@
-use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use super::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
-use crate::domain::DEFAULT_SAMPLE_RATE;
+use crate::domain::{DrumVelocity, DEFAULT_SAMPLE_RATE};
 
 pub use super::cymbals::PercussionParams as ClapParams;
 
@@ -45,11 +45,10 @@ impl ClapVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
         self.env = 1.0;
-        self.vel = v;
+        self.vel = *vel.into();
     }
 
     #[inline(always)]

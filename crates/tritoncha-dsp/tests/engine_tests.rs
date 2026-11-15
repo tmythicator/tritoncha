@@ -727,8 +727,11 @@ fn test_c_abi_ffi_modular_routing_and_processor_updates() {
             "Audio must render cleanly through FFI configured chains"
         );
 
-        // Clean up
-        let _ = Box::from_raw(ptr);
+        // Null-pointer safety across FFI wrappers
+        tritoncha_dsp_set_bpm(std::ptr::null_mut(), 174.0);
+        assert_eq!(tritoncha_dsp_take_trigger_mask(std::ptr::null_mut()), 0);
+        tritoncha_dsp_destroy(ptr);
+        tritoncha_dsp_destroy(std::ptr::null_mut());
     }
 }
 

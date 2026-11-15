@@ -1,5 +1,7 @@
 //! Sequencer track and step pattern representation.
 
+use crate::domain::Normalized;
+
 pub const MAX_STEPS: usize = 128;
 pub const MAX_TRACKS: usize = 16;
 
@@ -67,11 +69,18 @@ impl TrackPattern {
     }
 
     /// Sets a specific step's instrument, pitch, velocity, and duration.
-    pub fn set_step(&mut self, step: usize, inst_kind: i16, note: i16, vel: f32, dur: f32) {
+    pub fn set_step(
+        &mut self,
+        step: usize,
+        inst_kind: i16,
+        note: i16,
+        vel: impl Into<Normalized>,
+        dur: f32,
+    ) {
         if step < MAX_STEPS {
             self.inst_kinds[step] = inst_kind;
             self.notes[step] = note;
-            self.velocities[step] = vel.clamp(0.0, 1.0);
+            self.velocities[step] = *vel.into();
             self.durations[step] = dur.max(0.005);
         }
     }

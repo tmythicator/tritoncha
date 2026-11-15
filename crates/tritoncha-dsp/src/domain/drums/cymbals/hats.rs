@@ -1,11 +1,9 @@
 //! Hi-hat voice modeling closed, open, and pedal hi-hats.
 
 use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
-use crate::domain::drums::{
-    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
-use crate::domain::{AdsrTime, CutoffHz, DEFAULT_SAMPLE_RATE};
+use crate::domain::{AdsrTime, CutoffHz, DrumVelocity, DEFAULT_SAMPLE_RATE};
 
 /// Hi-hat synthesis parameters.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -80,12 +78,11 @@ impl NoiseHatVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32, open: bool) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>, open: bool) {
         self.active = true;
         self.env = 1.0;
         self.click_env = 1.0;
-        self.vel = v;
+        self.vel = *vel.into();
         self.decay = if open {
             self.decay_open
         } else {

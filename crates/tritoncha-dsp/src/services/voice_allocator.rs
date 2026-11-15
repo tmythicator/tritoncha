@@ -31,59 +31,45 @@ impl VoiceAllocator {
         let glide = *glide_time.into();
         if poly <= 1 {
             // 1. Monophonic mode: find existing active voice for this patch
-            for (i, v) in voices.iter().enumerate() {
-                if v.active && v.patch_id == pid {
-                    return if glide > MIN_LEGATO_GLIDE_SEC {
-                        VoiceAllocation::LegatoGlide { voice_idx: i }
-                    } else {
-                        VoiceAllocation::Trigger { voice_idx: i }
-                    };
-                }
+            if let Some(i) = voices.iter().position(|v| v.active && v.patch_id == pid) {
+                return if glide > MIN_LEGATO_GLIDE_SEC {
+                    VoiceAllocation::LegatoGlide { voice_idx: i }
+                } else {
+                    VoiceAllocation::Trigger { voice_idx: i }
+                };
             }
         } else {
             // 2. Polyphonic mode: enforce max polyphony for this specific patch
-            let mut patch_voice_indices = [0usize; N];
             let mut patch_count = 0;
-            for (i, v) in voices.iter().enumerate() {
-                if v.active && v.patch_id == pid {
-                    patch_voice_indices[patch_count] = i;
-                    patch_count += 1;
+            let mut oldest: Option<(usize, u32)> = None;
+            for (i, v) in voices
+                .iter()
+                .enumerate()
+                .filter(|(_, v)| v.active && v.patch_id == pid)
+            {
+                patch_count += 1;
+                if oldest.is_none_or(|(_, max_age)| v.age > max_age) {
+                    oldest = Some((i, v.age));
                 }
             }
-
-            if patch_count >= poly as usize && patch_count > 0 {
-                // Steal the oldest voice playing this patch
-                let mut oldest_idx = patch_voice_indices[0];
-                let mut max_age = voices[oldest_idx].age;
-                for &idx in &patch_voice_indices[1..patch_count] {
-                    if voices[idx].age > max_age {
-                        max_age = voices[idx].age;
-                        oldest_idx = idx;
-                    }
+            if patch_count >= poly as usize {
+                if let Some((oldest_idx, _)) = oldest {
+                    return VoiceAllocation::Trigger {
+                        voice_idx: oldest_idx,
+                    };
                 }
-                return VoiceAllocation::Trigger {
-                    voice_idx: oldest_idx,
-                };
             }
         }
 
-        // 3. Find first inactive voice in pool
-        for (i, v) in voices.iter().enumerate() {
-            if !v.active {
-                return VoiceAllocation::Trigger { voice_idx: i };
-            }
-        }
-
-        // 4. Global LRU voice stealing across all active voices
-        let mut oldest = 0;
-        let mut max_age = voices[0].age;
-        for (i, v) in voices.iter().enumerate().skip(1) {
-            if v.age > max_age {
-                max_age = voices[i].age;
-                oldest = i;
-            }
-        }
-        VoiceAllocation::Trigger { voice_idx: oldest }
+        // 3. Find first inactive voice in pool, or 4. Global LRU voice stealing
+        let voice_idx = voices.iter().position(|v| !v.active).unwrap_or_else(|| {
+            voices
+                .iter()
+                .enumerate()
+                .max_by_key(|(_, v)| v.age)
+                .map_or(0, |(i, _)| i)
+        });
+        VoiceAllocation::Trigger { voice_idx }
     }
 }
 

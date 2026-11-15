@@ -4,10 +4,9 @@
 
 use super::{ModalFilter, PercussionParams};
 use crate::core::math::{soft_clip, xorshift32_norm};
-use crate::domain::drums::{
-    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
+use crate::domain::DrumVelocity;
 
 /// Ride Cymbal Bell (Cup) Physical Modeling Voice.
 /// Utilizes a 5-mode modal resonator bank calibrated to acoustic B20 bronze cup geometry,
@@ -67,10 +66,9 @@ impl RideBellVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
-        self.vel = v;
+        self.vel = *vel.into();
         self.click_env = 1.0;
         self.impulse_env = 1.0;
         self.pitch_env = 1.0;

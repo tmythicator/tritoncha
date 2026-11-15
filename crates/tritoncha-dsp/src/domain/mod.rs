@@ -74,6 +74,11 @@ mod tests {
 
         let from_usize: PatchId = 8.into();
         assert_eq!(from_usize, PatchId::LEAD);
+
+        assert_eq!(*Bpm::new(10.0), 30.0);
+        assert_eq!(*Bpm::new(500.0), 300.0);
+        assert_eq!(*DrumVelocity::new(0.01), 0.1);
+        assert_eq!(*DrumVelocity::new(2.0), 1.2);
     }
 
     #[test]

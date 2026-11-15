@@ -1,9 +1,10 @@
 //! Membrane drum voices (toms, kicks, and tuned sub-percussion).
 
-use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
-use crate::core::math::{soft_clip, t60_decay_coeff, wrap_phase};
-use crate::domain::{AdsrTime, Drive, DrumPitch, PitchSnapDecay, DEFAULT_SAMPLE_RATE};
-use std::f32::consts::PI;
+use super::{DrumMode, MIN_AUDIBLE_VELOCITY};
+use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase};
+use crate::domain::{
+    AdsrTime, Drive, DrumPitch, DrumVelocity, PitchSnapDecay, DEFAULT_SAMPLE_RATE,
+};
 
 // Tuned frequency ranges for membrane toms
 pub const TOM_HIGH_START_HZ: f32 = 240.0;
@@ -99,8 +100,7 @@ impl MembraneVoice {
         }
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
         self.phase = 0.05;
         self.click_phase = 0.0;
@@ -108,11 +108,10 @@ impl MembraneVoice {
         self.pitch_fast = (self.start_pitch_hz - self.min_pitch_hz).max(30.0) * 0.85;
         self.env = 1.0;
         self.click_env = 1.0;
-        self.vel = v;
+        self.vel = *vel.into();
     }
 
-    pub fn trigger_freq(&mut self, vel: f32, freq: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger_freq(&mut self, vel: impl Into<DrumVelocity>, freq: f32) {
         self.active = true;
         self.phase = 0.05;
         self.click_phase = 0.0;
@@ -121,7 +120,7 @@ impl MembraneVoice {
         self.pitch_fast = base_f * 0.45;
         self.env = 1.0;
         self.click_env = 1.0;
-        self.vel = v;
+        self.vel = *vel.into();
     }
 
     #[inline(always)]
@@ -135,7 +134,7 @@ impl MembraneVoice {
 
         // Stick tip impact click (~3200 Hz with fast ~3ms decay)
         let click_sig = if self.click_env > MIN_AUDIBLE_VELOCITY {
-            let clk = (self.click_phase * 2.0 * PI).sin() * self.click_env * 0.40;
+            let clk = sin_phase(self.click_phase) * self.click_env * 0.40;
             self.click_phase = wrap_phase(self.click_phase + 3200.0 / sample_rate);
             self.click_env *= 0.993;
             clk
@@ -146,22 +145,22 @@ impl MembraneVoice {
         // Multi-modal circular membrane vibration (Bessel ratios: 1.0, 1.587, 2.140)
         let membrane_val = match self.mode {
             DrumMode::Natural => {
-                let m0 = (self.phase * 2.0 * PI).sin();
-                let m1 = (self.phase * 1.587 * 2.0 * PI).sin() * 0.32 * self.env;
-                let m2 = (self.phase * 2.140 * 2.0 * PI).sin() * 0.14 * self.env * self.env;
+                let m0 = sin_phase(self.phase);
+                let m1 = sin_phase(self.phase * 1.587) * 0.32 * self.env;
+                let m2 = sin_phase(self.phase * 2.140) * 0.14 * self.env * self.env;
                 m0 + m1 + m2
             }
             DrumMode::Analog => {
-                let m0 = (self.phase * 2.0 * PI).sin();
-                let m1 = (self.phase * 1.587 * 2.0 * PI).sin() * 0.20 * self.env;
+                let m0 = sin_phase(self.phase);
+                let m1 = sin_phase(self.phase * 1.587) * 0.20 * self.env;
                 m0 + m1
             }
             DrumMode::Idm => {
-                let chirp = (self.phase * 3.2 * 2.0 * PI).sin() * 0.6 * self.env;
-                ((self.phase + chirp) * 2.0 * PI).sin()
+                let chirp = sin_phase(self.phase * 3.2) * 0.6 * self.env;
+                sin_phase(self.phase + chirp)
             }
             DrumMode::Industrial => {
-                let raw = (self.phase * 2.0 * PI).sin();
+                let raw = sin_phase(self.phase);
                 (raw * 2.4).sin()
             }
         };

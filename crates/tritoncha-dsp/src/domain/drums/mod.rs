@@ -13,8 +13,8 @@ pub use membrane::*;
 pub use snare::{SnareParams, SnareVoice};
 
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
-pub const VELOCITY_MIN_CLAMP: f32 = 0.1;
-pub const VELOCITY_MAX_CLAMP: f32 = 1.2;
+pub const VELOCITY_MIN_CLAMP: f32 = crate::domain::DrumVelocity::MIN.get();
+pub const VELOCITY_MAX_CLAMP: f32 = crate::domain::DrumVelocity::MAX.get();
 
 /// Drum acoustic character and synthesis modeling mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

@@ -1,8 +1,10 @@
 //! Kick drum physical and analog modeling voice.
 
-use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
+use super::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase};
-use crate::domain::{AdsrTime, Drive, DrumPitch, PitchDrop, PitchSnapDecay, DEFAULT_SAMPLE_RATE};
+use crate::domain::{
+    AdsrTime, Drive, DrumPitch, DrumVelocity, PitchDrop, PitchSnapDecay, DEFAULT_SAMPLE_RATE,
+};
 
 // Default Tuning and Acoustic Physical Modeling Constants
 pub const DEFAULT_KICK_PITCH_HZ: f32 = 48.0; // Deep sub fundamental
@@ -149,8 +151,7 @@ impl KickVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
         // Start oscillator slightly offset from zero for instant pressure wave
         self.phase = KICK_INITIAL_PHASE_OFFSET;
@@ -159,7 +160,7 @@ impl KickVoice {
         self.env_punch = 1.0;
         self.env_body = 1.0;
         self.env_click = 1.0;
-        self.vel = v;
+        self.vel = *vel.into();
     }
 
     #[inline(always)]
