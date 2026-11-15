@@ -8,9 +8,9 @@ pub mod snare;
 
 pub use clap::ClapVoice;
 pub use cymbals::*;
-pub use kick::KickVoice;
+pub use kick::{KickParams, KickVoice};
 pub use membrane::*;
-pub use snare::SnareVoice;
+pub use snare::{SnareParams, SnareVoice};
 
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
 pub const VELOCITY_MIN_CLAMP: f32 = 0.1;
@@ -502,6 +502,58 @@ mod tests {
             assert!(!s_bell.is_nan());
             assert!(s_ride.abs() < 4.0);
             assert!(s_bell.abs() < 4.0);
+        }
+    }
+
+    #[test]
+    fn test_drum_patch_clamping_and_dispatch() {
+        let mut dm = DrumMachine::new();
+
+        let raw_kick = [5000.0, 9999.0, 5.0, 10.0, 20.0, 50.0, 2.0];
+        assert_eq!(
+            KickParams::from(raw_kick),
+            KickParams {
+                base_pitch: 1000.0.into(),
+                pitch_drop: 1000.0.into(),
+                pitch_decay: 0.150.into(),
+                decay: 10.0.into(),
+                click_level: 10.0.into(),
+                drive: 10.0.into(),
+                mode: DrumMode::Idm,
+            }
+        );
+
+        let raw_snare = [10.0, 5.0, 5.0, 50000.0, 20.0, 0.0, 3.0];
+        assert_eq!(
+            SnareParams::from(raw_snare),
+            SnareParams {
+                base_freq: 20.0.into(),
+                tone_decay: 1.0.into(),
+                noise_decay: 1.0.into(),
+                cutoff: 20000.0.into(),
+                snappy: 10.0.into(),
+                mode: DrumMode::Industrial,
+            }
+        );
+
+        let raw_perc = [50000.0, 2.0, 50.0, 50.0, 0.0, 0.0, 0.0];
+        assert_eq!(
+            PercussionParams::from(raw_perc),
+            PercussionParams {
+                cutoff: 20000.0.into(),
+                resonance: 0.98.into(),
+                decay: 10.0.into(),
+                drive: 10.0.into(),
+                mode: DrumMode::Analog,
+            }
+        );
+
+        for &drum in &DrumId::ALL {
+            dm.reset();
+            dm.set_drum_patch(drum, [50000.0, 9999.0, 50.0, 50.0, 50.0, 50.0, 3.0]);
+            dm.trigger_drum(drum, 1.0, 440.0);
+            let s = dm.process(DEFAULT_SAMPLE_RATE);
+            assert!(!s.is_nan() && s.abs() < 5.0);
         }
     }
 }

@@ -5,25 +5,37 @@ use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
 use crate::domain::effects::StateVariableFilter;
+use crate::domain::{AdsrTime, CutoffHz};
 use crate::engine::DEFAULT_SAMPLE_RATE;
 
 /// Hi-hat synthesis parameters.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct HatParams {
-    pub cutoff_hz: f32,
-    pub decay_closed_s: f32,
-    pub decay_open_s: f32,
-    pub mode: f32,
+    pub cutoff: CutoffHz,
+    pub decay_closed: AdsrTime,
+    pub decay_open: AdsrTime,
+    pub mode: DrumMode,
+}
+
+impl Default for HatParams {
+    fn default() -> Self {
+        Self {
+            cutoff: 7200.0.into(),
+            decay_closed: 0.04.into(),
+            decay_open: 0.40.into(),
+            mode: DrumMode::default(),
+        }
+    }
 }
 
 impl From<[f32; 7]> for HatParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
         Self {
-            cutoff_hz: p[0],
-            decay_closed_s: p[1],
-            decay_open_s: p[2],
-            mode: p[6],
+            cutoff: p[0].into(),
+            decay_closed: p[1].into(),
+            decay_open: p[2].into(),
+            mode: p[6].into(),
         }
     }
 }
@@ -63,21 +75,10 @@ impl NoiseHatVoice {
 
     pub fn set_params(&mut self, params: impl Into<HatParams>) {
         let p = params.into();
-        if p.cutoff_hz > 0.0 {
-            self.cutoff_hz = p.cutoff_hz.clamp(3000.0, 14000.0);
-        }
-        if p.decay_closed_s > 0.0 {
-            self.decay_closed =
-                t60_decay_coeff(p.decay_closed_s.clamp(0.01, 0.5), DEFAULT_SAMPLE_RATE)
-                    .clamp(0.980, 0.999);
-        }
-        if p.decay_open_s > 0.0 {
-            self.decay_open = t60_decay_coeff(p.decay_open_s.clamp(0.05, 1.5), DEFAULT_SAMPLE_RATE)
-                .clamp(0.990, 0.9999);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.cutoff_hz = *p.cutoff;
+        self.decay_closed = t60_decay_coeff(*p.decay_closed, DEFAULT_SAMPLE_RATE);
+        self.decay_open = t60_decay_coeff(*p.decay_open, DEFAULT_SAMPLE_RATE);
+        self.mode = p.mode;
     }
 
     pub fn trigger(&mut self, vel: f32, open: bool) {

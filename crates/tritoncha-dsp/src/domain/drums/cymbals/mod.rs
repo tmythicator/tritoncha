@@ -7,8 +7,49 @@ pub mod ride;
 
 pub use bell::RideBellVoice;
 pub use hats::{HatParams, NoiseHatVoice};
-pub use metallic::{MetallicParams, MetallicVoice};
+pub use metallic::MetallicVoice;
 pub use ride::RideVoice;
+
+use crate::domain::drums::DrumMode;
+use crate::domain::{AdsrTime, CutoffHz, Drive, Resonance};
+
+/// Unified parameter configuration for resonant percussion models (cymbals, metallic, clap).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PercussionParams {
+    pub cutoff: CutoffHz,
+    pub resonance: Resonance,
+    pub decay: AdsrTime,
+    pub drive: Drive,
+    pub mode: DrumMode,
+}
+
+impl Default for PercussionParams {
+    fn default() -> Self {
+        Self {
+            cutoff: 3000.0.into(),
+            resonance: 0.5.into(),
+            decay: 1.0.into(),
+            drive: 1.0.into(),
+            mode: DrumMode::default(),
+        }
+    }
+}
+
+impl From<[f32; 7]> for PercussionParams {
+    #[inline(always)]
+    fn from(p: [f32; 7]) -> Self {
+        Self {
+            cutoff: p[0].into(),
+            resonance: p[1].into(),
+            decay: p[2].into(),
+            drive: p[3].into(),
+            mode: p[6].into(),
+        }
+    }
+}
+
+pub type RideParams = PercussionParams;
+pub type MetallicParams = PercussionParams;
 
 // Inharmonic metallic frequency banks for cymbals and percussion (B20 bronze modal models)
 pub const CRASH_16_FREQS: [f32; 6] = [240.0, 360.0, 560.0, 890.0, 1420.0, 2260.0];

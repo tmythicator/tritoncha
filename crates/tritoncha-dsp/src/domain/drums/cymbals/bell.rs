@@ -2,7 +2,7 @@
 //! Simulates non-linear strike deformation, stick tip contact transient,
 //! and five inharmonic modal plate resonances of B20 bronze.
 
-use super::ride::RideParams;
+use super::PercussionParams;
 use crate::core::math::{soft_clip, xorshift32_norm, LN_MIN_60DB};
 use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
@@ -103,23 +103,12 @@ impl RideBellVoice {
         }
     }
 
-    pub fn set_params(&mut self, params: impl Into<RideParams>) {
+    pub fn set_params(&mut self, params: impl Into<PercussionParams>) {
         let p = params.into();
-        if p.cutoff_hz > 0.0 {
-            self.tune_ratio = (p.cutoff_hz / 1385.0).clamp(0.6, 1.8);
-        }
-        if p.resonance >= 0.0 {
-            self.drive = (1.0 + p.resonance * 1.5).clamp(0.5, 3.5);
-        }
-        if p.decay_s > 0.0 {
-            self.decay_scale = (p.decay_s / 1.45).clamp(0.15, 3.5);
-        }
-        if p.drive > 0.0 {
-            self.drive = p.drive.clamp(0.2, 4.0);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.tune_ratio = (*p.cutoff / 1385.0).clamp(0.6, 1.8);
+        self.decay_scale = (*p.decay / 1.45).clamp(0.15, 3.5);
+        self.drive = *p.drive;
+        self.mode = p.mode;
     }
 
     pub fn trigger(&mut self, vel: f32) {

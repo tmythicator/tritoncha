@@ -66,6 +66,9 @@ clamped_f32!(AdsrTime, 0.001, 10.0, 0.01);
 clamped_f32!(GlideTime, 0.0, 2.0, 0.0);
 clamped_f32!(PitchSnap, 0.0, 48.0, 0.0);
 clamped_f32!(PitchSnapDecay, 0.002, 0.150, 0.015);
+clamped_f32!(Drive, 0.0, 10.0, 1.0);
+clamped_f32!(DrumPitch, 20.0, 1000.0, 48.0);
+clamped_f32!(PitchDrop, 0.0, 1000.0, 180.0);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Polyphony(pub(crate) u8);

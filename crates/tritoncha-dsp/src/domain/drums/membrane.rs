@@ -2,6 +2,7 @@
 
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP};
 use crate::core::math::{soft_clip, t60_decay_coeff, wrap_phase};
+use crate::domain::{AdsrTime, Drive, DrumPitch, PitchSnapDecay};
 use crate::engine::DEFAULT_SAMPLE_RATE;
 use std::f32::consts::PI;
 
@@ -17,26 +18,39 @@ pub const TOM_DEFAULT_AMP_DECAY: f32 = 0.9992;
 pub const TOM_DEFAULT_DRIVE: f32 = 1.0;
 
 /// Membrane drum synthesis parameters.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MembraneParams {
-    pub start_pitch_hz: f32,
-    pub min_pitch_hz: f32,
-    pub pitch_decay: f32,
-    pub decay_s: f32,
-    pub drive: f32,
-    pub mode: f32,
+    pub start_pitch: DrumPitch,
+    pub min_pitch: DrumPitch,
+    pub pitch_decay: PitchSnapDecay,
+    pub decay: AdsrTime,
+    pub drive: Drive,
+    pub mode: DrumMode,
+}
+
+impl Default for MembraneParams {
+    fn default() -> Self {
+        Self {
+            start_pitch: TOM_MID_START_HZ.into(),
+            min_pitch: TOM_MID_MIN_HZ.into(),
+            pitch_decay: TOM_DEFAULT_PITCH_DECAY.into(),
+            decay: 0.25.into(),
+            drive: TOM_DEFAULT_DRIVE.into(),
+            mode: DrumMode::default(),
+        }
+    }
 }
 
 impl From<[f32; 7]> for MembraneParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
         Self {
-            start_pitch_hz: p[0],
-            min_pitch_hz: p[1],
-            pitch_decay: p[2],
-            decay_s: p[3],
-            drive: p[4],
-            mode: p[6],
+            start_pitch: p[0].into(),
+            min_pitch: p[1].into(),
+            pitch_decay: p[2].into(),
+            decay: p[3].into(),
+            drive: p[4].into(),
+            mode: p[6].into(),
         }
     }
 }
@@ -172,25 +186,12 @@ impl MembraneVoice {
 
     pub fn set_params(&mut self, params: impl Into<MembraneParams>) {
         let p = params.into();
-        if p.start_pitch_hz > 0.0 {
-            self.start_pitch_hz = p.start_pitch_hz.clamp(30.0, 900.0);
-        }
-        if p.min_pitch_hz > 0.0 {
-            self.min_pitch_hz = p.min_pitch_hz.clamp(20.0, 600.0);
-        }
-        if p.pitch_decay > 0.0 {
-            self.pitch_decay_coeff = p.pitch_decay.clamp(0.001, 0.15);
-        }
-        if p.decay_s > 0.0 {
-            self.amp_decay_coeff = t60_decay_coeff(p.decay_s.clamp(0.02, 3.0), DEFAULT_SAMPLE_RATE)
-                .clamp(0.980, 0.9999);
-        }
-        if p.drive > 0.0 {
-            self.drive_gain = p.drive.clamp(0.2, 4.0);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.start_pitch_hz = *p.start_pitch;
+        self.min_pitch_hz = *p.min_pitch;
+        self.pitch_decay_coeff = *p.pitch_decay;
+        self.amp_decay_coeff = t60_decay_coeff(*p.decay, DEFAULT_SAMPLE_RATE);
+        self.drive_gain = *p.drive;
+        self.mode = p.mode;
     }
 
     pub fn reset(&mut self) {

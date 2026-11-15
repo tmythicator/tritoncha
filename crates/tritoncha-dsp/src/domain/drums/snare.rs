@@ -6,6 +6,7 @@ use super::{
 };
 use crate::core::math::{sin_phase, soft_clip, wrap_phase, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
+use crate::domain::{CutoffHz, Drive, DrumPitch, Normalized};
 
 // Default Snare Voice Tuning Constants
 pub const DEFAULT_SNARE_BASE_FREQ: f32 = 185.0;
@@ -131,26 +132,39 @@ pub struct SnareVoice {
 }
 
 /// Snare drum synthesis parameters.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SnareParams {
-    pub base_freq: f32,
-    pub tone_decay: f32,
-    pub noise_decay: f32,
-    pub cutoff_hz: f32,
-    pub snappy: f32,
-    pub mode: f32,
+    pub base_freq: DrumPitch,
+    pub tone_decay: Normalized,
+    pub noise_decay: Normalized,
+    pub cutoff: CutoffHz,
+    pub snappy: Drive,
+    pub mode: DrumMode,
+}
+
+impl Default for SnareParams {
+    fn default() -> Self {
+        Self {
+            base_freq: DEFAULT_SNARE_BASE_FREQ.into(),
+            tone_decay: DEFAULT_SNARE_TONE_DECAY.into(),
+            noise_decay: DEFAULT_SNARE_NOISE_DECAY.into(),
+            cutoff: DEFAULT_SNARE_CUTOFF_HZ.into(),
+            snappy: DEFAULT_SNARE_NOISE_GAIN.into(),
+            mode: DrumMode::default(),
+        }
+    }
 }
 
 impl From<[f32; 7]> for SnareParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
         Self {
-            base_freq: p[0],
-            tone_decay: p[1],
-            noise_decay: p[2],
-            cutoff_hz: p[3],
-            snappy: p[4],
-            mode: p[6],
+            base_freq: p[0].into(),
+            tone_decay: p[1].into(),
+            noise_decay: p[2].into(),
+            cutoff: p[3].into(),
+            snappy: p[4].into(),
+            mode: p[6].into(),
         }
     }
 }
@@ -180,24 +194,12 @@ impl SnareVoice {
 
     pub fn set_params(&mut self, params: impl Into<SnareParams>) {
         let p = params.into();
-        if p.base_freq > 0.0 {
-            self.base_freq = p.base_freq.clamp(80.0, 500.0);
-        }
-        if p.tone_decay > 0.0 {
-            self.tone_decay = p.tone_decay.clamp(0.990, 0.9999);
-        }
-        if p.noise_decay > 0.0 {
-            self.noise_decay = p.noise_decay.clamp(0.990, 0.9999);
-        }
-        if p.cutoff_hz > 0.0 {
-            self.cutoff_hz = p.cutoff_hz.clamp(800.0, 12000.0);
-        }
-        if p.snappy >= 0.0 {
-            self.noise_gain = p.snappy.clamp(0.0, 2.5);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.base_freq = *p.base_freq;
+        self.tone_decay = *p.tone_decay;
+        self.noise_decay = *p.noise_decay;
+        self.cutoff_hz = *p.cutoff;
+        self.noise_gain = *p.snappy;
+        self.mode = p.mode;
     }
 
     pub fn trigger_styled(&mut self, vel: f32, style: i32) {

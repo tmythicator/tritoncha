@@ -10,28 +10,7 @@ use crate::domain::effects::StateVariableFilter;
 use crate::engine::DEFAULT_SAMPLE_RATE;
 use std::f32::consts::PI;
 
-/// Ride cymbal synthesis parameters.
-#[derive(Clone, Copy, Debug)]
-pub struct RideParams {
-    pub cutoff_hz: f32,
-    pub resonance: f32,
-    pub decay_s: f32,
-    pub drive: f32,
-    pub mode: f32,
-}
-
-impl From<[f32; 7]> for RideParams {
-    #[inline(always)]
-    fn from(p: [f32; 7]) -> Self {
-        Self {
-            cutoff_hz: p[0],
-            resonance: p[1],
-            decay_s: p[2],
-            drive: p[3],
-            mode: p[6],
-        }
-    }
-}
+use super::PercussionParams;
 
 /// Second-order resonant modal filter for plate vibration modes.
 #[derive(Clone, Copy)]
@@ -173,25 +152,13 @@ impl RideVoice {
         }
     }
 
-    pub fn set_params(&mut self, params: impl Into<RideParams>) {
+    pub fn set_params(&mut self, params: impl Into<PercussionParams>) {
         let p = params.into();
-        if p.cutoff_hz > 0.0 {
-            self.tune_ratio = (p.cutoff_hz / 950.0).clamp(0.5, 2.0);
-        }
-        if p.resonance >= 0.0 {
-            self.drive = (1.0 + p.resonance * 1.5).clamp(0.5, 3.5);
-        }
-        if p.decay_s > 0.0 {
-            self.wash_decay = t60_decay_coeff(p.decay_s.clamp(0.2, 5.0), DEFAULT_SAMPLE_RATE)
-                .clamp(0.995, 0.99998);
-            self.decay_scale = (p.decay_s / 2.0).clamp(0.2, 3.0);
-        }
-        if p.drive > 0.0 {
-            self.drive = p.drive.clamp(0.2, 4.0);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.tune_ratio = (*p.cutoff / 950.0).clamp(0.5, 2.0);
+        self.wash_decay = t60_decay_coeff(*p.decay, DEFAULT_SAMPLE_RATE);
+        self.decay_scale = (*p.decay / 2.0).clamp(0.2, 3.0);
+        self.drive = *p.drive;
+        self.mode = p.mode;
     }
 
     pub fn trigger(&mut self, vel: f32) {

@@ -9,8 +9,8 @@ pub use crate::services::mixer::BusTarget;
 pub use effects::BusId;
 pub use sequencer::TrackId;
 pub use synth::{
-    AdsrTime, CutoffEnvAmt, CutoffHz, CutoffKeyTrack, GlideTime, ModularPatch, Normalized, PatchId,
-    PitchSnap, PitchSnapDecay, Polyphony, PulseWidth, Resonance,
+    AdsrTime, CutoffEnvAmt, CutoffHz, CutoffKeyTrack, Drive, DrumPitch, GlideTime, ModularPatch,
+    Normalized, PatchId, PitchDrop, PitchSnap, PitchSnapDecay, Polyphony, PulseWidth, Resonance,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
