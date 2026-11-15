@@ -38,6 +38,44 @@ pub const PATCH_BASS_MOOG: usize = 43;
 pub const PATCH_LEAD_NBELL: usize = 44;
 pub const PATCH_ZAP: usize = 45;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PatchId(pub usize);
+
+impl PatchId {
+    pub const SAW_BASS: Self = Self(PATCH_SAW_BASS);
+    pub const ACID_BASS: Self = Self(PATCH_ACID_BASS);
+    pub const SUB_SINE: Self = Self(PATCH_SUB_SINE);
+    pub const DARK_PAD: Self = Self(PATCH_DARK_PAD);
+    pub const LEAD: Self = Self(PATCH_LEAD);
+    pub const FM: Self = Self(PATCH_FM);
+    pub const REESE: Self = Self(PATCH_REESE);
+    pub const CLICK: Self = Self(PATCH_CLICK);
+    pub const SUPERSAW: Self = Self(PATCH_SUPERSAW);
+    pub const BLADE: Self = Self(PATCH_BLADE);
+    pub const HOOVER: Self = Self(PATCH_HOOVER);
+    pub const KARPLUS: Self = Self(PATCH_KARPLUS);
+    pub const ORGAN: Self = Self(PATCH_ORGAN);
+    pub const CHIPTUNE: Self = Self(PATCH_CHIPTUNE);
+    pub const AMBIENT_GLASS: Self = Self(PATCH_AMBIENT_GLASS);
+
+    #[inline(always)]
+    pub const fn as_usize(self) -> usize {
+        self.0
+    }
+
+    #[inline(always)]
+    pub fn clamped(self) -> Self {
+        Self(self.0.min(MAX_PATCHES - 1))
+    }
+}
+
+impl From<usize> for PatchId {
+    #[inline(always)]
+    fn from(val: usize) -> Self {
+        Self(val)
+    }
+}
+
 /// Strongly typed oscillator waveform selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]

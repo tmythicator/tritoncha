@@ -15,6 +15,38 @@ pub const BUS_ID_LEAD: usize = 3;
 pub const BUS_ID_DIRECT: usize = 4;
 pub const BUS_ID_MASTER: usize = 5;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BusId(pub usize);
+
+impl BusId {
+    pub const DRUMS: Self = Self(BUS_ID_DRUMS);
+    pub const BASS: Self = Self(BUS_ID_BASS);
+    pub const SPACE: Self = Self(BUS_ID_SPACE);
+    pub const LEAD: Self = Self(BUS_ID_LEAD);
+    pub const DIRECT: Self = Self(BUS_ID_DIRECT);
+    pub const MASTER: Self = Self(BUS_ID_MASTER);
+
+    pub const COUNT: usize = NUM_ROUTABLE_BUSSES;
+    pub const VOICE_BUS_COUNT: usize = 5;
+
+    #[inline(always)]
+    pub const fn as_usize(self) -> usize {
+        self.0
+    }
+
+    #[inline(always)]
+    pub fn is_routable(self) -> bool {
+        self.0 < NUM_ROUTABLE_BUSSES
+    }
+}
+
+impl From<usize> for BusId {
+    #[inline(always)]
+    fn from(idx: usize) -> Self {
+        Self(idx)
+    }
+}
+
 pub trait AudioProcessor {
     fn process(&mut self, in_l: f32, in_r: f32, sample_rate: f32) -> (f32, f32);
     fn reset(&mut self);

@@ -2,6 +2,28 @@
 
 pub const MAX_STEPS: usize = 128;
 pub const MAX_TRACKS: usize = 16;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TrackId(pub usize);
+
+impl TrackId {
+    #[inline(always)]
+    pub const fn as_usize(self) -> usize {
+        self.0
+    }
+
+    #[inline(always)]
+    pub fn is_valid(self) -> bool {
+        self.0 < MAX_TRACKS
+    }
+}
+
+impl From<usize> for TrackId {
+    #[inline(always)]
+    fn from(idx: usize) -> Self {
+        Self(idx)
+    }
+}
 pub const DEFAULT_TRACK_LENGTH: usize = 16;
 pub const DEFAULT_STEP_MULTIPLIER: usize = 4;
 pub const DEFAULT_SYNTH_PATCH_ID: i16 = 4;
