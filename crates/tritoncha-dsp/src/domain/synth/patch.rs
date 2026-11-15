@@ -146,7 +146,7 @@ pub const FILTER_BANDPASS: FilterMode = FilterMode::Bandpass;
 pub const FILTER_NOTCH: FilterMode = FilterMode::Notch;
 pub const FILTER_LADDER_24DB: FilterMode = FilterMode::Ladder24;
 
-pub use crate::services::mixer::BusTarget;
+pub use crate::domain::BusTarget;
 
 // Bus IDs
 pub const BUS_DRUMS: BusTarget = BusTarget::Drums;
@@ -173,7 +173,7 @@ pub const MAX_PITCH_SNAP_DECAY_SEC: f32 = 0.150;
 pub const DEFAULT_PITCH_SNAP_DECAY_SEC: f32 = 0.015;
 pub const MAX_ANALOG_DRIFT_SEMITONES: f32 = 0.15;
 
-use super::params::*;
+use crate::domain::params::*;
 
 #[macro_export]
 macro_rules! modular_patch {

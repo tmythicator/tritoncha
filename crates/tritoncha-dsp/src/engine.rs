@@ -5,11 +5,11 @@ use crate::domain::drums::{DrumMachine, DrumMode};
 use crate::domain::effects::{
     BitcrusherDrive, BusCompressor, BusEffectChain, BusEffectNode, CompressorConfig, DriveMode,
     FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
-    BUS_ID_DIRECT, BUS_ID_MASTER, MAX_SAMPLE_HOLD, NUM_ROUTABLE_BUSSES,
+    BUS_ID_DIRECT, BUS_ID_MASTER, NUM_ROUTABLE_BUSSES,
 };
 use crate::domain::sequencer::{MasterSequencer, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
-use crate::domain::{BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
+use crate::domain::{Bpm, BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
 pub use crate::domain::drums::{
@@ -107,7 +107,7 @@ impl Default for TritonchaEngine {
 }
 
 impl TritonchaEngine {
-    pub fn set_bpm(&mut self, bpm: f32) {
+    pub fn set_bpm(&mut self, bpm: impl Into<Bpm>) {
         self.sequencer.set_bpm(bpm);
     }
 
@@ -302,17 +302,13 @@ impl TritonchaEngine {
         sample_hold: f32,
     ) {
         let mut dist = BitcrusherDrive::new();
-        dist.set_drive(drive);
-        dist.bit_depth = bits.clamp(1.0, 16.0);
-        dist.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
+        dist.set_params(drive, bits, sample_hold);
         self.push_bus_effect(bus, BusEffectNode::Distort(dist));
     }
 
     pub fn add_bus_chorus(&mut self, bus: impl Into<BusId>, rate_hz: f32, depth: f32, mix: f32) {
         let mut c = StereoChorus::new();
-        c.rate_hz = rate_hz.clamp(0.1, 10.0);
-        c.depth = depth.clamp(0.0, 1.0);
-        c.mix = mix.clamp(0.0, 1.0);
+        c.set_params(rate_hz, depth, mix);
         self.push_bus_effect(bus, BusEffectNode::Chorus(c));
     }
 
@@ -501,47 +497,15 @@ impl TritonchaEngine {
                 }
             }
 
-            let mut master_in_l = 0.0_f32;
-            let mut master_in_r = 0.0_f32;
-            let mut direct_out_l = 0.0_f32;
-            let mut direct_out_r = 0.0_f32;
-            let mut cue_click_l = 0.0_f32;
-            let mut cue_click_r = 0.0_f32;
+            let (raw_l, raw_r) = self.mixer.mix_frame(
+                &bus_accum,
+                &mut self.bus_chains,
+                self.master_gain,
+                self.sample_rate,
+            );
 
-            for (b, (bus, &accum)) in self.mixer.busses.iter().zip(bus_accum.iter()).enumerate() {
-                if !bus.muted {
-                    let mut bus_val = accum * bus.gain;
-                    if matches!(b, BUS_BASS..=BUS_LEAD) {
-                        bus_val = self.mixer.sidechain.process(bus_val);
-                    }
-
-                    let (proc_l, proc_r) =
-                        self.bus_chains[b].process(bus_val, bus_val, self.sample_rate);
-
-                    if b == BUS_DIRECT {
-                        cue_click_l += proc_l;
-                        cue_click_r += proc_r;
-                    } else if self.bus_chains[b].target_out || bus.bypass_master_fx {
-                        direct_out_l += proc_l;
-                        direct_out_r += proc_r;
-                    } else {
-                        master_in_l += proc_l;
-                        master_in_r += proc_r;
-                    }
-                }
-            }
-
-            let (master_l, master_r) =
-                self.bus_chains[BUS_ID_MASTER].process(master_in_l, master_in_r, self.sample_rate);
-
-            let master_out_l = (master_l + direct_out_l) * self.master_gain;
-            let master_out_r = (master_r + direct_out_r) * self.master_gain;
-
-            let final_l = (master_out_l + cue_click_l) * MASTER_HEADROOM_GAIN;
-            let final_r = (master_out_r + cue_click_r) * MASTER_HEADROOM_GAIN;
-
-            out_l[i] = soft_clip(final_l);
-            out_r[i] = soft_clip(final_r);
+            out_l[i] = soft_clip(raw_l * MASTER_HEADROOM_GAIN);
+            out_r[i] = soft_clip(raw_r * MASTER_HEADROOM_GAIN);
         }
     }
 }

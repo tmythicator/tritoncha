@@ -84,6 +84,13 @@ impl BitcrusherDrive {
         self.adaa.set_drive(self.drive);
     }
 
+    /// Updates drive, bit depth, and sample hold parameters with domain clamping.
+    pub fn set_params(&mut self, drive: impl Into<Normalized>, bits: f32, sample_hold: f32) {
+        self.set_drive(drive);
+        self.bit_depth = bits.clamp(MIN_BIT_DEPTH, MAX_BIT_DEPTH);
+        self.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
+    }
+
     #[inline(always)]
     pub fn process(&mut self, in_l: f32, in_r: f32) -> (f32, f32) {
         if self.drive <= MIN_DRIVE_THRESHOLD
@@ -163,6 +170,18 @@ impl StereoChorus {
             depth: DEFAULT_CHORUS_DEPTH,
             mix: 0.0,
         }
+    }
+
+    /// Updates chorus rate, depth, and wet/dry mix with domain clamping.
+    pub fn set_params(
+        &mut self,
+        rate_hz: f32,
+        depth: impl Into<Normalized>,
+        mix: impl Into<Normalized>,
+    ) {
+        self.rate_hz = rate_hz.clamp(0.1, 10.0);
+        self.depth = *depth.into();
+        self.mix = *mix.into();
     }
 
     #[inline(always)]

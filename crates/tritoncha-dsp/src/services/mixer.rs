@@ -1,81 +1,16 @@
 //! Multi-bus audio mixing, routing, and effects send matrix.
 
 use crate::core::math::db_to_gain;
-use crate::domain::effects::{BusId, SidechainPump};
+use crate::domain::effects::{
+    BusEffectChain, BusId, SidechainPump, BUS_ID_MASTER, NUM_ROUTABLE_BUSSES,
+};
 use crate::domain::Normalized;
 
-pub const NUM_BUSSES: usize = 5;
-
-pub const BUS_DRUMS: usize = 0;
-pub const BUS_BASS: usize = 1;
-pub const BUS_SPACE: usize = 2;
-pub const BUS_LEAD: usize = 3;
-pub const BUS_DIRECT: usize = 4;
+pub use crate::domain::effects::{
+    BusTarget, BUS_BASS, BUS_DIRECT, BUS_DRUMS, BUS_LEAD, BUS_SPACE, NUM_BUSSES,
+};
 
 pub const MAX_BUS_LINEAR_GAIN: f32 = 4.0;
-
-/// Strongly typed mixer bus routing targets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[repr(u8)]
-pub enum BusTarget {
-    #[default]
-    Drums = 0,
-    Bass = 1,
-    Space = 2,
-    Lead = 3,
-    Direct = 4,
-}
-
-impl BusTarget {
-    #[inline(always)]
-    pub fn as_usize(self) -> usize {
-        self as usize
-    }
-
-    #[inline(always)]
-    pub fn as_u8(self) -> u8 {
-        self as u8
-    }
-}
-
-impl From<u8> for BusTarget {
-    #[inline(always)]
-    fn from(val: u8) -> Self {
-        match val {
-            1 => BusTarget::Bass,
-            2 => BusTarget::Space,
-            3 => BusTarget::Lead,
-            4 => BusTarget::Direct,
-            _ => BusTarget::Drums,
-        }
-    }
-}
-
-impl From<usize> for BusTarget {
-    #[inline(always)]
-    fn from(val: usize) -> Self {
-        match val {
-            1 => BusTarget::Bass,
-            2 => BusTarget::Space,
-            3 => BusTarget::Lead,
-            4 => BusTarget::Direct,
-            _ => BusTarget::Drums,
-        }
-    }
-}
-
-impl From<i32> for BusTarget {
-    #[inline(always)]
-    fn from(val: i32) -> Self {
-        match val {
-            1 => BusTarget::Bass,
-            2 => BusTarget::Space,
-            3 => BusTarget::Lead,
-            4 => BusTarget::Direct,
-            _ => BusTarget::Drums,
-        }
-    }
-}
 
 /// Mixer bus state controlling volume, mutes, and effects sends.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -210,6 +145,55 @@ impl Mixer {
             reverb_send,
             direct_bypass,
         }
+    }
+
+    /// Processes all mixer busses through their modular insert chains, applies sidechain
+    /// ducking, routes through the master bus chain, and returns stereo `(left, right)`
+    /// prior to master headroom/clipping.
+    #[inline(always)]
+    pub fn mix_frame(
+        &mut self,
+        bus_accum: &[f32; NUM_BUSSES],
+        bus_chains: &mut [BusEffectChain; NUM_ROUTABLE_BUSSES],
+        master_gain: f32,
+        sample_rate: f32,
+    ) -> (f32, f32) {
+        let mut master_in_l = 0.0_f32;
+        let mut master_in_r = 0.0_f32;
+        let mut direct_out_l = 0.0_f32;
+        let mut direct_out_r = 0.0_f32;
+        let mut cue_click_l = 0.0_f32;
+        let mut cue_click_r = 0.0_f32;
+
+        for (b, (bus, &accum)) in self.busses.iter().zip(bus_accum.iter()).enumerate() {
+            if !bus.muted {
+                let mut bus_val = accum * bus.gain;
+                if matches!(b, BUS_BASS..=BUS_LEAD) {
+                    bus_val = self.sidechain.process(bus_val);
+                }
+
+                let (proc_l, proc_r) = bus_chains[b].process(bus_val, bus_val, sample_rate);
+
+                if b == BUS_DIRECT {
+                    cue_click_l += proc_l;
+                    cue_click_r += proc_r;
+                } else if bus_chains[b].target_out || bus.bypass_master_fx {
+                    direct_out_l += proc_l;
+                    direct_out_r += proc_r;
+                } else {
+                    master_in_l += proc_l;
+                    master_in_r += proc_r;
+                }
+            }
+        }
+
+        let (master_l, master_r) =
+            bus_chains[BUS_ID_MASTER].process(master_in_l, master_in_r, sample_rate);
+
+        let master_out_l = (master_l + direct_out_l) * master_gain;
+        let master_out_r = (master_r + direct_out_r) * master_gain;
+
+        (master_out_l + cue_click_l, master_out_r + cue_click_r)
     }
 }
 

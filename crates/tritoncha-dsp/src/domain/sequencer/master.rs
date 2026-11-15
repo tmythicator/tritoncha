@@ -7,6 +7,7 @@ use super::track::{
 use super::trigger_mask::TriggerMask;
 use crate::core::math::midi_to_freq;
 use crate::domain::drums::{is_drum_inst, DRUM_TOM};
+use crate::domain::Bpm;
 
 pub use crate::engine::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_BPM: f32 = 168.0;
@@ -61,12 +62,10 @@ impl MasterSequencer {
         }
     }
 
-    pub fn set_bpm(&mut self, bpm: f32) {
-        if (MIN_BPM..=MAX_BPM).contains(&bpm) {
-            self.bpm = bpm;
-            self.samples_per_step =
-                (self.sample_rate * SECONDS_PER_MINUTE) / (bpm * STEPS_PER_BEAT_64TH);
-        }
+    pub fn set_bpm(&mut self, bpm: impl Into<Bpm>) {
+        let b = *bpm.into();
+        self.bpm = b;
+        self.samples_per_step = (self.sample_rate * SECONDS_PER_MINUTE) / (b * STEPS_PER_BEAT_64TH);
     }
 
     pub fn set_playing(&mut self, playing: bool) {

@@ -7,14 +7,75 @@ use crate::domain::effects::{
 use crate::domain::{CutoffHz, Normalized, Resonance};
 
 pub const MAX_BUS_INSERTS: usize = 4;
+pub const NUM_BUSSES: usize = 5;
 pub const NUM_ROUTABLE_BUSSES: usize = 6;
 
-pub const BUS_ID_DRUMS: usize = 0;
-pub const BUS_ID_BASS: usize = 1;
-pub const BUS_ID_SPACE: usize = 2;
-pub const BUS_ID_LEAD: usize = 3;
-pub const BUS_ID_DIRECT: usize = 4;
+pub const BUS_DRUMS: usize = 0;
+pub const BUS_BASS: usize = 1;
+pub const BUS_SPACE: usize = 2;
+pub const BUS_LEAD: usize = 3;
+pub const BUS_DIRECT: usize = 4;
+
+pub const BUS_ID_DRUMS: usize = BUS_DRUMS;
+pub const BUS_ID_BASS: usize = BUS_BASS;
+pub const BUS_ID_SPACE: usize = BUS_SPACE;
+pub const BUS_ID_LEAD: usize = BUS_LEAD;
+pub const BUS_ID_DIRECT: usize = BUS_DIRECT;
 pub const BUS_ID_MASTER: usize = 5;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u8)]
+pub enum BusTarget {
+    #[default]
+    Drums = 0,
+    Bass = 1,
+    Space = 2,
+    Lead = 3,
+    Direct = 4,
+}
+
+impl BusTarget {
+    #[inline(always)]
+    pub const fn as_usize(self) -> usize {
+        self as usize
+    }
+
+    #[inline(always)]
+    pub const fn as_u8(self) -> u8 {
+        self as u8
+    }
+}
+
+impl From<u8> for BusTarget {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            1 => BusTarget::Bass,
+            2 => BusTarget::Space,
+            3 => BusTarget::Lead,
+            4 => BusTarget::Direct,
+            _ => BusTarget::Drums,
+        }
+    }
+}
+
+impl From<usize> for BusTarget {
+    #[inline(always)]
+    fn from(val: usize) -> Self {
+        Self::from(val as u8)
+    }
+}
+
+impl From<i32> for BusTarget {
+    #[inline(always)]
+    fn from(val: i32) -> Self {
+        if val < 0 {
+            BusTarget::Drums
+        } else {
+            Self::from(val as u8)
+        }
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BusId(pub usize);
@@ -28,7 +89,7 @@ impl BusId {
     pub const MASTER: Self = Self(BUS_ID_MASTER);
 
     pub const COUNT: usize = NUM_ROUTABLE_BUSSES;
-    pub const VOICE_BUS_COUNT: usize = 5;
+    pub const VOICE_BUS_COUNT: usize = NUM_BUSSES;
 
     #[inline(always)]
     pub const fn as_usize(self) -> usize {
@@ -54,6 +115,13 @@ impl From<usize> for BusId {
     #[inline(always)]
     fn from(idx: usize) -> Self {
         Self(idx)
+    }
+}
+
+impl From<BusTarget> for BusId {
+    #[inline(always)]
+    fn from(t: BusTarget) -> Self {
+        Self(t as usize)
     }
 }
 
@@ -118,54 +186,28 @@ impl AudioProcessor for StereoSvfFilter {
     }
 }
 
-impl AudioProcessor for StereoDelay {
-    #[inline(always)]
-    fn process(&mut self, in_l: f32, in_r: f32, _sample_rate: f32) -> (f32, f32) {
-        self.process(in_l, in_r)
-    }
-
-    fn reset(&mut self) {
-        self.reset();
-    }
+macro_rules! impl_stereo_processor {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl AudioProcessor for $ty {
+                #[inline(always)]
+                fn process(&mut self, in_l: f32, in_r: f32, _sr: f32) -> (f32, f32) {
+                    self.process(in_l, in_r)
+                }
+                fn reset(&mut self) {
+                    self.reset();
+                }
+            }
+        )+
+    };
 }
 
-impl AudioProcessor for BitcrusherDrive {
-    #[inline(always)]
-    fn process(&mut self, in_l: f32, in_r: f32, _sample_rate: f32) -> (f32, f32) {
-        self.process(in_l, in_r)
-    }
-
-    fn reset(&mut self) {
-        self.reset();
-    }
-}
+impl_stereo_processor!(StereoDelay, BitcrusherDrive, StereoReverb, BusCompressor);
 
 impl AudioProcessor for StereoChorus {
     #[inline(always)]
     fn process(&mut self, in_l: f32, in_r: f32, sample_rate: f32) -> (f32, f32) {
         self.process(in_l, in_r, sample_rate)
-    }
-
-    fn reset(&mut self) {
-        self.reset();
-    }
-}
-
-impl AudioProcessor for StereoReverb {
-    #[inline(always)]
-    fn process(&mut self, in_l: f32, in_r: f32, _sample_rate: f32) -> (f32, f32) {
-        self.process(in_l, in_r)
-    }
-
-    fn reset(&mut self) {
-        self.reset();
-    }
-}
-
-impl AudioProcessor for BusCompressor {
-    #[inline(always)]
-    fn process(&mut self, in_l: f32, in_r: f32, _sample_rate: f32) -> (f32, f32) {
-        self.process(in_l, in_r)
     }
 
     fn reset(&mut self) {
@@ -229,6 +271,16 @@ impl Default for BusEffectChain {
     }
 }
 
+macro_rules! for_each_node {
+    ($self:ident, $pat:pat => $body:expr) => {
+        for slot in $self.slots.iter_mut().flatten() {
+            if let $pat = slot {
+                $body;
+            }
+        }
+    };
+}
+
 impl BusEffectChain {
     pub fn new() -> Self {
         Self {
@@ -243,11 +295,8 @@ impl BusEffectChain {
     }
 
     pub fn push(&mut self, node: BusEffectNode) {
-        for slot in &mut self.slots {
-            if slot.is_none() {
-                *slot = Some(node);
-                return;
-            }
+        if let Some(slot) = self.slots.iter_mut().find(|s| s.is_none()) {
+            *slot = Some(node);
         }
     }
 
@@ -256,13 +305,8 @@ impl BusEffectChain {
         cutoff_hz: impl Into<CutoffHz>,
         resonance: impl Into<Resonance>,
     ) {
-        let f = *cutoff_hz.into();
-        let r = *resonance.into();
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Filter(filter)) = slot {
-                filter.set_params(f, r);
-            }
-        }
+        let (f, r) = (*cutoff_hz.into(), *resonance.into());
+        for_each_node!(self, BusEffectNode::Filter(flt) => flt.set_params(f, r));
     }
 
     pub fn sweep_filter(
@@ -272,13 +316,8 @@ impl BusEffectChain {
         dur_s: f32,
         sample_rate: f32,
     ) {
-        let f = *from_hz.into();
-        let t = *to_hz.into();
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Filter(filter)) = slot {
-                filter.start_sweep(f, t, dur_s, sample_rate);
-            }
-        }
+        let (f, t) = (*from_hz.into(), *to_hz.into());
+        for_each_node!(self, BusEffectNode::Filter(flt) => flt.start_sweep(f, t, dur_s, sample_rate));
     }
 
     pub fn update_delay(
@@ -288,24 +327,13 @@ impl BusEffectChain {
         wet: impl Into<Normalized>,
         sample_rate: f32,
     ) {
-        let fb = feedback.into();
-        let w = wet.into();
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Delay(delay)) = slot {
-                delay.set_params(time_s, fb, w, sample_rate);
-            }
-        }
+        let (fb, w) = (feedback.into(), wet.into());
+        for_each_node!(self, BusEffectNode::Delay(d) => d.set_params(time_s, fb, w, sample_rate));
     }
 
     pub fn update_distort(&mut self, drive: impl Into<Normalized>, bits: f32, sample_hold: f32) {
         let d = drive.into();
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Distort(distort)) = slot {
-                distort.set_drive(d);
-                distort.bit_depth = bits;
-                distort.sample_hold = sample_hold;
-            }
-        }
+        for_each_node!(self, BusEffectNode::Distort(dist) => dist.set_params(d, bits, sample_hold));
     }
 
     pub fn update_chorus(
@@ -314,49 +342,25 @@ impl BusEffectChain {
         depth: impl Into<Normalized>,
         mix: impl Into<Normalized>,
     ) {
-        let dp = *depth.into();
-        let mx = *mix.into();
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Chorus(chorus)) = slot {
-                chorus.rate_hz = rate_hz;
-                chorus.depth = dp;
-                chorus.mix = mx;
-            }
-        }
+        let (dp, mx) = (depth.into(), mix.into());
+        for_each_node!(self, BusEffectNode::Chorus(c) => c.set_params(rate_hz, dp, mx));
     }
 
     pub fn update_reverb(&mut self, room_size: impl Into<Normalized>, wet: impl Into<Normalized>) {
-        let rs = room_size.into();
-        let w = wet.into();
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Reverb(reverb)) = slot {
-                reverb.set_params(rs, w);
-            }
-        }
+        let (rs, w) = (room_size.into(), wet.into());
+        for_each_node!(self, BusEffectNode::Reverb(rev) => rev.set_params(rs, w));
     }
 
     pub fn update_compressor(&mut self, config: CompressorConfig) {
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Compressor(comp)) = slot {
-                comp.set_config(config);
-            }
-        }
+        for_each_node!(self, BusEffectNode::Compressor(comp) => comp.set_config(config));
     }
 
     pub fn set_drive_mode(&mut self, mode: DriveMode) {
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Distort(dist)) = slot {
-                dist.set_mode(mode);
-            }
-        }
+        for_each_node!(self, BusEffectNode::Distort(dist) => dist.set_mode(mode));
     }
 
     pub fn set_reverb_mode(&mut self, mode: ReverbMode) {
-        for slot in &mut self.slots {
-            if let Some(BusEffectNode::Reverb(rev)) = slot {
-                rev.set_mode(mode);
-            }
-        }
+        for_each_node!(self, BusEffectNode::Reverb(rev) => rev.set_mode(mode));
     }
 
     #[inline(always)]

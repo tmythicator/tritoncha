@@ -2,16 +2,14 @@
 
 pub mod drums;
 pub mod effects;
+pub mod params;
 pub mod sequencer;
 pub mod synth;
 
-pub use crate::services::mixer::BusTarget;
-pub use effects::BusId;
+pub use effects::{BusId, BusTarget};
+pub use params::*;
 pub use sequencer::TrackId;
-pub use synth::{
-    AdsrTime, CutoffEnvAmt, CutoffHz, CutoffKeyTrack, Drive, DrumPitch, GlideTime, ModularPatch,
-    Normalized, PatchId, PitchDrop, PitchSnap, PitchSnapDecay, Polyphony, PulseWidth, Resonance,
-};
+pub use synth::{ModularPatch, PatchId};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InstrumentId {

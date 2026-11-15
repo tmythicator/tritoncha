@@ -2,58 +2,14 @@
 //! Integrates stick tip ping definition, low bronze plate body resonance,
 //! and a 4-stage Schroeder allpass diffuser network simulating the turbulent wash of B20 bronze.
 
-use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm, LN_MIN_60DB};
+use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
 use crate::domain::drums::{
     DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
 };
 use crate::domain::effects::StateVariableFilter;
 use crate::engine::DEFAULT_SAMPLE_RATE;
-use std::f32::consts::PI;
 
-use super::PercussionParams;
-
-/// Second-order resonant modal filter for plate vibration modes.
-#[derive(Clone, Copy)]
-struct ModalFilter {
-    y1: f32,
-    y2: f32,
-    base_freq: f32,
-    decay_s: f32,
-    gain: f32,
-}
-
-impl ModalFilter {
-    fn new(base_freq: f32, decay_s: f32, gain: f32) -> Self {
-        Self {
-            y1: 0.0,
-            y2: 0.0,
-            base_freq,
-            decay_s,
-            gain,
-        }
-    }
-
-    fn reset(&mut self) {
-        self.y1 = 0.0;
-        self.y2 = 0.0;
-    }
-
-    #[inline(always)]
-    fn process(&mut self, input: f32, pitch_ratio: f32, decay_scale: f32, sample_rate: f32) -> f32 {
-        let f = (self.base_freq * pitch_ratio).clamp(30.0, sample_rate * 0.45);
-        let theta = 2.0 * PI * f / sample_rate;
-        let decay_samples = (self.decay_s * decay_scale * sample_rate).max(20.0);
-        let r = (LN_MIN_60DB / decay_samples).exp().clamp(0.85, 0.99995);
-
-        let a1 = 2.0 * r * theta.cos();
-        let a2 = -(r * r);
-
-        let y0 = soft_clip(a1 * self.y1 + a2 * self.y2) + input * self.gain;
-        self.y2 = self.y1;
-        self.y1 = y0;
-        y0
-    }
-}
+use super::{ModalFilter, PercussionParams};
 
 /// Fixed-delay Schroeder allpass diffuser unit for bronze plate dispersion.
 #[derive(Clone)]
