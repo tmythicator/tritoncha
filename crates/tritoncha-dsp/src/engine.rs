@@ -4,7 +4,7 @@ use crate::core::math::soft_clip;
 use crate::domain::drums::{DrumMachine, DrumMode};
 use crate::domain::effects::{
     BitcrusherDrive, BusCompressor, BusEffectChain, BusEffectNode, CompressorConfig, DriveMode,
-    FrequencySweep, ReverbMode, StateVariableFilter, StereoChorus, StereoDelay, StereoReverb,
+    FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
     BUS_ID_DIRECT, BUS_ID_MASTER, MAX_SAMPLE_HOLD, NUM_ROUTABLE_BUSSES,
 };
 
@@ -225,13 +225,7 @@ impl TritonchaEngine {
         if bus_idx < NUM_ROUTABLE_BUSSES {
             let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
             let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
-            self.bus_chains[bus_idx].push(BusEffectNode::Filter {
-                filter_l: StateVariableFilter::new(),
-                filter_r: StateVariableFilter::new(),
-                cutoff_hz: f_hz,
-                resonance: res,
-                sweep: FrequencySweep::new(f_hz),
-            });
+            self.bus_chains[bus_idx].push(BusEffectNode::Filter(StereoSvfFilter::new(f_hz, res)));
         }
     }
 
