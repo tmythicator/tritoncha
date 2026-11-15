@@ -1,6 +1,7 @@
 //! Voice allocation and polyphony voice-stealing strategies.
 
-use crate::domain::synth::{PatchId, SynthVoice};
+use crate::domain::synth::SynthVoice;
+use crate::domain::{GlideTime, PatchId, Polyphony};
 
 pub const MIN_LEGATO_GLIDE_SEC: f32 = 0.001;
 
@@ -22,15 +23,17 @@ impl VoiceAllocator {
     pub fn allocate<const N: usize>(
         voices: &[SynthVoice; N],
         patch_id: impl Into<PatchId>,
-        polyphony: u8,
-        glide_time: f32,
+        polyphony: impl Into<Polyphony>,
+        glide_time: impl Into<GlideTime>,
     ) -> VoiceAllocation {
         let pid = patch_id.into();
-        if polyphony <= 1 {
+        let poly = *polyphony.into();
+        let glide = *glide_time.into();
+        if poly <= 1 {
             // 1. Monophonic mode: find existing active voice for this patch
             for (i, v) in voices.iter().enumerate() {
                 if v.active && v.patch_id == pid {
-                    return if glide_time > MIN_LEGATO_GLIDE_SEC {
+                    return if glide > MIN_LEGATO_GLIDE_SEC {
                         VoiceAllocation::LegatoGlide { voice_idx: i }
                     } else {
                         VoiceAllocation::Trigger { voice_idx: i }
@@ -48,7 +51,7 @@ impl VoiceAllocator {
                 }
             }
 
-            if patch_count >= polyphony as usize && patch_count > 0 {
+            if patch_count >= poly as usize && patch_count > 0 {
                 // Steal the oldest voice playing this patch
                 let mut oldest_idx = patch_voice_indices[0];
                 let mut max_age = voices[oldest_idx].age;

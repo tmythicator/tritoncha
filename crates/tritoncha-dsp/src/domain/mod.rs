@@ -8,7 +8,10 @@ pub mod synth;
 pub use crate::services::mixer::BusTarget;
 pub use effects::BusId;
 pub use sequencer::TrackId;
-pub use synth::PatchId;
+pub use synth::{
+    AdsrTime, CutoffEnvAmt, CutoffHz, CutoffKeyTrack, GlideTime, ModularPatch, Normalized, PatchId,
+    PitchSnap, PitchSnapDecay, Polyphony, PulseWidth, Resonance,
+};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InstrumentId {

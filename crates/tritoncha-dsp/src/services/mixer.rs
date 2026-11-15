@@ -2,6 +2,7 @@
 
 use crate::core::math::db_to_gain;
 use crate::domain::effects::{BusId, SidechainPump};
+use crate::domain::Normalized;
 
 pub const NUM_BUSSES: usize = 5;
 
@@ -81,18 +82,22 @@ impl From<i32> for BusTarget {
 pub struct AudioBus {
     pub gain: f32,
     pub muted: bool,
-    pub send_delay: f32,
-    pub send_reverb: f32,
+    pub send_delay: Normalized,
+    pub send_reverb: Normalized,
     pub bypass_master_fx: bool,
 }
 
 impl AudioBus {
-    pub fn new(gain: f32, send_delay: f32, send_reverb: f32) -> Self {
+    pub fn new(
+        gain: f32,
+        send_delay: impl Into<Normalized>,
+        send_reverb: impl Into<Normalized>,
+    ) -> Self {
         Self {
             gain,
             muted: false,
-            send_delay,
-            send_reverb,
+            send_delay: send_delay.into(),
+            send_reverb: send_reverb.into(),
             bypass_master_fx: false,
         }
     }
@@ -143,16 +148,16 @@ impl Mixer {
         bus: impl Into<BusId>,
         gain_db: f32,
         muted: bool,
-        send_delay: f32,
-        send_reverb: f32,
+        send_delay: impl Into<Normalized>,
+        send_reverb: impl Into<Normalized>,
         bypass_master_fx: bool,
     ) {
         if let Some(b) = self.bus_mut(bus) {
             let linear_gain = db_to_gain(gain_db);
             b.gain = linear_gain.clamp(0.0, MAX_BUS_LINEAR_GAIN);
             b.muted = muted;
-            b.send_delay = send_delay.clamp(0.0, 1.0);
-            b.send_reverb = send_reverb.clamp(0.0, 1.0);
+            b.send_delay = send_delay.into();
+            b.send_reverb = send_reverb.into();
             b.bypass_master_fx = bypass_master_fx;
         }
     }
@@ -163,8 +168,8 @@ impl Mixer {
     }
 
     #[inline(always)]
-    pub fn set_sidechain_amount(&mut self, amount: f32) {
-        self.sidechain.amount = amount.clamp(0.0, 1.0);
+    pub fn set_sidechain_amount(&mut self, amount: impl Into<Normalized>) {
+        self.sidechain.amount = *amount.into();
     }
 
     /// Sums accumulated bus signals, applies sidechain pump to musical tracks,
@@ -184,16 +189,16 @@ impl Mixer {
                     direct_bypass += bus_val;
                 } else if bus.bypass_master_fx {
                     bypass_fx_bus += bus_val;
-                    delay_send += bus_val * bus.send_delay;
-                    reverb_send += bus_val * bus.send_reverb;
+                    delay_send += bus_val * *bus.send_delay;
+                    reverb_send += bus_val * *bus.send_reverb;
                 } else {
                     // Sidechain ducking is applied to bass and space/lead layers
                     if matches!(b, BUS_BASS..=BUS_LEAD) {
                         bus_val = self.sidechain.process(bus_val);
                     }
                     master_bus += bus_val;
-                    delay_send += bus_val * bus.send_delay;
-                    reverb_send += bus_val * bus.send_reverb;
+                    delay_send += bus_val * *bus.send_delay;
+                    reverb_send += bus_val * *bus.send_reverb;
                 }
             }
         }
@@ -223,8 +228,8 @@ mod tests {
         let bus = AudioBus::new(1.0, 0.2, 0.3);
         assert_eq!(bus.gain, 1.0);
         assert!(!bus.muted);
-        assert_eq!(bus.send_delay, 0.2);
-        assert_eq!(bus.send_reverb, 0.3);
+        assert_eq!(*bus.send_delay, 0.2);
+        assert_eq!(*bus.send_reverb, 0.3);
     }
 
     #[test]

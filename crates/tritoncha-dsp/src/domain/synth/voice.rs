@@ -8,6 +8,7 @@ use crate::core::math::{
     SEMITONES_PER_OCTAVE,
 };
 use crate::domain::effects::{LadderFilter, StateVariableFilter};
+use crate::domain::GlideTime;
 
 // Voice Tuning and Timing Constants
 pub const MIN_PORTAMENTO_TIME_SEC: f32 = 0.001;
@@ -112,13 +113,13 @@ impl SynthVoice {
         target_freq: f32,
         vel: f32,
         sample_rate: f32,
-        glide_time: f32,
+        glide_time: impl Into<GlideTime>,
         dur_s: f32,
     ) {
         self.target_freq = target_freq.clamp(MIN_FREQ_HZ, MAX_FREQ_HZ);
         self.velocity = vel.clamp(MIN_VELOCITY, MAX_VELOCITY);
-        let time_s = glide_time.max(MIN_PORTAMENTO_TIME_SEC);
-        self.glide_rate = (1.0 / (time_s * sample_rate)).clamp(MIN_GLIDE_RATE, MAX_GLIDE_RATE);
+        let time_s: f32 = (*glide_time.into()).max(MIN_PORTAMENTO_TIME_SEC);
+        self.glide_rate = (1.0_f32 / (time_s * sample_rate)).clamp(MIN_GLIDE_RATE, MAX_GLIDE_RATE);
         self.age = 0;
         self.amp_env.hold_samples =
             time_to_samples(dur_s, sample_rate, 10.0 / sample_rate, MAX_HOLD_SEC);

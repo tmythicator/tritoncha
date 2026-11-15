@@ -4,6 +4,7 @@ use crate::domain::effects::{
     BitcrusherDrive, BusCompressor, CompressorConfig, DriveMode, FrequencySweep, ReverbMode,
     StateVariableFilter, StereoChorus, StereoDelay, StereoReverb,
 };
+use crate::domain::{CutoffHz, Normalized, Resonance};
 
 pub const MAX_BUS_INSERTS: usize = 4;
 pub const NUM_ROUTABLE_BUSSES: usize = 6;
@@ -71,19 +72,21 @@ pub struct StereoSvfFilter {
 }
 
 impl StereoSvfFilter {
-    pub fn new(cutoff_hz: f32, resonance: f32) -> Self {
+    pub fn new(cutoff_hz: impl Into<CutoffHz>, resonance: impl Into<Resonance>) -> Self {
+        let f = *cutoff_hz.into();
+        let r = *resonance.into();
         Self {
             filter_l: StateVariableFilter::new(),
             filter_r: StateVariableFilter::new(),
-            cutoff_hz,
-            resonance,
-            sweep: FrequencySweep::new(cutoff_hz),
+            cutoff_hz: f,
+            resonance: r,
+            sweep: FrequencySweep::new(f),
         }
     }
 
-    pub fn set_params(&mut self, cutoff_hz: f32, resonance: f32) {
-        self.cutoff_hz = cutoff_hz;
-        self.resonance = resonance;
+    pub fn set_params(&mut self, cutoff_hz: impl Into<CutoffHz>, resonance: impl Into<Resonance>) {
+        self.cutoff_hz = *cutoff_hz.into();
+        self.resonance = *resonance.into();
         self.sweep.cancel();
     }
 
@@ -248,54 +251,86 @@ impl BusEffectChain {
         }
     }
 
-    pub fn update_filter(&mut self, cutoff: f32, resonance: f32) {
+    pub fn update_filter(
+        &mut self,
+        cutoff_hz: impl Into<CutoffHz>,
+        resonance: impl Into<Resonance>,
+    ) {
+        let f = *cutoff_hz.into();
+        let r = *resonance.into();
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Filter(filter)) = slot {
-                filter.set_params(cutoff, resonance);
+                filter.set_params(f, r);
             }
         }
     }
 
-    pub fn sweep_filter(&mut self, from_hz: f32, to_hz: f32, dur_s: f32, sample_rate: f32) {
+    pub fn sweep_filter(
+        &mut self,
+        from_hz: impl Into<CutoffHz>,
+        to_hz: impl Into<CutoffHz>,
+        dur_s: f32,
+        sample_rate: f32,
+    ) {
+        let f = *from_hz.into();
+        let t = *to_hz.into();
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Filter(filter)) = slot {
-                filter.start_sweep(from_hz, to_hz, dur_s, sample_rate);
+                filter.start_sweep(f, t, dur_s, sample_rate);
             }
         }
     }
 
-    pub fn update_delay(&mut self, time_s: f32, feedback: f32, wet: f32, sample_rate: f32) {
+    pub fn update_delay(
+        &mut self,
+        time_s: f32,
+        feedback: impl Into<Normalized>,
+        wet: impl Into<Normalized>,
+        sample_rate: f32,
+    ) {
+        let fb = feedback.into();
+        let w = wet.into();
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Delay(delay)) = slot {
-                delay.set_params(time_s, feedback, wet, sample_rate);
+                delay.set_params(time_s, fb, w, sample_rate);
             }
         }
     }
 
-    pub fn update_distort(&mut self, drive: f32, bits: f32, sample_hold: f32) {
+    pub fn update_distort(&mut self, drive: impl Into<Normalized>, bits: f32, sample_hold: f32) {
+        let d = drive.into();
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Distort(distort)) = slot {
-                distort.set_drive(drive);
+                distort.set_drive(d);
                 distort.bit_depth = bits;
                 distort.sample_hold = sample_hold;
             }
         }
     }
 
-    pub fn update_chorus(&mut self, rate_hz: f32, depth: f32, mix: f32) {
+    pub fn update_chorus(
+        &mut self,
+        rate_hz: f32,
+        depth: impl Into<Normalized>,
+        mix: impl Into<Normalized>,
+    ) {
+        let dp = *depth.into();
+        let mx = *mix.into();
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Chorus(chorus)) = slot {
                 chorus.rate_hz = rate_hz;
-                chorus.depth = depth;
-                chorus.mix = mix;
+                chorus.depth = dp;
+                chorus.mix = mx;
             }
         }
     }
 
-    pub fn update_reverb(&mut self, room_size: f32, wet: f32) {
+    pub fn update_reverb(&mut self, room_size: impl Into<Normalized>, wet: impl Into<Normalized>) {
+        let rs = room_size.into();
+        let w = wet.into();
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Reverb(reverb)) = slot {
-                reverb.set_params(room_size, wet);
+                reverb.set_params(rs, w);
             }
         }
     }

@@ -1,6 +1,7 @@
 //! Studio-Quality Stereo Schroeder / Freeverb Diffusion Reverb.
 
 use crate::core::math::lerp;
+use crate::domain::Normalized;
 
 pub const NUM_COMB_FILTERS: usize = 8;
 pub const NUM_ALLPASS_FILTERS: usize = 4;
@@ -149,18 +150,18 @@ impl StereoReverb {
         self.mode = mode;
     }
 
-    pub fn set_wet(&mut self, wet: f32) {
-        self.wet = wet.clamp(0.0, 1.0);
+    pub fn set_wet(&mut self, wet: impl Into<Normalized>) {
+        self.wet = *wet.into();
         self.fdn.set_wet(self.wet);
     }
 
-    pub fn set_params(&mut self, room_size: f32, wet: f32) {
-        self.wet = wet.clamp(0.0, 1.0);
-        self.fdn.set_room_size(room_size);
+    pub fn set_params(&mut self, room_size: impl Into<Normalized>, wet: impl Into<Normalized>) {
+        let rs = *room_size.into();
+        self.wet = *wet.into();
+        self.fdn.set_room_size(rs);
         self.fdn.set_wet(self.wet);
 
-        let fb =
-            (COMB_FEEDBACK_OFFSET + room_size * COMB_FEEDBACK_SCALE).clamp(0.0, MAX_COMB_FEEDBACK);
+        let fb = (COMB_FEEDBACK_OFFSET + rs * COMB_FEEDBACK_SCALE).clamp(0.0, MAX_COMB_FEEDBACK);
         for c in &mut self.combs_l {
             c.set_feedback(fb);
         }

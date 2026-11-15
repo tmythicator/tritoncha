@@ -9,7 +9,7 @@ use crate::domain::effects::{
 };
 use crate::domain::sequencer::{MasterSequencer, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
-use crate::domain::{BusId, InstrumentId, PatchId, TrackId};
+use crate::domain::{BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
 pub use crate::domain::drums::{
@@ -185,7 +185,7 @@ impl TritonchaEngine {
     }
 
     pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
-        self.drums.set_drum_patch(drum_id, params);
+        self.drums.set_drum_patch_by_id(drum_id, params);
     }
 
     pub fn set_drum_mode(&mut self, mode: impl Into<DrumMode>) {
@@ -205,13 +205,13 @@ impl TritonchaEngine {
                 let patch = self.patches[pid.as_usize()];
                 let target_bus = patch.bus_id.as_usize();
 
-                match VoiceAllocator::allocate(&self.voices, pid, *patch.polyphony, *patch.glide) {
+                match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
                     VoiceAllocation::LegatoGlide { voice_idx } => {
                         self.voices[voice_idx].glide_to(
                             freq,
                             vel,
                             self.sample_rate,
-                            *patch.glide,
+                            patch.glide,
                             dur_s,
                         );
                     }
@@ -328,58 +328,102 @@ impl TritonchaEngine {
         self.push_bus_effect(bus, BusEffectNode::Compressor(comp));
     }
 
-    pub fn update_bus_filter(&mut self, bus: Option<BusId>, cutoff_hz: f32, resonance: f32) {
-        let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-        let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
+    pub fn update_bus_filter(
+        &mut self,
+        bus: Option<BusId>,
+        cutoff_hz: impl Into<CutoffHz>,
+        resonance: impl Into<Resonance>,
+    ) {
+        let f_hz = *cutoff_hz.into();
+        let res = *resonance.into();
         self.for_bus_chains_mut(bus, |chain| chain.update_filter(f_hz, res));
     }
 
-    pub fn sweep_bus_filter(&mut self, bus: Option<BusId>, from_hz: f32, to_hz: f32, dur_s: f32) {
-        let f_hz = from_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-        let t_hz = to_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
+    pub fn sweep_bus_filter(
+        &mut self,
+        bus: Option<BusId>,
+        from_hz: impl Into<CutoffHz>,
+        to_hz: impl Into<CutoffHz>,
+        dur_s: f32,
+    ) {
+        let f_hz = *from_hz.into();
+        let t_hz = *to_hz.into();
         let sr = self.sample_rate;
         self.for_bus_chains_mut(bus, |chain| chain.sweep_filter(f_hz, t_hz, dur_s, sr));
     }
 
-    pub fn update_bus_delay(&mut self, bus: Option<BusId>, time_s: f32, feedback: f32, wet: f32) {
+    pub fn update_bus_delay(
+        &mut self,
+        bus: Option<BusId>,
+        time_s: f32,
+        feedback: impl Into<Normalized>,
+        wet: impl Into<Normalized>,
+    ) {
+        let fb = feedback.into();
+        let w = wet.into();
         let sr = self.sample_rate;
-        self.for_bus_chains_mut(bus, |chain| chain.update_delay(time_s, feedback, wet, sr));
+        self.for_bus_chains_mut(bus, |chain| chain.update_delay(time_s, fb, w, sr));
     }
 
     pub fn update_bus_distort(
         &mut self,
         bus: Option<BusId>,
-        drive: f32,
+        drive: impl Into<Normalized>,
         bits: f32,
         sample_hold: f32,
     ) {
-        self.for_bus_chains_mut(bus, |chain| chain.update_distort(drive, bits, sample_hold));
+        let d = drive.into();
+        self.for_bus_chains_mut(bus, |chain| chain.update_distort(d, bits, sample_hold));
     }
 
-    pub fn update_bus_chorus(&mut self, bus: Option<BusId>, rate_hz: f32, depth: f32, mix: f32) {
-        self.for_bus_chains_mut(bus, |chain| chain.update_chorus(rate_hz, depth, mix));
+    pub fn update_bus_chorus(
+        &mut self,
+        bus: Option<BusId>,
+        rate_hz: f32,
+        depth: impl Into<Normalized>,
+        mix: impl Into<Normalized>,
+    ) {
+        let dp = depth.into();
+        let mx = mix.into();
+        self.for_bus_chains_mut(bus, |chain| chain.update_chorus(rate_hz, dp, mx));
     }
 
-    pub fn update_bus_reverb(&mut self, bus: Option<BusId>, room_size: f32, wet: f32) {
-        self.for_bus_chains_mut(bus, |chain| chain.update_reverb(room_size, wet));
+    pub fn update_bus_reverb(
+        &mut self,
+        bus: Option<BusId>,
+        room_size: impl Into<Normalized>,
+        wet: impl Into<Normalized>,
+    ) {
+        let rs = room_size.into();
+        let w = wet.into();
+        self.for_bus_chains_mut(bus, |chain| chain.update_reverb(rs, w));
     }
 
     pub fn update_bus_compressor(&mut self, bus: Option<BusId>, config: CompressorConfig) {
         self.for_bus_chains_mut(bus, |chain| chain.update_compressor(config));
     }
 
-    pub fn set_master_filter(&mut self, cutoff_hz: f32, resonance: f32) {
+    pub fn set_master_filter(
+        &mut self,
+        cutoff_hz: impl Into<CutoffHz>,
+        resonance: impl Into<Resonance>,
+    ) {
         self.sweep.cancel();
-        let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-        let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
+        let f_hz = *cutoff_hz.into();
+        let res = *resonance.into();
         self.master_cutoff_hz = f_hz;
         self.master_resonance = res;
         self.update_bus_filter(None, f_hz, res);
     }
 
-    pub fn sweep_master_filter(&mut self, from_hz: f32, to_hz: f32, duration_secs: f32) {
-        let f_hz = from_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-        let t_hz = to_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
+    pub fn sweep_master_filter(
+        &mut self,
+        from_hz: impl Into<CutoffHz>,
+        to_hz: impl Into<CutoffHz>,
+        duration_secs: f32,
+    ) {
+        let f_hz = *from_hz.into();
+        let t_hz = *to_hz.into();
         self.sweep
             .start(f_hz, t_hz, duration_secs, self.sample_rate);
         self.master_cutoff_hz = f_hz;

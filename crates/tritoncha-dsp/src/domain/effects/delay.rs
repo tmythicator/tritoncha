@@ -1,6 +1,7 @@
 //! Stereo Ping-Pong Dub Delay with Lowpass Analog Damping and Feedback Limiting.
 
 use crate::core::math::lerp;
+use crate::domain::Normalized;
 
 pub const MAX_DELAY_SAMPLES: usize = 96000;
 pub const MIN_DELAY_SAMPLES: f32 = 500.0;
@@ -37,12 +38,18 @@ impl StereoDelay {
         }
     }
 
-    pub fn set_params(&mut self, time_s: f32, feedback: f32, wet: f32, sample_rate: f32) {
+    pub fn set_params(
+        &mut self,
+        time_s: f32,
+        feedback: impl Into<Normalized>,
+        wet: impl Into<Normalized>,
+        sample_rate: f32,
+    ) {
         let max_samples = (MAX_DELAY_SAMPLES - 1) as f32;
         let len = (time_s * sample_rate).clamp(MIN_DELAY_SAMPLES, max_samples) as usize;
         self.delay_len = len;
-        self.feedback = feedback.clamp(0.0, MAX_FEEDBACK);
-        self.wet = wet.clamp(0.0, 1.0);
+        self.feedback = (*feedback.into()).min(MAX_FEEDBACK);
+        self.wet = *wet.into();
     }
 
     #[inline(always)]

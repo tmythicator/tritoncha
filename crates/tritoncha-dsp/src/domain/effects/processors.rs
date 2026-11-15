@@ -2,6 +2,7 @@
 
 use crate::core::adaa::AdaaDrive;
 use crate::core::math::{tanh_approx, wrap_phase};
+use crate::domain::Normalized;
 use std::f32::consts::PI;
 
 pub const DEFAULT_BIT_DEPTH: f32 = 16.0;
@@ -78,8 +79,8 @@ impl BitcrusherDrive {
     }
 
     /// Updates the drive gain parameter across classic and ADAA engines.
-    pub fn set_drive(&mut self, drive: f32) {
-        self.drive = drive.clamp(0.0, 1.0);
+    pub fn set_drive(&mut self, drive: impl Into<Normalized>) {
+        self.drive = *drive.into();
         self.adaa.set_drive(self.drive);
     }
 

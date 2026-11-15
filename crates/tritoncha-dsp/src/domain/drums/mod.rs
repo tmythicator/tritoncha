@@ -279,26 +279,38 @@ impl DrumMachine {
         }
     }
 
-    pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
-        match drum_id {
-            DRUM_KICK => self.kick.set_params(params),
-            DRUM_SNARE | DRUM_SNARE_CRACK | DRUM_SNARE_BODY | DRUM_SNARE_WIRE
-            | DRUM_SNARE_GHOST | DRUM_SNARE_RIM => self.snare.set_params(params),
-            DRUM_HH_CLOSED | DRUM_HH_OPEN => self.hat.set_params(params),
-            DRUM_TOM => self.tom.set_params(params),
-            DRUM_TOM_HIGH => self.tom_high.set_params(params),
-            DRUM_TOM_MID => self.tom_mid.set_params(params),
-            DRUM_TOM_LOW => self.tom_low.set_params(params),
-            DRUM_RIDE => self.ride.set_params(params),
-            DRUM_RIDE_BELL => self.ride_bell.set_params(params),
-            DRUM_CRASH_16 => self.crash_16.set_params(params),
-            DRUM_CRASH_17 => self.crash_17.set_params(params),
-            DRUM_CRASH_18 => self.crash_18.set_params(params),
-            DRUM_SPLASH => self.splash.set_params(params),
-            DRUM_CHINA => self.china.set_params(params),
-            DRUM_COWBELL => self.cowbell.set_params(params),
-            DRUM_CLAP => self.clap.set_params(params),
-            _ => {}
+    pub fn set_drum_patch(&mut self, drum: DrumId, params: [f32; 7]) {
+        match drum {
+            DrumId::Kick => self.kick.set_params(params),
+            DrumId::Snare
+            | DrumId::SnareCrack
+            | DrumId::SnareBody
+            | DrumId::SnareWire
+            | DrumId::SnareGhost
+            | DrumId::SnareRim => self.snare.set_params(params),
+            DrumId::HhClosed | DrumId::HhOpen => self.hat.set_params(params),
+            DrumId::Tom => self.tom.set_params(params),
+            DrumId::TomHigh => self.tom_high.set_params(params),
+            DrumId::TomMid => self.tom_mid.set_params(params),
+            DrumId::TomLow => self.tom_low.set_params(params),
+            DrumId::Ride => self.ride.set_params(params),
+            DrumId::RideBell => self.ride_bell.set_params(params),
+            DrumId::Crash16 => self.crash_16.set_params(params),
+            DrumId::Crash17 => self.crash_17.set_params(params),
+            DrumId::Crash18 => self.crash_18.set_params(params),
+            DrumId::Splash => self.splash.set_params(params),
+            DrumId::China => self.china.set_params(params),
+            DrumId::Cowbell => self.cowbell.set_params(params),
+            DrumId::Clap => self.clap.set_params(params),
+        }
+    }
+
+    pub fn set_drum_patch_by_id(&mut self, inst_id: i32, params: [f32; 7]) -> bool {
+        if let Ok(drum) = DrumId::try_from(inst_id) {
+            self.set_drum_patch(drum, params);
+            true
+        } else {
+            false
         }
     }
 
