@@ -1,8 +1,8 @@
 //! Modular per-bus DSP insert effects chain for Tritoncha.
 
 use crate::domain::effects::{
-    BitcrusherDrive, BusCompressor, CompressorConfig, FrequencySweep, StateVariableFilter,
-    StereoChorus, StereoDelay, StereoReverb,
+    BitcrusherDrive, BusCompressor, CompressorConfig, DriveMode, FrequencySweep, ReverbMode,
+    StateVariableFilter, StereoChorus, StereoDelay, StereoReverb,
 };
 
 pub const MAX_BUS_INSERTS: usize = 4;
@@ -37,6 +37,15 @@ impl BusId {
     #[inline(always)]
     pub fn is_routable(self) -> bool {
         self.0 < NUM_ROUTABLE_BUSSES
+    }
+
+    #[inline(always)]
+    pub fn from_ffi(bus_idx: i32) -> Option<Self> {
+        if bus_idx < 0 {
+            None
+        } else {
+            Some(Self(bus_idx as usize))
+        }
     }
 }
 
@@ -295,6 +304,22 @@ impl BusEffectChain {
         for slot in &mut self.slots {
             if let Some(BusEffectNode::Compressor(comp)) = slot {
                 comp.set_config(config);
+            }
+        }
+    }
+
+    pub fn set_drive_mode(&mut self, mode: DriveMode) {
+        for slot in &mut self.slots {
+            if let Some(BusEffectNode::Distort(dist)) = slot {
+                dist.set_mode(mode);
+            }
+        }
+    }
+
+    pub fn set_reverb_mode(&mut self, mode: ReverbMode) {
+        for slot in &mut self.slots {
+            if let Some(BusEffectNode::Reverb(rev)) = slot {
+                rev.set_mode(mode);
             }
         }
     }

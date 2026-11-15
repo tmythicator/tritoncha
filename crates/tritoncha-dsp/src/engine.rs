@@ -7,9 +7,9 @@ use crate::domain::effects::{
     FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
     BUS_ID_DIRECT, BUS_ID_MASTER, MAX_SAMPLE_HOLD, NUM_ROUTABLE_BUSSES,
 };
-
 use crate::domain::sequencer::{MasterSequencer, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
+use crate::domain::{BusId, InstrumentId, PatchId, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
 pub use crate::domain::drums::{
@@ -122,7 +122,7 @@ impl TritonchaEngine {
 
     pub fn set_track(
         &mut self,
-        track_idx: usize,
+        track_id: impl Into<TrackId>,
         inst_ids: &[i16],
         notes: &[i16],
         vels: &[f32],
@@ -130,28 +130,28 @@ impl TritonchaEngine {
         step_mult: usize,
     ) {
         self.sequencer
-            .set_track(track_idx, inst_ids, notes, vels, durs, step_mult);
+            .set_track(track_id, inst_ids, notes, vels, durs, step_mult);
     }
 
-    pub fn deactivate_track(&mut self, track_idx: usize) {
-        self.sequencer.deactivate_track(track_idx);
+    pub fn deactivate_track(&mut self, track_id: impl Into<TrackId>) {
+        self.sequencer.deactivate_track(track_id);
     }
 
     pub fn clear_tracks(&mut self) {
         self.sequencer.clear_tracks();
     }
 
-    pub fn mute_track(&mut self, track_idx: usize, muted: bool) {
-        self.sequencer.mute_track(track_idx, muted);
+    pub fn mute_track(&mut self, track_id: impl Into<TrackId>, muted: bool) {
+        self.sequencer.mute_track(track_id, muted);
     }
 
-    pub fn solo_track(&mut self, track_idx: usize, solo: bool) {
-        self.sequencer.solo_track(track_idx, solo);
+    pub fn solo_track(&mut self, track_id: impl Into<TrackId>, solo: bool) {
+        self.sequencer.solo_track(track_id, solo);
     }
 
     pub fn set_bus_params(
         &mut self,
-        bus_idx: usize,
+        bus: impl Into<BusId>,
         gain_db: f32,
         muted: bool,
         send_delay: f32,
@@ -159,7 +159,7 @@ impl TritonchaEngine {
         bypass_master_fx: bool,
     ) {
         self.mixer.set_bus_params(
-            bus_idx,
+            bus,
             gain_db,
             muted,
             send_delay,
@@ -168,9 +168,19 @@ impl TritonchaEngine {
         );
     }
 
-    pub fn set_voice_patch(&mut self, patch_id: usize, patch: ModularPatch) {
-        if patch_id < MAX_PATCHES {
-            self.patches[patch_id] = patch.sanitized();
+    #[inline(always)]
+    pub fn patch_mut(&mut self, patch_id: impl Into<PatchId>) -> Option<&mut ModularPatch> {
+        let pid = patch_id.into();
+        if pid.is_valid() {
+            Some(&mut self.patches[pid.as_usize()])
+        } else {
+            None
+        }
+    }
+
+    pub fn set_voice_patch(&mut self, patch_id: impl Into<PatchId>, patch: ModularPatch) {
+        if let Some(target) = self.patch_mut(patch_id) {
+            *target = patch.sanitized();
         }
     }
 
@@ -183,24 +193,40 @@ impl TritonchaEngine {
     }
 
     pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
-        if inst_id == DRUM_KICK {
-            self.mixer.trigger_sidechain_kick();
-        }
-        if self.drums.trigger_by_id(inst_id, vel, freq) {
-            return;
-        }
-
-        let pid = (inst_id as usize).min(MAX_PATCHES - 1);
-        let patch = self.patches[pid];
-        let target_bus = patch.bus_id as usize;
-
-        match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
-            VoiceAllocation::LegatoGlide { voice_idx } => {
-                self.voices[voice_idx].glide_to(freq, vel, self.sample_rate, patch.glide, dur_s);
+        match InstrumentId::from(inst_id) {
+            InstrumentId::Drum(drum) => {
+                if drum == DrumId::Kick {
+                    self.mixer.trigger_sidechain_kick();
+                }
+                self.drums.trigger_drum(drum, vel, freq);
             }
-            VoiceAllocation::Trigger { voice_idx } => {
-                self.voice_bus_map[voice_idx] = target_bus;
-                self.voices[voice_idx].trigger(freq, vel, pid, &patch, self.sample_rate, dur_s);
+            InstrumentId::Synth(patch_id) => {
+                let pid = patch_id.clamped().as_usize();
+                let patch = self.patches[pid];
+                let target_bus = patch.bus_id as usize;
+
+                match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
+                    VoiceAllocation::LegatoGlide { voice_idx } => {
+                        self.voices[voice_idx].glide_to(
+                            freq,
+                            vel,
+                            self.sample_rate,
+                            patch.glide,
+                            dur_s,
+                        );
+                    }
+                    VoiceAllocation::Trigger { voice_idx } => {
+                        self.voice_bus_map[voice_idx] = target_bus;
+                        self.voices[voice_idx].trigger(
+                            freq,
+                            vel,
+                            pid,
+                            &patch,
+                            self.sample_rate,
+                            dur_s,
+                        );
+                    }
+                }
             }
         }
     }
@@ -209,142 +235,137 @@ impl TritonchaEngine {
         self.master_cutoff_hz
     }
 
-    pub fn clear_bus_chain(&mut self, bus_idx: usize) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].clear();
+    #[inline(always)]
+    pub fn bus_chain_mut(&mut self, bus: impl Into<BusId>) -> Option<&mut BusEffectChain> {
+        let b = bus.into();
+        if b.is_routable() {
+            self.bus_chains.get_mut(b.as_usize())
+        } else {
+            None
         }
     }
 
-    pub fn set_bus_target_out(&mut self, bus_idx: usize, target_out: bool) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].target_out = target_out;
+    #[inline(always)]
+    fn for_bus_chains_mut<F>(&mut self, bus: Option<BusId>, mut f: F)
+    where
+        F: FnMut(&mut BusEffectChain),
+    {
+        match bus {
+            Some(b) => {
+                if let Some(chain) = self.bus_chain_mut(b) {
+                    f(chain);
+                }
+            }
+            None => {
+                for chain in &mut self.bus_chains {
+                    f(chain);
+                }
+            }
         }
     }
 
-    pub fn add_bus_filter(&mut self, bus_idx: usize, cutoff_hz: f32, resonance: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-            let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
-            self.bus_chains[bus_idx].push(BusEffectNode::Filter(StereoSvfFilter::new(f_hz, res)));
+    pub fn push_bus_effect(&mut self, bus: impl Into<BusId>, node: BusEffectNode) {
+        if let Some(chain) = self.bus_chain_mut(bus) {
+            chain.push(node);
         }
     }
 
-    pub fn add_bus_delay(&mut self, bus_idx: usize, time_s: f32, feedback: f32, wet: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            let mut d = StereoDelay::new();
-            d.set_params(time_s, feedback, wet, self.sample_rate);
-            self.bus_chains[bus_idx].push(BusEffectNode::Delay(d));
+    pub fn clear_bus_chain(&mut self, bus: impl Into<BusId>) {
+        if let Some(chain) = self.bus_chain_mut(bus) {
+            chain.clear();
         }
     }
 
-    pub fn add_bus_distort(&mut self, bus_idx: usize, drive: f32, bits: f32, sample_hold: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            let mut dist = BitcrusherDrive::new();
-            dist.set_drive(drive);
-            dist.bit_depth = bits.clamp(1.0, 16.0);
-            dist.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
-            self.bus_chains[bus_idx].push(BusEffectNode::Distort(dist));
+    pub fn set_bus_target_out(&mut self, bus: impl Into<BusId>, target_out: bool) {
+        if let Some(chain) = self.bus_chain_mut(bus) {
+            chain.target_out = target_out;
         }
     }
 
-    pub fn add_bus_chorus(&mut self, bus_idx: usize, rate_hz: f32, depth: f32, mix: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            let mut c = StereoChorus::new();
-            c.rate_hz = rate_hz.clamp(0.1, 10.0);
-            c.depth = depth.clamp(0.0, 1.0);
-            c.mix = mix.clamp(0.0, 1.0);
-            self.bus_chains[bus_idx].push(BusEffectNode::Chorus(c));
-        }
-    }
-
-    pub fn add_bus_reverb(&mut self, bus_idx: usize, room_size: f32, wet: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            let mut r = StereoReverb::with_sample_rate(self.sample_rate);
-            r.set_params(room_size, wet);
-            self.bus_chains[bus_idx].push(BusEffectNode::Reverb(Box::new(r)));
-        }
-    }
-
-    pub fn add_bus_compressor(&mut self, bus_idx: usize, config: CompressorConfig) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            let mut comp = BusCompressor::new(self.sample_rate);
-            comp.set_config(config);
-            self.bus_chains[bus_idx].push(BusEffectNode::Compressor(comp));
-        }
-    }
-
-    pub fn update_bus_filter(&mut self, bus_idx: usize, cutoff_hz: f32, resonance: f32) {
+    pub fn add_bus_filter(&mut self, bus: impl Into<BusId>, cutoff_hz: f32, resonance: f32) {
         let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
         let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].update_filter(f_hz, res);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.update_filter(f_hz, res);
-            }
-        }
+        self.push_bus_effect(bus, BusEffectNode::Filter(StereoSvfFilter::new(f_hz, res)));
     }
 
-    pub fn sweep_bus_filter(&mut self, bus_idx: usize, from_hz: f32, to_hz: f32, dur_s: f32) {
+    pub fn add_bus_delay(&mut self, bus: impl Into<BusId>, time_s: f32, feedback: f32, wet: f32) {
+        let mut d = StereoDelay::new();
+        d.set_params(time_s, feedback, wet, self.sample_rate);
+        self.push_bus_effect(bus, BusEffectNode::Delay(d));
+    }
+
+    pub fn add_bus_distort(
+        &mut self,
+        bus: impl Into<BusId>,
+        drive: f32,
+        bits: f32,
+        sample_hold: f32,
+    ) {
+        let mut dist = BitcrusherDrive::new();
+        dist.set_drive(drive);
+        dist.bit_depth = bits.clamp(1.0, 16.0);
+        dist.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
+        self.push_bus_effect(bus, BusEffectNode::Distort(dist));
+    }
+
+    pub fn add_bus_chorus(&mut self, bus: impl Into<BusId>, rate_hz: f32, depth: f32, mix: f32) {
+        let mut c = StereoChorus::new();
+        c.rate_hz = rate_hz.clamp(0.1, 10.0);
+        c.depth = depth.clamp(0.0, 1.0);
+        c.mix = mix.clamp(0.0, 1.0);
+        self.push_bus_effect(bus, BusEffectNode::Chorus(c));
+    }
+
+    pub fn add_bus_reverb(&mut self, bus: impl Into<BusId>, room_size: f32, wet: f32) {
+        let mut r = StereoReverb::new();
+        r.set_params(room_size, wet);
+        self.push_bus_effect(bus, BusEffectNode::Reverb(Box::new(r)));
+    }
+
+    pub fn add_bus_compressor(&mut self, bus: impl Into<BusId>, config: CompressorConfig) {
+        let mut comp = BusCompressor::new(self.sample_rate);
+        comp.set_config(config);
+        self.push_bus_effect(bus, BusEffectNode::Compressor(comp));
+    }
+
+    pub fn update_bus_filter(&mut self, bus: Option<BusId>, cutoff_hz: f32, resonance: f32) {
+        let f_hz = cutoff_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
+        let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
+        self.for_bus_chains_mut(bus, |chain| chain.update_filter(f_hz, res));
+    }
+
+    pub fn sweep_bus_filter(&mut self, bus: Option<BusId>, from_hz: f32, to_hz: f32, dur_s: f32) {
         let f_hz = from_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
         let t_hz = to_hz.clamp(MIN_MASTER_CUTOFF_HZ, MAX_MASTER_CUTOFF_HZ);
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].sweep_filter(f_hz, t_hz, dur_s, self.sample_rate);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.sweep_filter(f_hz, t_hz, dur_s, self.sample_rate);
-            }
-        }
+        let sr = self.sample_rate;
+        self.for_bus_chains_mut(bus, |chain| chain.sweep_filter(f_hz, t_hz, dur_s, sr));
     }
 
-    pub fn update_bus_delay(&mut self, bus_idx: usize, time_s: f32, feedback: f32, wet: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].update_delay(time_s, feedback, wet, self.sample_rate);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.update_delay(time_s, feedback, wet, self.sample_rate);
-            }
-        }
+    pub fn update_bus_delay(&mut self, bus: Option<BusId>, time_s: f32, feedback: f32, wet: f32) {
+        let sr = self.sample_rate;
+        self.for_bus_chains_mut(bus, |chain| chain.update_delay(time_s, feedback, wet, sr));
     }
 
-    pub fn update_bus_distort(&mut self, bus_idx: usize, drive: f32, bits: f32, sample_hold: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].update_distort(drive, bits, sample_hold);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.update_distort(drive, bits, sample_hold);
-            }
-        }
+    pub fn update_bus_distort(
+        &mut self,
+        bus: Option<BusId>,
+        drive: f32,
+        bits: f32,
+        sample_hold: f32,
+    ) {
+        self.for_bus_chains_mut(bus, |chain| chain.update_distort(drive, bits, sample_hold));
     }
 
-    pub fn update_bus_chorus(&mut self, bus_idx: usize, rate_hz: f32, depth: f32, mix: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].update_chorus(rate_hz, depth, mix);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.update_chorus(rate_hz, depth, mix);
-            }
-        }
+    pub fn update_bus_chorus(&mut self, bus: Option<BusId>, rate_hz: f32, depth: f32, mix: f32) {
+        self.for_bus_chains_mut(bus, |chain| chain.update_chorus(rate_hz, depth, mix));
     }
 
-    pub fn update_bus_reverb(&mut self, bus_idx: usize, room_size: f32, wet: f32) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].update_reverb(room_size, wet);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.update_reverb(room_size, wet);
-            }
-        }
+    pub fn update_bus_reverb(&mut self, bus: Option<BusId>, room_size: f32, wet: f32) {
+        self.for_bus_chains_mut(bus, |chain| chain.update_reverb(room_size, wet));
     }
 
-    pub fn update_bus_compressor(&mut self, bus_idx: usize, config: CompressorConfig) {
-        if bus_idx < NUM_ROUTABLE_BUSSES {
-            self.bus_chains[bus_idx].update_compressor(config);
-        } else {
-            for chain in &mut self.bus_chains {
-                chain.update_compressor(config);
-            }
-        }
+    pub fn update_bus_compressor(&mut self, bus: Option<BusId>, config: CompressorConfig) {
+        self.for_bus_chains_mut(bus, |chain| chain.update_compressor(config));
     }
 
     pub fn set_master_filter(&mut self, cutoff_hz: f32, resonance: f32) {
@@ -353,7 +374,7 @@ impl TritonchaEngine {
         let res = resonance.clamp(0.0, MAX_MASTER_RESONANCE);
         self.master_cutoff_hz = f_hz;
         self.master_resonance = res;
-        self.update_bus_filter(usize::MAX, f_hz, res);
+        self.update_bus_filter(None, f_hz, res);
     }
 
     pub fn sweep_master_filter(&mut self, from_hz: f32, to_hz: f32, duration_secs: f32) {
@@ -362,11 +383,11 @@ impl TritonchaEngine {
         self.sweep
             .start(f_hz, t_hz, duration_secs, self.sample_rate);
         self.master_cutoff_hz = f_hz;
-        self.sweep_bus_filter(usize::MAX, f_hz, t_hz, duration_secs);
+        self.sweep_bus_filter(None, f_hz, t_hz, duration_secs);
     }
 
     pub fn set_drive_bitcrush(&mut self, drive: f32, bit_depth: f32, sample_hold: f32) {
-        self.update_bus_distort(usize::MAX, drive, bit_depth, sample_hold);
+        self.update_bus_distort(None, drive, bit_depth, sample_hold);
     }
 
     pub fn set_drive_mode(&mut self, mode: u8) {
@@ -375,17 +396,11 @@ impl TritonchaEngine {
         } else {
             DriveMode::Adaa
         };
-        for chain in &mut self.bus_chains {
-            for slot in &mut chain.slots {
-                if let Some(BusEffectNode::Distort(dist)) = slot {
-                    dist.set_mode(m);
-                }
-            }
-        }
+        self.for_bus_chains_mut(None, |chain| chain.set_drive_mode(m));
     }
 
     pub fn set_chorus(&mut self, rate_hz: f32, depth: f32, mix: f32) {
-        self.update_bus_chorus(usize::MAX, rate_hz, depth, mix);
+        self.update_bus_chorus(None, rate_hz, depth, mix);
     }
 
     pub fn set_sidechain(&mut self, amount: f32) {
@@ -393,11 +408,11 @@ impl TritonchaEngine {
     }
 
     pub fn set_delay(&mut self, time_s: f32, feedback: f32, wet: f32) {
-        self.update_bus_delay(usize::MAX, time_s, feedback, wet);
+        self.update_bus_delay(None, time_s, feedback, wet);
     }
 
     pub fn set_reverb(&mut self, room_size: f32, wet: f32) {
-        self.update_bus_reverb(usize::MAX, room_size, wet);
+        self.update_bus_reverb(None, room_size, wet);
     }
 
     pub fn set_reverb_mode(&mut self, mode: u8) {
@@ -406,17 +421,11 @@ impl TritonchaEngine {
         } else {
             ReverbMode::Fdn
         };
-        for chain in &mut self.bus_chains {
-            for slot in &mut chain.slots {
-                if let Some(BusEffectNode::Reverb(rev)) = slot {
-                    rev.set_mode(m);
-                }
-            }
-        }
+        self.for_bus_chains_mut(None, |chain| chain.set_reverb_mode(m));
     }
 
     pub fn set_master_compressor(&mut self, config: CompressorConfig) {
-        self.update_bus_compressor(BUS_ID_MASTER, config);
+        self.update_bus_compressor(Some(BusId::MASTER), config);
     }
 
     pub fn set_master_volume(&mut self, gain_db: f32) {

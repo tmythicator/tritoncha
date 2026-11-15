@@ -1,7 +1,7 @@
 //! Master sequencer managing timing, transport, and 16-track patterns.
 
 use super::track::{
-    TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
+    TrackId, TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
     MAX_STEPS, MAX_TRACKS,
 };
 use super::trigger_mask::TriggerMask;
@@ -77,20 +77,39 @@ impl MasterSequencer {
         }
     }
 
+    #[inline(always)]
+    pub fn track_mut(&mut self, track: impl Into<TrackId>) -> Option<&mut TrackPattern> {
+        let t = track.into();
+        if t.is_valid() {
+            Some(&mut self.tracks[t.as_usize()])
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn track(&self, track: impl Into<TrackId>) -> Option<&TrackPattern> {
+        let t = track.into();
+        if t.is_valid() {
+            Some(&self.tracks[t.as_usize()])
+        } else {
+            None
+        }
+    }
+
     pub fn set_track(
         &mut self,
-        track_idx: usize,
+        track: impl Into<TrackId>,
         inst_ids: &[i16],
         notes: &[i16],
         vels: &[f32],
         durs: &[f32],
         step_mult: usize,
     ) {
-        if track_idx >= MAX_TRACKS {
+        let Some(tr) = self.track_mut(track) else {
             return;
-        }
+        };
 
-        let tr = &mut self.tracks[track_idx];
         let len = notes.len().min(MAX_STEPS);
 
         if len == 0 || notes.iter().all(|&n| n < 0) {
@@ -122,9 +141,9 @@ impl MasterSequencer {
         }
     }
 
-    pub fn deactivate_track(&mut self, track_idx: usize) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].clear();
+    pub fn deactivate_track(&mut self, track: impl Into<TrackId>) {
+        if let Some(tr) = self.track_mut(track) {
+            tr.clear();
         }
     }
 
@@ -137,15 +156,15 @@ impl MasterSequencer {
         self.solo_active = false;
     }
 
-    pub fn mute_track(&mut self, track_idx: usize, muted: bool) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].muted = muted;
+    pub fn mute_track(&mut self, track: impl Into<TrackId>, muted: bool) {
+        if let Some(tr) = self.track_mut(track) {
+            tr.muted = muted;
         }
     }
 
-    pub fn solo_track(&mut self, track_idx: usize, solo: bool) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].solo = solo;
+    pub fn solo_track(&mut self, track: impl Into<TrackId>, solo: bool) {
+        if let Some(tr) = self.track_mut(track) {
+            tr.solo = solo;
             self.solo_active = self.tracks.iter().any(|t| t.solo);
         }
     }

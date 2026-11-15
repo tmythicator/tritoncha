@@ -64,6 +64,11 @@ impl PatchId {
     }
 
     #[inline(always)]
+    pub fn is_valid(self) -> bool {
+        self.0 < MAX_PATCHES
+    }
+
+    #[inline(always)]
     pub fn clamped(self) -> Self {
         Self(self.0.min(MAX_PATCHES - 1))
     }

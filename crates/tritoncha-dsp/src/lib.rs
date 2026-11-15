@@ -5,6 +5,7 @@ pub mod services;
 
 use crate::domain::effects::CompressorConfig;
 use crate::domain::synth::ModularPatch;
+use crate::domain::BusId;
 pub use engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
@@ -625,12 +626,7 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_filter(
     resonance: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let b = if bus_idx < 0 {
-            usize::MAX
-        } else {
-            bus_idx as usize
-        };
-        engine.update_bus_filter(b, cutoff_hz, resonance);
+        engine.update_bus_filter(BusId::from_ffi(bus_idx), cutoff_hz, resonance);
     }
 }
 
@@ -647,12 +643,7 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_delay(
     wet: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let b = if bus_idx < 0 {
-            usize::MAX
-        } else {
-            bus_idx as usize
-        };
-        engine.update_bus_delay(b, time_s, feedback, wet);
+        engine.update_bus_delay(BusId::from_ffi(bus_idx), time_s, feedback, wet);
     }
 }
 
@@ -669,12 +660,7 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_distort(
     sample_hold: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let b = if bus_idx < 0 {
-            usize::MAX
-        } else {
-            bus_idx as usize
-        };
-        engine.update_bus_distort(b, drive, bits, sample_hold);
+        engine.update_bus_distort(BusId::from_ffi(bus_idx), drive, bits, sample_hold);
     }
 }
 
@@ -691,12 +677,7 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_chorus(
     mix: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let b = if bus_idx < 0 {
-            usize::MAX
-        } else {
-            bus_idx as usize
-        };
-        engine.update_bus_chorus(b, rate_hz, depth, mix);
+        engine.update_bus_chorus(BusId::from_ffi(bus_idx), rate_hz, depth, mix);
     }
 }
 
@@ -712,12 +693,7 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_reverb(
     wet: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let b = if bus_idx < 0 {
-            usize::MAX
-        } else {
-            bus_idx as usize
-        };
-        engine.update_bus_reverb(b, room_size, wet);
+        engine.update_bus_reverb(BusId::from_ffi(bus_idx), room_size, wet);
     }
 }
 
@@ -737,11 +713,6 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_compressor(
     mix: f32,
 ) {
     if let Some(engine) = ptr.as_mut() {
-        let b = if bus_idx < 0 {
-            usize::MAX
-        } else {
-            bus_idx as usize
-        };
         let config = CompressorConfig {
             enabled: true,
             threshold_db,
@@ -751,7 +722,7 @@ pub unsafe extern "C" fn tritoncha_dsp_update_bus_compressor(
             makeup_gain_db: makeup_db,
             mix,
         };
-        engine.update_bus_compressor(b, config);
+        engine.update_bus_compressor(BusId::from_ffi(bus_idx), config);
     }
 }
 

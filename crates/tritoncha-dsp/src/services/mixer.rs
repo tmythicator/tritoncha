@@ -1,7 +1,7 @@
 //! Multi-bus audio mixing, routing, and effects send matrix.
 
 use crate::core::math::db_to_gain;
-use crate::domain::effects::SidechainPump;
+use crate::domain::effects::{BusId, SidechainPump};
 
 pub const NUM_BUSSES: usize = 5;
 
@@ -128,22 +128,32 @@ impl Mixer {
         }
     }
 
+    #[inline(always)]
+    pub fn bus_mut(&mut self, bus: impl Into<BusId>) -> Option<&mut AudioBus> {
+        self.busses.get_mut(bus.into().as_usize())
+    }
+
+    #[inline(always)]
+    pub fn bus(&self, bus: impl Into<BusId>) -> Option<&AudioBus> {
+        self.busses.get(bus.into().as_usize())
+    }
+
     pub fn set_bus_params(
         &mut self,
-        bus_idx: usize,
+        bus: impl Into<BusId>,
         gain_db: f32,
         muted: bool,
         send_delay: f32,
         send_reverb: f32,
         bypass_master_fx: bool,
     ) {
-        if bus_idx < NUM_BUSSES {
+        if let Some(b) = self.bus_mut(bus) {
             let linear_gain = db_to_gain(gain_db);
-            self.busses[bus_idx].gain = linear_gain.clamp(0.0, MAX_BUS_LINEAR_GAIN);
-            self.busses[bus_idx].muted = muted;
-            self.busses[bus_idx].send_delay = send_delay.clamp(0.0, 1.0);
-            self.busses[bus_idx].send_reverb = send_reverb.clamp(0.0, 1.0);
-            self.busses[bus_idx].bypass_master_fx = bypass_master_fx;
+            b.gain = linear_gain.clamp(0.0, MAX_BUS_LINEAR_GAIN);
+            b.muted = muted;
+            b.send_delay = send_delay.clamp(0.0, 1.0);
+            b.send_reverb = send_reverb.clamp(0.0, 1.0);
+            b.bypass_master_fx = bypass_master_fx;
         }
     }
 
