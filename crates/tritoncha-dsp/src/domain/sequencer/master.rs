@@ -6,8 +6,8 @@ use super::track::{
 };
 use super::trigger_mask::TriggerMask;
 use crate::core::math::midi_to_freq;
-use crate::domain::drums::{is_drum_inst, DRUM_TOM};
-use crate::domain::Bpm;
+use crate::domain::drums::DrumId;
+use crate::domain::{Bpm, InstrumentId, PatchId};
 
 pub use crate::domain::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_BPM: f32 = 168.0;
@@ -18,7 +18,6 @@ pub const STEPS_PER_BEAT_64TH: f32 = 16.0;
 pub const SEQUENCER_TICK_MODULO: usize = 65536;
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
 
-pub const INST_CLICK: i32 = 11;
 pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
 pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
 
@@ -207,18 +206,18 @@ impl MasterSequencer {
             let dur_s = tr.durations[pat_idx];
 
             if note >= 0 && vel > MIN_AUDIBLE_VELOCITY {
-                let freq = if !is_drum_inst(inst_id) {
-                    if note > 0 {
-                        midi_to_freq(note as f32)
-                    } else if inst_id == INST_CLICK {
-                        DEFAULT_CLICK_FREQ_HZ
-                    } else {
-                        DEFAULT_NOTE_FREQ_HZ
+                let freq = match InstrumentId::from(inst_id) {
+                    InstrumentId::Synth(id) => {
+                        if note > 0 {
+                            midi_to_freq(note as f32)
+                        } else if id == PatchId::CLICK {
+                            DEFAULT_CLICK_FREQ_HZ
+                        } else {
+                            DEFAULT_NOTE_FREQ_HZ
+                        }
                     }
-                } else if inst_id == DRUM_TOM {
-                    midi_to_freq(note as f32)
-                } else {
-                    DEFAULT_NOTE_FREQ_HZ
+                    InstrumentId::Drum(DrumId::Tom) => midi_to_freq(note as f32),
+                    InstrumentId::Drum(_) => DEFAULT_NOTE_FREQ_HZ,
                 };
                 out_events[count] = (inst_id, freq, vel, dur_s);
                 count += 1;

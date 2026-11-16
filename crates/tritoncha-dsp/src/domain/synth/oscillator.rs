@@ -3,9 +3,6 @@
 use crate::core::math::{poly_blep, sin_phase, wrap_phase};
 use crate::domain::PulseWidth;
 
-pub const MIN_PULSE_WIDTH: f32 = PulseWidth::MIN.get();
-pub const MAX_PULSE_WIDTH: f32 = PulseWidth::MAX.get();
-
 pub const NUM_SUPERSAW_VOICES: usize = 7;
 pub const SUPERSAW_DETUNE_OFFSETS: [f32; NUM_SUPERSAW_VOICES] =
     [-0.012, -0.007, -0.003, 0.0, 0.003, 0.007, 0.012];

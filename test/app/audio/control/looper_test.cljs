@@ -3,6 +3,7 @@
   (:require [app.audio.control.looper :as looper]
             [app.audio.control.pattern :as pattern]
             [app.audio.control.scheduler :as sched]
+            [app.state :refer [audio-state]]
             [app.utils.audio :as audio-utils]
             [cljs.test :refer [deftest is testing]]))
 
@@ -59,4 +60,10 @@
     (is (= :natural (looper/set-drum-mode! :natural)))
     (is (= :idm (looper/set-drum-mode! :idm)))
     (is (= :analog (looper/mod! :analog)))
-    (is (= :industrial (looper/mod! :industrial)))))
+    (is (= :industrial (looper/mod! :industrial))))
+
+  (testing "Global drum mode persists across track loops without per-loop :mod override"
+    (looper/set-drum-mode! :natural)
+    (looper/loop! :kick {:notes [:kick nil :kick nil] :step "16n"})
+    (is (= :natural (:drum-mode @audio-state)))
+    (looper/stop!)))

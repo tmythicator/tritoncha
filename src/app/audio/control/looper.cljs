@@ -40,7 +40,8 @@
                           :else nil)]
     (when target-drum
       (when-let [base (inst/resolve-instrument-spec target-drum)]
-        (let [spec (if-let [m (:mod pat-data)] (assoc base :mod m) base)]
+        (let [active-mod (or (:mod pat-data) (:drum-mode @audio-state) (:mod base))
+              spec       (if active-mod (assoc base :mod active-mod) base)]
           (worklet/set-worklet-drum-patch! target-drum spec))))
     (when (and (= target-drum :drums) (:mod pat-data))
       (worklet/set-drum-mode! (:mod pat-data)))))

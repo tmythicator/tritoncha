@@ -43,8 +43,7 @@ impl From<i32> for InstrumentId {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::drums::{DrumId, DRUM_KICK, DRUM_SNARE};
-    use crate::domain::synth::PATCH_SAW_BASS;
+    use crate::domain::drums::DrumId;
 
     #[test]
     fn test_bus_id_type_safety_and_routing_bounds() {
@@ -100,24 +99,24 @@ mod tests {
     fn test_instrument_id_resolves_drums_vs_synths() {
         // Drums
         assert_eq!(
-            InstrumentId::from(DRUM_KICK),
+            InstrumentId::from(DrumId::Kick.as_i32()),
             InstrumentId::Drum(DrumId::Kick)
         );
         assert_eq!(
-            InstrumentId::from(DRUM_SNARE),
+            InstrumentId::from(DrumId::Snare.as_i32()),
             InstrumentId::Drum(DrumId::Snare)
         );
 
         // Synth Patches
         assert_eq!(
-            InstrumentId::from(PATCH_SAW_BASS as i32),
+            InstrumentId::from(PatchId::SAW_BASS.as_usize() as i32),
             InstrumentId::Synth(PatchId::SAW_BASS)
         );
         assert_eq!(InstrumentId::from(8), InstrumentId::Synth(PatchId::LEAD));
 
         // Introspection helpers
-        assert!(InstrumentId::from(DRUM_KICK).is_drum());
-        assert!(!InstrumentId::from(DRUM_KICK).is_synth());
+        assert!(InstrumentId::from(DrumId::Kick.as_i32()).is_drum());
+        assert!(!InstrumentId::from(DrumId::Kick.as_i32()).is_synth());
 
         assert!(InstrumentId::from(4).is_synth());
         assert!(!InstrumentId::from(4).is_drum());

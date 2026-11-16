@@ -1,9 +1,8 @@
+use super::cymbals::PercussionParams;
 use super::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
 use crate::domain::{DrumVelocity, DEFAULT_SAMPLE_RATE};
-
-pub use super::cymbals::PercussionParams as ClapParams;
 
 /// Hand Clap Voice with multi-burst envelope.
 #[derive(Clone)]
@@ -36,7 +35,7 @@ impl ClapVoice {
         }
     }
 
-    pub fn set_params(&mut self, params: impl Into<ClapParams>) {
+    pub fn set_params(&mut self, params: impl Into<PercussionParams>) {
         let p = params.into();
         self.cutoff_hz = *p.cutoff;
         self.resonance = *p.resonance;

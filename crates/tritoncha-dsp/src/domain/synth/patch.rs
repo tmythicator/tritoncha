@@ -2,61 +2,42 @@
 
 pub const MAX_PATCHES: usize = 64;
 
-// Standard Modular Patch Identifiers
-pub const PATCH_SAW_BASS: usize = 4;
-pub const PATCH_ACID_BASS: usize = 5;
-pub const PATCH_SUB_SINE: usize = 6;
-pub const PATCH_DARK_PAD: usize = 7;
-pub const PATCH_LEAD: usize = 8;
-pub const PATCH_FM: usize = 9;
-pub const PATCH_REESE: usize = 10;
-pub const PATCH_CLICK: usize = 11;
-pub const PATCH_SUPERSAW: usize = 12;
-pub const PATCH_BLADE: usize = 13;
-pub const PATCH_HOOVER: usize = 14;
-pub const PATCH_KARPLUS: usize = 15;
-pub const PATCH_ORGAN: usize = 16;
-pub const PATCH_CHIPTUNE: usize = 17;
-pub const PATCH_AMBIENT_GLASS: usize = 19;
-pub const PATCH_ETHEREAL_PAD: usize = 27;
-pub const PATCH_ICE_PAD: usize = 28;
-pub const PATCH_WARM_STRINGS: usize = 29;
-pub const PATCH_CHOIR_PAD: usize = 30;
-pub const PATCH_SPACE_DRONE: usize = 31;
-pub const PATCH_PLUCK_LEAD: usize = 32;
-pub const PATCH_NEURO_BASS: usize = 33;
-pub const PATCH_808_SUB: usize = 34;
-pub const PATCH_SLAP_BASS: usize = 35;
-pub const PATCH_ORGAN_BASS: usize = 36;
-pub const PATCH_ACID_LEAD: usize = 37;
-pub const PATCH_FM_BELL: usize = 38;
-pub const PATCH_GLASS_KEYS: usize = 39;
-pub const PATCH_SIREN: usize = 40;
-pub const PATCH_LASER: usize = 41;
-pub const PATCH_SUB_MOOG: usize = 42;
-pub const PATCH_BASS_MOOG: usize = 43;
-pub const PATCH_LEAD_NBELL: usize = 44;
-pub const PATCH_ZAP: usize = 45;
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PatchId(pub usize);
 
 impl PatchId {
-    pub const SAW_BASS: Self = Self(PATCH_SAW_BASS);
-    pub const ACID_BASS: Self = Self(PATCH_ACID_BASS);
-    pub const SUB_SINE: Self = Self(PATCH_SUB_SINE);
-    pub const DARK_PAD: Self = Self(PATCH_DARK_PAD);
-    pub const LEAD: Self = Self(PATCH_LEAD);
-    pub const FM: Self = Self(PATCH_FM);
-    pub const REESE: Self = Self(PATCH_REESE);
-    pub const CLICK: Self = Self(PATCH_CLICK);
-    pub const SUPERSAW: Self = Self(PATCH_SUPERSAW);
-    pub const BLADE: Self = Self(PATCH_BLADE);
-    pub const HOOVER: Self = Self(PATCH_HOOVER);
-    pub const KARPLUS: Self = Self(PATCH_KARPLUS);
-    pub const ORGAN: Self = Self(PATCH_ORGAN);
-    pub const CHIPTUNE: Self = Self(PATCH_CHIPTUNE);
-    pub const AMBIENT_GLASS: Self = Self(PATCH_AMBIENT_GLASS);
+    pub const SAW_BASS: Self = Self(4);
+    pub const ACID_BASS: Self = Self(5);
+    pub const SUB_SINE: Self = Self(6);
+    pub const DARK_PAD: Self = Self(7);
+    pub const LEAD: Self = Self(8);
+    pub const FM: Self = Self(9);
+    pub const REESE: Self = Self(10);
+    pub const CLICK: Self = Self(11);
+    pub const SUPERSAW: Self = Self(12);
+    pub const BLADE: Self = Self(13);
+    pub const HOOVER: Self = Self(14);
+    pub const KARPLUS: Self = Self(15);
+    pub const ORGAN: Self = Self(16);
+    pub const CHIPTUNE: Self = Self(17);
+    pub const AMBIENT_GLASS: Self = Self(19);
+    pub const ETHEREAL_PAD: Self = Self(27);
+    pub const ICE_PAD: Self = Self(28);
+    pub const WARM_STRINGS: Self = Self(29);
+    pub const CHOIR_PAD: Self = Self(30);
+    pub const SPACE_DRONE: Self = Self(31);
+    pub const PLUCK_LEAD: Self = Self(32);
+    pub const NEURO_BASS: Self = Self(33);
+    pub const SUB_808: Self = Self(34);
+    pub const SLAP_BASS: Self = Self(35);
+    pub const ORGAN_BASS: Self = Self(36);
+    pub const ACID_LEAD: Self = Self(37);
+    pub const FM_BELL: Self = Self(38);
+    pub const GLASS_KEYS: Self = Self(39);
+    pub const SIREN: Self = Self(40);
+    pub const LASER: Self = Self(41);
+    pub const LEAD_NBELL: Self = Self(44);
+    pub const ZAP: Self = Self(45);
 
     #[inline(always)]
     pub const fn as_usize(self) -> usize {
@@ -122,38 +103,8 @@ impl From<u8> for OscillatorType {
     }
 }
 
-// Oscillator Types
-pub const OSC_SAW: OscillatorType = OscillatorType::Saw;
-pub const OSC_PULSE: OscillatorType = OscillatorType::Pulse;
-pub const OSC_TRIANGLE: OscillatorType = OscillatorType::Triangle;
-pub const OSC_SINE: OscillatorType = OscillatorType::Sine;
-pub const OSC_SUPERSAW: OscillatorType = OscillatorType::Supersaw;
-pub const OSC_KARPLUS: OscillatorType = OscillatorType::Karplus;
-pub const OSC_ORGAN: OscillatorType = OscillatorType::Organ;
-pub const OSC_CHIPTUNE: OscillatorType = OscillatorType::Chiptune;
-pub const OSC_FM: OscillatorType = OscillatorType::Fm;
-pub const OSC_REESE: OscillatorType = OscillatorType::Reese;
-pub const OSC_BLADE: OscillatorType = OscillatorType::Blade;
-pub const OSC_HOOVER: OscillatorType = OscillatorType::Hoover;
-pub const OSC_CLICK: OscillatorType = OscillatorType::Click;
-
 pub use crate::domain::effects::FilterMode;
-
-// Filter Types
-pub const FILTER_LOWPASS: FilterMode = FilterMode::Lowpass;
-pub const FILTER_HIGHPASS: FilterMode = FilterMode::Highpass;
-pub const FILTER_BANDPASS: FilterMode = FilterMode::Bandpass;
-pub const FILTER_NOTCH: FilterMode = FilterMode::Notch;
-pub const FILTER_LADDER_24DB: FilterMode = FilterMode::Ladder24;
-
 pub use crate::domain::BusTarget;
-
-// Bus IDs
-pub const BUS_DRUMS: BusTarget = BusTarget::Drums;
-pub const BUS_BASS: BusTarget = BusTarget::Bass;
-pub const BUS_SPACE: BusTarget = BusTarget::Space;
-pub const BUS_LEAD: BusTarget = BusTarget::Lead;
-pub const BUS_DIRECT: BusTarget = BusTarget::Direct;
 
 // Audio and Voice Timing Constants
 pub const MIN_FREQ_HZ: f32 = 20.0;
@@ -210,10 +161,10 @@ pub struct ModularPatch {
 impl ModularPatch {
     pub fn default_lead() -> Self {
         modular_patch! {
-            osc_type: OSC_SAW,
+            osc_type: OscillatorType::Saw,
             sub_level: 0.25,
             pulse_width: 0.5,
-            filter_type: FILTER_LOWPASS,
+            filter_type: FilterMode::Lowpass,
             cutoff_base: 2800.0,
             cutoff_env_amt: 3500.0,
             cutoff_key_track: 1.0,
@@ -224,7 +175,7 @@ impl ModularPatch {
             release: 0.18,
             mod_attack: 0.005,
             mod_decay: 0.12,
-            bus_id: BUS_LEAD,
+            bus_id: BusTarget::Lead,
             polyphony: 4,
             glide: 0.0,
             filter_drive: 0.2,
@@ -235,11 +186,12 @@ impl ModularPatch {
         }
     }
 
-    /// Returns default patch for a given patch index.
-    pub fn default_for(patch_id: usize) -> Self {
+    /// Returns default patch for a given patch identifier or index.
+    pub fn default_for(patch_id: impl Into<PatchId>) -> Self {
+        let pid = patch_id.into();
         let all = init_default_patches();
-        if patch_id < MAX_PATCHES {
-            all[patch_id]
+        if pid.is_valid() {
+            all[pid.as_usize()]
         } else {
             ModularPatch::default()
         }
@@ -280,10 +232,13 @@ mod tests {
     #[test]
     fn test_init_default_patches() {
         let patches = init_default_patches();
-        assert_eq!(patches[PATCH_SAW_BASS].osc_type, OSC_SAW);
-        assert_eq!(*patches[PATCH_ACID_BASS].polyphony, 1);
-        assert_eq!(*patches[PATCH_DARK_PAD].polyphony, 8);
-        assert!(*patches[PATCH_808_SUB].pitch_snap > 0.0);
+        assert_eq!(
+            patches[PatchId::SAW_BASS.as_usize()].osc_type,
+            OscillatorType::Saw
+        );
+        assert_eq!(*patches[PatchId::ACID_BASS.as_usize()].polyphony, 1);
+        assert_eq!(*patches[PatchId::DARK_PAD.as_usize()].polyphony, 8);
+        assert!(*patches[PatchId::SUB_808.as_usize()].pitch_snap > 0.0);
     }
 
     #[test]

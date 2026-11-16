@@ -11,7 +11,7 @@ pub use metallic::MetallicVoice;
 pub use ride::RideVoice;
 
 use crate::core::math::{soft_clip, LN_MIN_60DB};
-use crate::domain::drums::DrumMode;
+use crate::domain::drums::{opt_param, DrumMode};
 use crate::domain::{AdsrTime, CutoffHz, Drive, Resonance};
 use std::f32::consts::PI;
 
@@ -89,18 +89,16 @@ impl Default for PercussionParams {
 impl From<[f32; 7]> for PercussionParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
+        let d = Self::default();
         Self {
-            cutoff: p[0].into(),
-            resonance: p[1].into(),
-            decay: p[2].into(),
-            drive: p[3].into(),
+            cutoff: opt_param(p[0], d.cutoff),
+            resonance: opt_param(p[1], d.resonance),
+            decay: opt_param(p[2], d.decay),
+            drive: opt_param(p[3], d.drive),
             mode: p[6].into(),
         }
     }
 }
-
-pub type RideParams = PercussionParams;
-pub type MetallicParams = PercussionParams;
 
 // Inharmonic metallic frequency banks for cymbals and percussion (B20 bronze modal models)
 pub const CRASH_16_FREQS: [f32; 6] = [240.0, 360.0, 560.0, 890.0, 1420.0, 2260.0];

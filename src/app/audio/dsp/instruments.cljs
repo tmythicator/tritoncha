@@ -113,7 +113,11 @@
                                          (get user-drums canonical)))))
                          insts))))
   (doseq [[inst-key spec] (all-instruments)]
-    (sync-instrument-dsp! inst-key spec))
+    (let [active-mod (:drum-mode @audio-state)
+          eff-spec   (if (and active-mod (or (catalog/drum? inst-key) (catalog/drum? spec)))
+                       (assoc spec :mod active-mod)
+                       spec)]
+      (sync-instrument-dsp! inst-key eff-spec)))
   :reloaded)
 
 (defn trigger-note!

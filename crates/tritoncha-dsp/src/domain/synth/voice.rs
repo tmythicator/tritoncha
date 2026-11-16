@@ -172,7 +172,7 @@ impl SynthVoice {
             sample_rate,
         );
 
-        if patch.osc_type == OSC_KARPLUS {
+        if patch.osc_type == OscillatorType::Karplus {
             // Initialize Karplus-Strong string burst with white noise excitation
             self.ks_len =
                 (sample_rate / self.freq).clamp(KARPLUS_MIN_LEN, KARPLUS_MAX_LEN) as usize;
@@ -206,7 +206,7 @@ impl SynthVoice {
         self.drift_phase_inc = drift_hz / sample_rate;
 
         // Initialize free-running supersaw phase offsets
-        if patch.osc_type == OSC_SUPERSAW {
+        if patch.osc_type == OscillatorType::Supersaw {
             let mut seed = self.noise_seed;
             for phase in &mut self.supersaw_phases {
                 *phase = (xorshift32_norm(&mut seed) * 0.5 + 0.5).fract();
@@ -316,7 +316,7 @@ impl SynthVoice {
             + *patch.cutoff_env_amt * mod_env_level)
             .clamp(20.0, 20000.0);
 
-        let filtered = if patch.filter_type == FILTER_LADDER_24DB {
+        let filtered = if patch.filter_type == FilterMode::Ladder24 {
             self.ladder_filter.process(
                 osc,
                 cutoff,
@@ -365,7 +365,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(440.0, 0.9, PATCH_LEAD, &patch, sr, 0.1);
+        voice.trigger(440.0, 0.9, PatchId::LEAD, &patch, sr, 0.1);
         assert!(voice.active);
         assert_eq!(voice.env_stage(), EnvelopeStage::Attack);
         assert_eq!(voice.freq, 440.0);
@@ -384,7 +384,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(220.0, 0.8, PATCH_LEAD, &patch, sr, 0.5);
+        voice.trigger(220.0, 0.8, PatchId::LEAD, &patch, sr, 0.5);
         voice.glide_to(440.0, 0.8, sr, 0.05, 0.5);
         assert_eq!(voice.target_freq, 440.0);
         assert!(voice.freq < 440.0);
@@ -422,7 +422,7 @@ mod tests {
     fn test_karplus_strong_synthesis() {
         let mut voice = SynthVoice::new();
         let mut patch = ModularPatch::default_lead();
-        patch.osc_type = OSC_KARPLUS;
+        patch.osc_type = OscillatorType::Karplus;
         let sr = DEFAULT_SAMPLE_RATE;
 
         voice.trigger(330.0, 1.0, 0, &patch, sr, 0.2);

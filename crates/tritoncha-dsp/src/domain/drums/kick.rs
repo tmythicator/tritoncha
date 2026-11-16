@@ -1,6 +1,6 @@
 //! Kick drum physical and analog modeling voice.
 
-use super::{DrumMode, MIN_AUDIBLE_VELOCITY};
+use super::{opt_param, DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase};
 use crate::domain::{
     AdsrTime, Drive, DrumPitch, DrumVelocity, PitchDrop, PitchSnapDecay, DEFAULT_SAMPLE_RATE,
@@ -105,13 +105,14 @@ impl Default for KickParams {
 impl From<[f32; 7]> for KickParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
+        let d = Self::default();
         Self {
-            base_pitch: p[0].into(),
-            pitch_drop: p[1].into(),
-            pitch_decay: p[2].into(),
-            decay: p[3].into(),
-            click_level: p[4].into(),
-            drive: p[5].into(),
+            base_pitch: opt_param(p[0], d.base_pitch),
+            pitch_drop: opt_param(p[1], d.pitch_drop),
+            pitch_decay: opt_param(p[2], d.pitch_decay),
+            decay: opt_param(p[3], d.decay),
+            click_level: opt_param(p[4], d.click_level),
+            drive: opt_param(p[5], d.drive),
             mode: p[6].into(),
         }
     }

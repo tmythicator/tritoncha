@@ -1,9 +1,6 @@
 //! Snare drum voice combining body membrane resonance with filtered wire noise.
 
-use super::{
-    DrumMode, DRUM_SNARE_BODY, DRUM_SNARE_CRACK, DRUM_SNARE_GHOST, DRUM_SNARE_RIM, DRUM_SNARE_WIRE,
-    MIN_AUDIBLE_VELOCITY,
-};
+use super::{opt_param, DrumId, DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::core::math::{sin_phase, soft_clip, wrap_phase, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
 use crate::domain::{CutoffHz, Drive, DrumPitch, DrumVelocity, Normalized};
@@ -158,12 +155,13 @@ impl Default for SnareParams {
 impl From<[f32; 7]> for SnareParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
+        let d = Self::default();
         Self {
-            base_freq: p[0].into(),
-            tone_decay: p[1].into(),
-            noise_decay: p[2].into(),
-            cutoff: p[3].into(),
-            snappy: p[4].into(),
+            base_freq: opt_param(p[0], d.base_freq),
+            tone_decay: opt_param(p[1], d.tone_decay),
+            noise_decay: opt_param(p[2], d.noise_decay),
+            cutoff: opt_param(p[3], d.cutoff),
+            snappy: opt_param(p[4], d.snappy),
             mode: p[6].into(),
         }
     }
@@ -202,12 +200,12 @@ impl SnareVoice {
         self.mode = p.mode;
     }
 
-    pub fn trigger_styled(&mut self, vel: impl Into<DrumVelocity>, style: i32) {
+    pub fn trigger_styled(&mut self, vel: impl Into<DrumVelocity>, style: DrumId) {
         self.active = true;
         self.phase = 0.0;
         self.vel = *vel.into();
 
-        if style == DRUM_SNARE_RIM {
+        if style == DrumId::SnareRim {
             self.env_rim = 1.0;
             self.phase_rim = 0.0;
         } else {
@@ -215,11 +213,11 @@ impl SnareVoice {
         }
 
         let preset = match style {
-            DRUM_SNARE_CRACK => STYLE_CRACK,
-            DRUM_SNARE_WIRE => STYLE_WIRE,
-            DRUM_SNARE_BODY => STYLE_BODY,
-            DRUM_SNARE_GHOST => STYLE_GHOST,
-            DRUM_SNARE_RIM => STYLE_RIM,
+            DrumId::SnareCrack => STYLE_CRACK,
+            DrumId::SnareWire => STYLE_WIRE,
+            DrumId::SnareBody => STYLE_BODY,
+            DrumId::SnareGhost => STYLE_GHOST,
+            DrumId::SnareRim => STYLE_RIM,
             _ => STYLE_DEFAULT,
         };
 

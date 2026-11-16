@@ -10,19 +10,6 @@ pub const MAX_BUS_INSERTS: usize = 4;
 pub const NUM_BUSSES: usize = 5;
 pub const NUM_ROUTABLE_BUSSES: usize = 6;
 
-pub const BUS_DRUMS: usize = 0;
-pub const BUS_BASS: usize = 1;
-pub const BUS_SPACE: usize = 2;
-pub const BUS_LEAD: usize = 3;
-pub const BUS_DIRECT: usize = 4;
-
-pub const BUS_ID_DRUMS: usize = BUS_DRUMS;
-pub const BUS_ID_BASS: usize = BUS_BASS;
-pub const BUS_ID_SPACE: usize = BUS_SPACE;
-pub const BUS_ID_LEAD: usize = BUS_LEAD;
-pub const BUS_ID_DIRECT: usize = BUS_DIRECT;
-pub const BUS_ID_MASTER: usize = 5;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]
 pub enum BusTarget {
@@ -81,12 +68,12 @@ impl From<i32> for BusTarget {
 pub struct BusId(pub usize);
 
 impl BusId {
-    pub const DRUMS: Self = Self(BUS_ID_DRUMS);
-    pub const BASS: Self = Self(BUS_ID_BASS);
-    pub const SPACE: Self = Self(BUS_ID_SPACE);
-    pub const LEAD: Self = Self(BUS_ID_LEAD);
-    pub const DIRECT: Self = Self(BUS_ID_DIRECT);
-    pub const MASTER: Self = Self(BUS_ID_MASTER);
+    pub const DRUMS: Self = Self(BusTarget::Drums as usize);
+    pub const BASS: Self = Self(BusTarget::Bass as usize);
+    pub const SPACE: Self = Self(BusTarget::Space as usize);
+    pub const LEAD: Self = Self(BusTarget::Lead as usize);
+    pub const DIRECT: Self = Self(BusTarget::Direct as usize);
+    pub const MASTER: Self = Self(5);
 
     pub const COUNT: usize = NUM_ROUTABLE_BUSSES;
     pub const VOICE_BUS_COUNT: usize = NUM_BUSSES;

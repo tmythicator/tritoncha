@@ -1,14 +1,10 @@
 //! Multi-bus audio mixing, routing, and effects send matrix.
 
 use crate::core::math::db_to_gain;
-use crate::domain::effects::{
-    BusEffectChain, BusId, SidechainPump, BUS_ID_MASTER, NUM_ROUTABLE_BUSSES,
-};
+use crate::domain::effects::{BusEffectChain, BusId, SidechainPump, NUM_ROUTABLE_BUSSES};
 use crate::domain::Normalized;
 
-pub use crate::domain::effects::{
-    BusTarget, BUS_BASS, BUS_DIRECT, BUS_DRUMS, BUS_LEAD, BUS_SPACE, NUM_BUSSES,
-};
+pub use crate::domain::effects::{BusTarget, NUM_BUSSES};
 
 pub const MAX_BUS_LINEAR_GAIN: f32 = 4.0;
 
@@ -120,7 +116,8 @@ impl Mixer {
         for (b, (bus, &accum)) in self.busses.iter().zip(bus_accum.iter()).enumerate() {
             if !bus.muted {
                 let mut bus_val = accum * bus.gain;
-                if b == BUS_DIRECT {
+                let target = BusTarget::from(b);
+                if target == BusTarget::Direct {
                     direct_bypass += bus_val;
                 } else if bus.bypass_master_fx {
                     bypass_fx_bus += bus_val;
@@ -128,7 +125,7 @@ impl Mixer {
                     reverb_send += bus_val * *bus.send_reverb;
                 } else {
                     // Sidechain ducking is applied to bass and space/lead layers
-                    if matches!(b, BUS_BASS..=BUS_LEAD) {
+                    if matches!(target, BusTarget::Bass | BusTarget::Space | BusTarget::Lead) {
                         bus_val = self.sidechain.process(bus_val);
                     }
                     master_bus += bus_val;
@@ -168,13 +165,14 @@ impl Mixer {
         for (b, (bus, &accum)) in self.busses.iter().zip(bus_accum.iter()).enumerate() {
             if !bus.muted {
                 let mut bus_val = accum * bus.gain;
-                if matches!(b, BUS_BASS..=BUS_LEAD) {
+                let target = BusTarget::from(b);
+                if matches!(target, BusTarget::Bass | BusTarget::Space | BusTarget::Lead) {
                     bus_val = self.sidechain.process(bus_val);
                 }
 
                 let (proc_l, proc_r) = bus_chains[b].process(bus_val, bus_val, sample_rate);
 
-                if b == BUS_DIRECT {
+                if target == BusTarget::Direct {
                     cue_click_l += proc_l;
                     cue_click_r += proc_r;
                 } else if bus_chains[b].target_out || bus.bypass_master_fx {
@@ -188,7 +186,7 @@ impl Mixer {
         }
 
         let (master_l, master_r) =
-            bus_chains[BUS_ID_MASTER].process(master_in_l, master_in_r, sample_rate);
+            bus_chains[BusId::MASTER.as_usize()].process(master_in_l, master_in_r, sample_rate);
 
         let master_out_l = (master_l + direct_out_l) * master_gain;
         let master_out_r = (master_r + direct_out_r) * master_gain;
@@ -231,9 +229,9 @@ mod tests {
     fn test_mixer_frame_summation_and_sends() {
         let mut mixer = Mixer::new();
         let mut accum = [0.0; NUM_BUSSES];
-        accum[BUS_DRUMS] = 0.5;
-        accum[BUS_BASS] = 0.3;
-        accum[BUS_DIRECT] = 0.2;
+        accum[BusTarget::Drums.as_usize()] = 0.5;
+        accum[BusTarget::Bass.as_usize()] = 0.3;
+        accum[BusTarget::Direct.as_usize()] = 0.2;
 
         let frame = mixer.process_frame(&accum);
         assert!(frame.master_bus > 0.0);

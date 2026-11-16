@@ -5,21 +5,16 @@ use crate::domain::drums::{DrumMachine, DrumMode};
 use crate::domain::effects::{
     BitcrusherDrive, BusCompressor, BusEffectChain, BusEffectNode, CompressorConfig, DriveMode,
     FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
-    BUS_ID_DIRECT, BUS_ID_MASTER, NUM_ROUTABLE_BUSSES,
+    NUM_ROUTABLE_BUSSES,
 };
 use crate::domain::sequencer::{MasterSequencer, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
 use crate::domain::{Bpm, BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
-pub use crate::domain::drums::{
-    is_drum_inst, DrumId, DRUM_CHINA, DRUM_CLAP, DRUM_COWBELL, DRUM_CRASH_16, DRUM_CRASH_17,
-    DRUM_CRASH_18, DRUM_HH_CLOSED, DRUM_HH_OPEN, DRUM_KICK, DRUM_RIDE, DRUM_RIDE_BELL, DRUM_SNARE,
-    DRUM_SNARE_BODY, DRUM_SNARE_CRACK, DRUM_SNARE_GHOST, DRUM_SNARE_RIM, DRUM_SNARE_WIRE,
-    DRUM_SPLASH, DRUM_TOM, DRUM_TOM_HIGH, DRUM_TOM_LOW, DRUM_TOM_MID,
-};
+pub use crate::domain::drums::{is_drum_inst, DrumId};
 pub use crate::domain::sequencer::{
-    DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, DEFAULT_SAMPLE_RATE, INST_CLICK,
+    DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, DEFAULT_SAMPLE_RATE,
     MIN_AUDIBLE_VELOCITY, SEQUENCER_TICK_MODULO,
 };
 pub use crate::services::mixer::*;
@@ -38,7 +33,7 @@ pub struct TritonchaEngine {
     pub sequencer: MasterSequencer,
 
     pub voices: [SynthVoice; NUM_VOICES],
-    voice_bus_map: [usize; NUM_VOICES],
+    voice_bus_map: [BusTarget; NUM_VOICES],
     patches: [ModularPatch; MAX_PATCHES],
     drums: DrumMachine,
 
@@ -62,22 +57,23 @@ impl TritonchaEngine {
         };
 
         let mut bus_chains = [
-            BusEffectChain::new(), // BUS_ID_DRUMS (0)
-            BusEffectChain::new(), // BUS_ID_BASS (1)
-            BusEffectChain::new(), // BUS_ID_SPACE (2)
-            BusEffectChain::new(), // BUS_ID_LEAD (3)
-            BusEffectChain::new(), // BUS_ID_DIRECT (4)
-            BusEffectChain::new(), // BUS_ID_MASTER (5)
+            BusEffectChain::new(), // BusId::DRUMS (0)
+            BusEffectChain::new(), // BusId::BASS (1)
+            BusEffectChain::new(), // BusId::SPACE (2)
+            BusEffectChain::new(), // BusId::LEAD (3)
+            BusEffectChain::new(), // BusId::DIRECT (4)
+            BusEffectChain::new(), // BusId::MASTER (5)
         ];
-        bus_chains[BUS_ID_DIRECT].target_out = true;
+        bus_chains[BusId::DIRECT.as_usize()].target_out = true;
         // Default graph: strictly compressor on master, all other busses dry thru
-        bus_chains[BUS_ID_MASTER].push(BusEffectNode::Compressor(BusCompressor::new(sr)));
+        bus_chains[BusId::MASTER.as_usize()]
+            .push(BusEffectNode::Compressor(BusCompressor::new(sr)));
 
         Self {
             sample_rate: sr,
             sequencer: MasterSequencer::new(sr),
             voices: std::array::from_fn(|_| SynthVoice::new()),
-            voice_bus_map: [BUS_BASS; NUM_VOICES],
+            voice_bus_map: [BusTarget::Bass; NUM_VOICES],
             patches: std::array::from_fn(ModularPatch::default_for),
             drums: DrumMachine::new(),
             mixer: Mixer::new(),
@@ -198,7 +194,6 @@ impl TritonchaEngine {
             InstrumentId::Synth(patch_id) => {
                 let pid = patch_id.clamped();
                 let patch = self.patches[pid.as_usize()];
-                let target_bus = patch.bus_id.as_usize();
 
                 match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
                     VoiceAllocation::LegatoGlide { voice_idx } => {
@@ -211,7 +206,7 @@ impl TritonchaEngine {
                         );
                     }
                     VoiceAllocation::Trigger { voice_idx } => {
-                        self.voice_bus_map[voice_idx] = target_bus;
+                        self.voice_bus_map[voice_idx] = patch.bus_id;
                         self.voices[voice_idx].trigger(
                             freq,
                             vel,
@@ -485,7 +480,7 @@ impl TritonchaEngine {
             }
 
             let mut bus_accum = [0.0_f32; NUM_BUSSES];
-            bus_accum[BUS_DRUMS] += self.drums.process(self.sample_rate);
+            bus_accum[BusTarget::Drums.as_usize()] += self.drums.process(self.sample_rate);
 
             for v_idx in 0..NUM_VOICES {
                 let voice = &mut self.voices[v_idx];
@@ -494,7 +489,7 @@ impl TritonchaEngine {
                     let patch = &self.patches[pid];
                     let s = voice.process_sample(patch, self.sample_rate);
                     let target_bus = self.voice_bus_map[v_idx];
-                    bus_accum[target_bus] += s;
+                    bus_accum[target_bus.as_usize()] += s;
                 }
             }
 
@@ -515,7 +510,6 @@ impl TritonchaEngine {
 mod tests {
     use super::*;
     use crate::core::math::db_to_gain;
-    use crate::domain::synth::patch::PATCH_SAW_BASS;
 
     #[test]
     fn test_engine_initial_state() {
@@ -536,18 +530,20 @@ mod tests {
     #[test]
     fn test_engine_bus_parameters() {
         let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
-        engine.set_bus_params(BUS_DRUMS, -6.0, true, 0.1, 0.2, false);
-        assert!(engine.mixer.busses[BUS_DRUMS].muted);
-        assert!((engine.mixer.busses[BUS_DRUMS].gain - db_to_gain(-6.0)).abs() < 0.01);
+        engine.set_bus_params(BusId::DRUMS, -6.0, true, 0.1, 0.2, false);
+        assert!(engine.mixer.busses[BusTarget::Drums.as_usize()].muted);
+        assert!(
+            (engine.mixer.busses[BusTarget::Drums.as_usize()].gain - db_to_gain(-6.0)).abs() < 0.01
+        );
     }
 
     #[test]
     fn test_engine_trigger_drum_and_synth() {
         let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
-        engine.trigger_note(DRUM_KICK, 60.0, 0.9, 0.1);
+        engine.trigger_note(DrumId::Kick.as_i32(), 60.0, 0.9, 0.1);
         assert!(engine.drums.kick.active);
 
-        engine.trigger_note(PATCH_SAW_BASS as i32, 55.0, 0.85, 0.2);
+        engine.trigger_note(PatchId::SAW_BASS.as_usize() as i32, 55.0, 0.85, 0.2);
         assert!(engine.voices.iter().any(|v| v.active));
     }
 
@@ -560,7 +556,7 @@ mod tests {
         engine.process_block(&mut out_l, &mut out_r);
         assert!(out_l.iter().all(|&s| s == 0.0));
 
-        engine.trigger_note(DRUM_KICK, 60.0, 1.0, 0.1);
+        engine.trigger_note(DrumId::Kick.as_i32(), 60.0, 1.0, 0.1);
         engine.process_block(&mut out_l, &mut out_r);
 
         let max_amp = out_l.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));

@@ -28,7 +28,7 @@ impl From<usize> for TrackId {
 }
 pub const DEFAULT_TRACK_LENGTH: usize = 16;
 pub const DEFAULT_STEP_MULTIPLIER: usize = 4;
-pub const DEFAULT_SYNTH_PATCH_ID: i16 = 4;
+pub const DEFAULT_SYNTH_PATCH_ID: i16 = crate::domain::PatchId::SAW_BASS.as_usize() as i16;
 pub const REST_NOTE: i16 = -1;
 pub const DEFAULT_STEP_VELOCITY: f32 = 0.9;
 pub const DEFAULT_STEP_DURATION_S: f32 = 0.2;

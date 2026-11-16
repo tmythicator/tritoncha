@@ -1,7 +1,7 @@
 //! Hi-hat voice modeling closed, open, and pedal hi-hats.
 
 use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
-use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
+use crate::domain::drums::{opt_param, DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
 use crate::domain::{AdsrTime, CutoffHz, DrumVelocity, DEFAULT_SAMPLE_RATE};
 
@@ -28,10 +28,11 @@ impl Default for HatParams {
 impl From<[f32; 7]> for HatParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
+        let d = Self::default();
         Self {
-            cutoff: p[0].into(),
-            decay_closed: p[1].into(),
-            decay_open: p[2].into(),
+            cutoff: opt_param(p[0], d.cutoff),
+            decay_closed: opt_param(p[1], d.decay_closed),
+            decay_open: opt_param(p[2], d.decay_open),
             mode: p[6].into(),
         }
     }
