@@ -3,7 +3,6 @@
 pub mod envelope;
 pub mod oscillator;
 pub mod patch;
-pub mod presets;
 pub mod voice;
 
 pub use crate::domain::params::*;

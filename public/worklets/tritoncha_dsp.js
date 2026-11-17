@@ -14,13 +14,14 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
     this.wasmEnginePtr = 0;
     this.pendingMessages = [];
 
-    // Linear memory pointers for 128-sample Float32 output blocks & track buffers (128 steps)
-    this.outLeftPtr = 16384;
-    this.outRightPtr = 16384 + 128 * 4;
-    this.instIdsBufferPtr = 20480;
-    this.notesBufferPtr = 20480 + 256;
-    this.velsBufferPtr = 20480 + 512;
-    this.dursBufferPtr = 20480 + 1024;
+    // Engine-owned linear memory buffer pointers (resolved dynamically from WASM engine)
+    this.outLeftPtr = 0;
+    this.outRightPtr = 0;
+    this.instIdsBufferPtr = 0;
+    this.notesBufferPtr = 0;
+    this.velsBufferPtr = 0;
+    this.dursBufferPtr = 0;
+    this.patchParamsPtr = 0;
 
     this.outLeftView = null;
     this.outRightView = null;
@@ -28,6 +29,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
     this.notesBufferView = null;
     this.velsBufferView = null;
     this.dursBufferView = null;
+    this.patchParamsView = null;
 
     this.port.onmessage = (event) => {
       const data = event.data;
@@ -40,6 +42,14 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             this.wasmInstance = result.instance;
             this.wasmExports = result.instance.exports;
             this.wasmEnginePtr = this.wasmExports.tritoncha_dsp_create(this.sampleRate);
+
+            this.outLeftPtr = this.wasmExports.tritoncha_dsp_out_l_ptr(this.wasmEnginePtr);
+            this.outRightPtr = this.wasmExports.tritoncha_dsp_out_r_ptr(this.wasmEnginePtr);
+            this.instIdsBufferPtr = this.wasmExports.tritoncha_dsp_track_inst_ids_ptr(this.wasmEnginePtr);
+            this.notesBufferPtr = this.wasmExports.tritoncha_dsp_track_notes_ptr(this.wasmEnginePtr);
+            this.velsBufferPtr = this.wasmExports.tritoncha_dsp_track_vels_ptr(this.wasmEnginePtr);
+            this.dursBufferPtr = this.wasmExports.tritoncha_dsp_track_durs_ptr(this.wasmEnginePtr);
+            this.patchParamsPtr = this.wasmExports.tritoncha_dsp_patch_params_ptr(this.wasmEnginePtr);
 
             this.ensureMemoryViews();
 
@@ -88,6 +98,9 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
       this.notesBufferView = new Int16Array(wasmMemory.buffer, this.notesBufferPtr, 128);
       this.velsBufferView = new Float32Array(wasmMemory.buffer, this.velsBufferPtr, 128);
       this.dursBufferView = new Float32Array(wasmMemory.buffer, this.dursBufferPtr, 128);
+      if (this.patchParamsPtr) {
+        this.patchParamsView = new Float32Array(wasmMemory.buffer, this.patchParamsPtr, 22);
+      }
     }
   }
 
@@ -403,32 +416,46 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
 
         case 'setVoicePatch':
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_voice_patch(
-              this.wasmEnginePtr,
-              data.patchId !== undefined ? data.patchId : 4,
-              data.oscType !== undefined ? data.oscType : 0,
-              data.subLevel !== undefined ? data.subLevel : 0.0,
-              data.pulseWidth !== undefined ? data.pulseWidth : 0.5,
-              data.filterType !== undefined ? data.filterType : 0,
-              data.cutoffBase !== undefined ? data.cutoffBase : 1200.0,
-              data.cutoffEnvAmt !== undefined ? data.cutoffEnvAmt : 3000.0,
-              data.cutoffKeyTrack !== undefined ? data.cutoffKeyTrack : 2.0,
-              data.resonance !== undefined ? data.resonance : 0.4,
-              data.attack !== undefined ? data.attack : 0.005,
-              data.decay !== undefined ? data.decay : 0.2,
-              data.sustain !== undefined ? data.sustain : 0.3,
-              data.release !== undefined ? data.release : 0.2,
-              data.modAttack !== undefined ? data.modAttack : 0.005,
-              data.modDecay !== undefined ? data.modDecay : 0.2,
-              data.busId !== undefined ? data.busId : 3,
-              data.polyphony !== undefined ? data.polyphony : 8,
-              data.glide !== undefined ? data.glide : 0.0,
-              data.filterDrive !== undefined ? data.filterDrive : 0.0,
-              data.noiseLevel !== undefined ? data.noiseLevel : 0.0,
-              data.pitchEnvAmt !== undefined ? data.pitchEnvAmt : 0.0,
-              data.pitchEnvDecay !== undefined ? data.pitchEnvDecay : 0.015,
-              data.analogDrift !== undefined ? data.analogDrift : 0.0
-            );
+            this.ensureMemoryViews();
+            if (data.params && this.patchParamsView && this.wasmExports.tritoncha_dsp_set_voice_patch_packed) {
+              const n = Math.min(data.params.length, 22);
+              for (let i = 0; i < n; i++) {
+                this.patchParamsView[i] = data.params[i];
+              }
+              this.wasmExports.tritoncha_dsp_set_voice_patch_packed(
+                this.wasmEnginePtr,
+                data.patchId !== undefined ? data.patchId : 4,
+                this.patchParamsPtr,
+                n
+              );
+            } else if (this.wasmExports.tritoncha_dsp_set_voice_patch) {
+              this.wasmExports.tritoncha_dsp_set_voice_patch(
+                this.wasmEnginePtr,
+                data.patchId !== undefined ? data.patchId : 4,
+                data.oscType !== undefined ? data.oscType : 0,
+                data.subLevel !== undefined ? data.subLevel : 0.0,
+                data.pulseWidth !== undefined ? data.pulseWidth : 0.5,
+                data.filterType !== undefined ? data.filterType : 0,
+                data.cutoffBase !== undefined ? data.cutoffBase : 1200.0,
+                data.cutoffEnvAmt !== undefined ? data.cutoffEnvAmt : 3000.0,
+                data.cutoffKeyTrack !== undefined ? data.cutoffKeyTrack : 2.0,
+                data.resonance !== undefined ? data.resonance : 0.4,
+                data.attack !== undefined ? data.attack : 0.005,
+                data.decay !== undefined ? data.decay : 0.2,
+                data.sustain !== undefined ? data.sustain : 0.3,
+                data.release !== undefined ? data.release : 0.2,
+                data.modAttack !== undefined ? data.modAttack : 0.005,
+                data.modDecay !== undefined ? data.modDecay : 0.2,
+                data.busId !== undefined ? data.busId : 3,
+                data.polyphony !== undefined ? data.polyphony : 8,
+                data.glide !== undefined ? data.glide : 0.0,
+                data.filterDrive !== undefined ? data.filterDrive : 0.0,
+                data.noiseLevel !== undefined ? data.noiseLevel : 0.0,
+                data.pitchEnvAmt !== undefined ? data.pitchEnvAmt : 0.0,
+                data.pitchEnvDecay !== undefined ? data.pitchEnvDecay : 0.015,
+                data.analogDrift !== undefined ? data.analogDrift : 0.0
+              );
+            }
           }
           break;
 

@@ -7,8 +7,8 @@ use crate::domain::effects::{
     FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
     NUM_ROUTABLE_BUSSES,
 };
-use crate::domain::sequencer::{MasterSequencer, MAX_TRACKS};
-use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
+use crate::domain::sequencer::{MasterSequencer, MAX_STEPS, MAX_TRACKS};
+use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES, VOICE_PATCH_PARAM_COUNT};
 use crate::domain::{Bpm, BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
@@ -20,12 +20,45 @@ pub use crate::domain::sequencer::{
 pub use crate::services::mixer::*;
 
 pub const NUM_VOICES: usize = 32;
+pub const FFI_BLOCK_SIZE: usize = 128;
 
 // Master Filter Cutoff Boundaries and Headroom
 pub const MIN_MASTER_CUTOFF_HZ: f32 = 40.0;
 pub const MAX_MASTER_CUTOFF_HZ: f32 = 18000.0;
 pub const DEFAULT_MASTER_CUTOFF_HZ: f32 = 18000.0;
 pub const MASTER_HEADROOM_GAIN: f32 = 0.95;
+
+/// Preallocated engine-owned linear memory buffers for zero-copy C-ABI FFI transport.
+#[derive(Clone)]
+pub struct FfiScratchBuffers {
+    pub out_l: [f32; FFI_BLOCK_SIZE],
+    pub out_r: [f32; FFI_BLOCK_SIZE],
+    pub track_inst_ids: [i16; MAX_STEPS],
+    pub track_notes: [i16; MAX_STEPS],
+    pub track_vels: [f32; MAX_STEPS],
+    pub track_durs: [f32; MAX_STEPS],
+    pub patch_params: [f32; VOICE_PATCH_PARAM_COUNT],
+}
+
+impl Default for FfiScratchBuffers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FfiScratchBuffers {
+    pub const fn new() -> Self {
+        Self {
+            out_l: [0.0; FFI_BLOCK_SIZE],
+            out_r: [0.0; FFI_BLOCK_SIZE],
+            track_inst_ids: [0; MAX_STEPS],
+            track_notes: [-1; MAX_STEPS],
+            track_vels: [0.0; MAX_STEPS],
+            track_durs: [0.0; MAX_STEPS],
+            patch_params: [0.0; VOICE_PATCH_PARAM_COUNT],
+        }
+    }
+}
 
 /// Tritoncha Real-Time Audio Engine.
 pub struct TritonchaEngine {
@@ -46,6 +79,7 @@ pub struct TritonchaEngine {
     master_resonance: f32,
     pub sweep: FrequencySweep,
     pub master_gain: f32,
+    pub ffi: FfiScratchBuffers,
 }
 
 impl TritonchaEngine {
@@ -82,6 +116,7 @@ impl TritonchaEngine {
             master_resonance: 0.0,
             sweep: FrequencySweep::new(DEFAULT_MASTER_CUTOFF_HZ),
             master_gain: 1.0,
+            ffi: FfiScratchBuffers::new(),
         }
     }
 
@@ -543,7 +578,7 @@ mod tests {
         engine.trigger_note(DrumId::Kick.as_i32(), 60.0, 0.9, 0.1);
         assert!(engine.drums.kick.active);
 
-        engine.trigger_note(PatchId::SAW_BASS.as_usize() as i32, 55.0, 0.85, 0.2);
+        engine.trigger_note(4, 55.0, 0.85, 0.2);
         assert!(engine.voices.iter().any(|v| v.active));
     }
 

@@ -186,7 +186,14 @@ fn test_analog_primitives_drive_noise_pitch_snap() {
 #[test]
 fn test_monophonic_glide_and_stealing() {
     let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
-    // Acid bass (patch 5) is mono with 0.04s glide
+    engine.set_voice_patch(
+        5,
+        ModularPatch {
+            polyphony: 1.into(),
+            glide: 0.04.into(),
+            ..ModularPatch::default()
+        },
+    );
     engine.trigger_note(5, 110.0, 0.9, 0.2);
     let mut out_l = [0.0; 128];
     let mut out_r = [0.0; 128];
@@ -536,8 +543,10 @@ fn test_audio_flows_through_all_individual_busses() {
     assert!(drum_amp > 0.05, "Drums bus must pass audio");
 
     // Bass bus
-    let mut patch_bass = ModularPatch::default_for(PatchId::SAW_BASS);
-    patch_bass.bus_id = BusTarget::Bass;
+    let patch_bass = ModularPatch {
+        bus_id: BusTarget::Bass,
+        ..ModularPatch::default()
+    };
     engine.set_voice_patch(4, patch_bass);
     engine.trigger_note(4, 110.0, 1.0, 0.2);
     engine.process_block(&mut out_l, &mut out_r);
@@ -545,8 +554,10 @@ fn test_audio_flows_through_all_individual_busses() {
     assert!(bass_amp > 0.05, "Bass bus must pass audio");
 
     // Space bus
-    let mut patch_space = ModularPatch::default_for(PatchId::DARK_PAD);
-    patch_space.bus_id = BusTarget::Space;
+    let patch_space = ModularPatch {
+        bus_id: BusTarget::Space,
+        ..ModularPatch::default()
+    };
     engine.set_voice_patch(5, patch_space);
     engine.trigger_note(5, 220.0, 1.0, 0.2);
     engine.process_block(&mut out_l, &mut out_r);
@@ -554,8 +565,10 @@ fn test_audio_flows_through_all_individual_busses() {
     assert!(space_amp > 0.05, "Space bus must pass audio");
 
     // Lead bus
-    let mut patch_lead = ModularPatch::default_for(PatchId::LEAD);
-    patch_lead.bus_id = BusTarget::Lead;
+    let patch_lead = ModularPatch {
+        bus_id: BusTarget::Lead,
+        ..ModularPatch::default()
+    };
     engine.set_voice_patch(6, patch_lead);
     engine.trigger_note(6, 440.0, 1.0, 0.2);
     engine.process_block(&mut out_l, &mut out_r);
@@ -603,12 +616,16 @@ fn test_modular_routing_graph_dsl_isolation_and_bypass() {
     engine.add_bus_chorus(BusId::MASTER, 1.5, 0.8, 1.0); // 100% wet chorus
 
     // Configure voices for Lead and Bass
-    let mut patch_lead = ModularPatch::default_for(PatchId::LEAD);
-    patch_lead.bus_id = BusTarget::Lead;
+    let patch_lead = ModularPatch {
+        bus_id: BusTarget::Lead,
+        ..ModularPatch::default()
+    };
     engine.set_voice_patch(6, patch_lead);
 
-    let mut patch_bass = ModularPatch::default_for(PatchId::SAW_BASS);
-    patch_bass.bus_id = BusTarget::Bass;
+    let patch_bass = ModularPatch {
+        bus_id: BusTarget::Bass,
+        ..ModularPatch::default()
+    };
     engine.set_voice_patch(4, patch_bass);
 
     // Proof 1: Lead (target_out = true) must bypass master chorus completely!

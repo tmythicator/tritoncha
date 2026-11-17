@@ -138,3 +138,26 @@
   (testing "Does not create custom synth patch for drums with bus specified"
     (is (= :kick (worklet/resolve-track-inst :kick {:inst :kick :bus :bus/direct})))))
 
+(deftest test-compile-voice-patch-msg-packed-params
+  (testing "Compiles synth spec into packed 22-float :params vector in canonical ABI order"
+    (let [msg (compiler/compile-voice-patch-msg
+               4
+               {:type :mono
+                :bus :bus/bass
+                :glide 0.035
+                :osc {:type :supersaw :sub-level 0.35 :pulse-width 0.5 :noise 0.1 :drift 0.25}
+                :filter {:type :ladder :cutoff 2400 :env-amount 4500 :key-track 2.0 :q 0.55 :drive 0.35}
+                :amp-env {:attack 0.005 :decay 0.22 :sustain 0.35 :release 0.20}
+                :mod-env {:attack 0.005 :decay 0.22}
+                :pitch-env {:amount 12 :decay 0.020}})
+          params (.-params msg)]
+      (is (some? params) "Message must include packed :params array")
+      (is (= 22 (alength params)) "Packed :params array must have exactly 22 floats")
+      (is (= 4.0 (aget params 0)))    ;; oscType (:supersaw = 4)
+      (is (< (js/Math.abs (- (aget params 1) 0.35)) 1e-4)) ;; subLevel
+      (is (= 4.0 (aget params 3)))    ;; filterType (:ladder = 4)
+      (is (= 2400.0 (aget params 4))) ;; cutoffBase
+      (is (= 1.0 (aget params 14)))   ;; busId (:bus/bass = 1)
+      (is (= 1.0 (aget params 15)))   ;; polyphony (:mono = 1)
+      (is (< (js/Math.abs (- (aget params 21) 0.25)) 1e-4))))) ;; analogDrift
+

@@ -70,7 +70,7 @@ impl SynthVoice {
     pub fn new() -> Self {
         Self {
             active: false,
-            patch_id: PatchId::SAW_BASS,
+            patch_id: PatchId(4),
             freq: 440.0,
             target_freq: 440.0,
             glide_rate: 1.0,
@@ -365,7 +365,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(440.0, 0.9, PatchId::LEAD, &patch, sr, 0.1);
+        voice.trigger(440.0, 0.9, PatchId(8), &patch, sr, 0.1);
         assert!(voice.active);
         assert_eq!(voice.env_stage(), EnvelopeStage::Attack);
         assert_eq!(voice.freq, 440.0);
@@ -384,7 +384,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(220.0, 0.8, PatchId::LEAD, &patch, sr, 0.5);
+        voice.trigger(220.0, 0.8, PatchId(8), &patch, sr, 0.5);
         voice.glide_to(440.0, 0.8, sr, 0.05, 0.5);
         assert_eq!(voice.target_freq, 440.0);
         assert!(voice.freq < 440.0);
