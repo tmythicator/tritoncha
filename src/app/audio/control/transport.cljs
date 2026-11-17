@@ -19,8 +19,10 @@
   Supported modes: :natural, :analog, :idm, :industrial.
   Examples: (set-drum-mode! :idm), (set-drum-mode! :natural)."
   [mode-kw]
-  (worklet/set-drum-mode! mode-kw)
-  mode-kw)
+  (let [m (keyword (or mode-kw :analog))]
+    (swap! audio-state assoc :drum-mode m)
+    (worklet/set-drum-mode! m)
+    m))
 
 (def mod!
   "Shortcut for set-drum-mode!. Configures drum character mode.

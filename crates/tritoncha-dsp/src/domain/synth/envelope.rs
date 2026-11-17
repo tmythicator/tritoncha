@@ -121,18 +121,8 @@ impl AdsrEnvelope {
                 }
             }
             EnvelopeStage::Decay => {
-                if self.level > self.sustain_level {
-                    self.level -= self.decay_rate;
-                    if self.level <= self.sustain_level {
-                        self.level = self.sustain_level;
-                        self.stage = if self.sustain_level > SUSTAIN_ACTIVE_THRESHOLD {
-                            EnvelopeStage::Sustain
-                        } else {
-                            EnvelopeStage::Release
-                        };
-                    }
-                } else {
-                    self.level = self.sustain_level;
+                self.level = (self.level - self.decay_rate).max(self.sustain_level);
+                if self.level <= self.sustain_level {
                     self.stage = if self.sustain_level > SUSTAIN_ACTIVE_THRESHOLD {
                         EnvelopeStage::Sustain
                     } else {
@@ -177,7 +167,7 @@ mod tests {
         assert_eq!(env.stage, EnvelopeStage::Idle);
         assert_eq!(env.level, 0.0);
 
-        let sr = crate::engine::DEFAULT_SAMPLE_RATE;
+        let sr = crate::domain::DEFAULT_SAMPLE_RATE;
         let attack_s = 10.0 / sr;
         let decay_s = 10.0 / sr;
         let sustain = 0.5;

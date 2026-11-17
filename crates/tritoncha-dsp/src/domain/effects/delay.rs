@@ -1,6 +1,7 @@
 //! Stereo Ping-Pong Dub Delay with Lowpass Analog Damping and Feedback Limiting.
 
 use crate::core::math::lerp;
+use crate::domain::Normalized;
 
 pub const MAX_DELAY_SAMPLES: usize = 96000;
 pub const MIN_DELAY_SAMPLES: f32 = 500.0;
@@ -37,12 +38,18 @@ impl StereoDelay {
         }
     }
 
-    pub fn set_params(&mut self, time_s: f32, feedback: f32, wet: f32, sample_rate: f32) {
+    pub fn set_params(
+        &mut self,
+        time_s: f32,
+        feedback: impl Into<Normalized>,
+        wet: impl Into<Normalized>,
+        sample_rate: f32,
+    ) {
         let max_samples = (MAX_DELAY_SAMPLES - 1) as f32;
         let len = (time_s * sample_rate).clamp(MIN_DELAY_SAMPLES, max_samples) as usize;
         self.delay_len = len;
-        self.feedback = feedback.clamp(0.0, MAX_FEEDBACK);
-        self.wet = wet.clamp(0.0, 1.0);
+        self.feedback = (*feedback.into()).min(MAX_FEEDBACK);
+        self.wet = *wet.into();
     }
 
     #[inline(always)]
@@ -51,26 +58,9 @@ impl StereoDelay {
             return (in_l, in_r);
         }
 
-        let max_len = MAX_DELAY_SAMPLES;
-        let read_idx = (self.pos + max_len - self.delay_len) % max_len;
-
-        let delayed_l = self.buf_l[read_idx];
-        let delayed_r = self.buf_r[read_idx];
-
-        // One-pole lowpass filter for analog warmth on the feedback path
-        self.prev_l = lerp(delayed_l, self.prev_l, DAMPING_COEFF);
-        self.prev_r = lerp(delayed_r, self.prev_r, DAMPING_COEFF);
-
-        // Ping-pong cross-feedback routing
-        self.buf_l[self.pos] = in_l + self.prev_r * self.feedback;
-        self.buf_r[self.pos] = in_r + self.prev_l * self.feedback;
-
-        self.pos = (self.pos + 1) % max_len;
-
-        (
-            in_l * (1.0 - self.wet) + delayed_l * self.wet,
-            in_r * (1.0 - self.wet) + delayed_r * self.wet,
-        )
+        let (wet_l, wet_r) = self.process_wet(in_l, in_r);
+        let dry = 1.0 - self.wet;
+        (in_l * dry + wet_l, in_r * dry + wet_r)
     }
 
     #[inline(always)]
@@ -116,7 +106,7 @@ impl Default for StereoDelay {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::DEFAULT_SAMPLE_RATE;
+    use crate::domain::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_delay_passthrough_when_dry() {

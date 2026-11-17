@@ -2,79 +2,12 @@
 //! Integrates stick tip ping definition, low bronze plate body resonance,
 //! and a 4-stage Schroeder allpass diffuser network simulating the turbulent wash of B20 bronze.
 
-use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm, LN_MIN_60DB};
-use crate::domain::drums::{
-    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use crate::core::math::{soft_clip, t60_decay_coeff, xorshift32_norm};
+use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
-use crate::engine::DEFAULT_SAMPLE_RATE;
-use std::f32::consts::PI;
+use crate::domain::{DrumVelocity, DEFAULT_SAMPLE_RATE};
 
-/// Ride cymbal synthesis parameters.
-#[derive(Clone, Copy, Debug)]
-pub struct RideParams {
-    pub cutoff_hz: f32,
-    pub resonance: f32,
-    pub decay_s: f32,
-    pub drive: f32,
-    pub mode: f32,
-}
-
-impl From<[f32; 7]> for RideParams {
-    #[inline(always)]
-    fn from(p: [f32; 7]) -> Self {
-        Self {
-            cutoff_hz: p[0],
-            resonance: p[1],
-            decay_s: p[2],
-            drive: p[3],
-            mode: p[6],
-        }
-    }
-}
-
-/// Second-order resonant modal filter for plate vibration modes.
-#[derive(Clone, Copy)]
-struct ModalFilter {
-    y1: f32,
-    y2: f32,
-    base_freq: f32,
-    decay_s: f32,
-    gain: f32,
-}
-
-impl ModalFilter {
-    fn new(base_freq: f32, decay_s: f32, gain: f32) -> Self {
-        Self {
-            y1: 0.0,
-            y2: 0.0,
-            base_freq,
-            decay_s,
-            gain,
-        }
-    }
-
-    fn reset(&mut self) {
-        self.y1 = 0.0;
-        self.y2 = 0.0;
-    }
-
-    #[inline(always)]
-    fn process(&mut self, input: f32, pitch_ratio: f32, decay_scale: f32, sample_rate: f32) -> f32 {
-        let f = (self.base_freq * pitch_ratio).clamp(30.0, sample_rate * 0.45);
-        let theta = 2.0 * PI * f / sample_rate;
-        let decay_samples = (self.decay_s * decay_scale * sample_rate).max(20.0);
-        let r = (LN_MIN_60DB / decay_samples).exp().clamp(0.85, 0.99995);
-
-        let a1 = 2.0 * r * theta.cos();
-        let a2 = -(r * r);
-
-        let y0 = soft_clip(a1 * self.y1 + a2 * self.y2) + input * self.gain;
-        self.y2 = self.y1;
-        self.y1 = y0;
-        y0
-    }
-}
+use super::{ModalFilter, PercussionParams};
 
 /// Fixed-delay Schroeder allpass diffuser unit for bronze plate dispersion.
 #[derive(Clone)]
@@ -173,31 +106,18 @@ impl RideVoice {
         }
     }
 
-    pub fn set_params(&mut self, params: impl Into<RideParams>) {
+    pub fn set_params(&mut self, params: impl Into<PercussionParams>) {
         let p = params.into();
-        if p.cutoff_hz > 0.0 {
-            self.tune_ratio = (p.cutoff_hz / 950.0).clamp(0.5, 2.0);
-        }
-        if p.resonance >= 0.0 {
-            self.drive = (1.0 + p.resonance * 1.5).clamp(0.5, 3.5);
-        }
-        if p.decay_s > 0.0 {
-            self.wash_decay = t60_decay_coeff(p.decay_s.clamp(0.2, 5.0), DEFAULT_SAMPLE_RATE)
-                .clamp(0.995, 0.99998);
-            self.decay_scale = (p.decay_s / 2.0).clamp(0.2, 3.0);
-        }
-        if p.drive > 0.0 {
-            self.drive = p.drive.clamp(0.2, 4.0);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.tune_ratio = (*p.cutoff / 950.0).clamp(0.5, 2.0);
+        self.wash_decay = t60_decay_coeff(*p.decay, DEFAULT_SAMPLE_RATE);
+        self.decay_scale = (*p.decay / 2.0).clamp(0.2, 3.0);
+        self.drive = *p.drive;
+        self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
-        self.vel = v;
+        self.vel = *vel.into();
         self.click_env = 1.0;
         self.ping_env = 1.0;
         self.wash_env = 0.2; // Start with fast initial excitation

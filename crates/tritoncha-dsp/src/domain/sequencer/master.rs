@@ -1,14 +1,15 @@
 //! Master sequencer managing timing, transport, and 16-track patterns.
 
 use super::track::{
-    TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
+    TrackId, TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
     MAX_STEPS, MAX_TRACKS,
 };
 use super::trigger_mask::TriggerMask;
 use crate::core::math::midi_to_freq;
-use crate::domain::drums::{is_drum_inst, DRUM_TOM};
+use crate::domain::drums::DrumId;
+use crate::domain::{Bpm, InstrumentId, PatchId};
 
-pub use crate::engine::DEFAULT_SAMPLE_RATE;
+pub use crate::domain::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_BPM: f32 = 168.0;
 pub const MIN_BPM: f32 = 30.0;
 pub const MAX_BPM: f32 = 300.0;
@@ -17,7 +18,6 @@ pub const STEPS_PER_BEAT_64TH: f32 = 16.0;
 pub const SEQUENCER_TICK_MODULO: usize = 65536;
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
 
-pub const INST_CLICK: i32 = 11;
 pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
 pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
 
@@ -61,12 +61,10 @@ impl MasterSequencer {
         }
     }
 
-    pub fn set_bpm(&mut self, bpm: f32) {
-        if (MIN_BPM..=MAX_BPM).contains(&bpm) {
-            self.bpm = bpm;
-            self.samples_per_step =
-                (self.sample_rate * SECONDS_PER_MINUTE) / (bpm * STEPS_PER_BEAT_64TH);
-        }
+    pub fn set_bpm(&mut self, bpm: impl Into<Bpm>) {
+        let b = *bpm.into();
+        self.bpm = b;
+        self.samples_per_step = (self.sample_rate * SECONDS_PER_MINUTE) / (b * STEPS_PER_BEAT_64TH);
     }
 
     pub fn set_playing(&mut self, playing: bool) {
@@ -77,20 +75,39 @@ impl MasterSequencer {
         }
     }
 
+    #[inline(always)]
+    pub fn track_mut(&mut self, track: impl Into<TrackId>) -> Option<&mut TrackPattern> {
+        let t = track.into();
+        if t.is_valid() {
+            Some(&mut self.tracks[t.as_usize()])
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn track(&self, track: impl Into<TrackId>) -> Option<&TrackPattern> {
+        let t = track.into();
+        if t.is_valid() {
+            Some(&self.tracks[t.as_usize()])
+        } else {
+            None
+        }
+    }
+
     pub fn set_track(
         &mut self,
-        track_idx: usize,
+        track: impl Into<TrackId>,
         inst_ids: &[i16],
         notes: &[i16],
         vels: &[f32],
         durs: &[f32],
         step_mult: usize,
     ) {
-        if track_idx >= MAX_TRACKS {
+        let Some(tr) = self.track_mut(track) else {
             return;
-        }
+        };
 
-        let tr = &mut self.tracks[track_idx];
         let len = notes.len().min(MAX_STEPS);
 
         if len == 0 || notes.iter().all(|&n| n < 0) {
@@ -122,9 +139,9 @@ impl MasterSequencer {
         }
     }
 
-    pub fn deactivate_track(&mut self, track_idx: usize) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].clear();
+    pub fn deactivate_track(&mut self, track: impl Into<TrackId>) {
+        if let Some(tr) = self.track_mut(track) {
+            tr.clear();
         }
     }
 
@@ -137,15 +154,15 @@ impl MasterSequencer {
         self.solo_active = false;
     }
 
-    pub fn mute_track(&mut self, track_idx: usize, muted: bool) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].muted = muted;
+    pub fn mute_track(&mut self, track: impl Into<TrackId>, muted: bool) {
+        if let Some(tr) = self.track_mut(track) {
+            tr.muted = muted;
         }
     }
 
-    pub fn solo_track(&mut self, track_idx: usize, solo: bool) {
-        if track_idx < MAX_TRACKS {
-            self.tracks[track_idx].solo = solo;
+    pub fn solo_track(&mut self, track: impl Into<TrackId>, solo: bool) {
+        if let Some(tr) = self.track_mut(track) {
+            tr.solo = solo;
             self.solo_active = self.tracks.iter().any(|t| t.solo);
         }
     }
@@ -189,18 +206,18 @@ impl MasterSequencer {
             let dur_s = tr.durations[pat_idx];
 
             if note >= 0 && vel > MIN_AUDIBLE_VELOCITY {
-                let freq = if !is_drum_inst(inst_id) {
-                    if note > 0 {
-                        midi_to_freq(note as f32)
-                    } else if inst_id == INST_CLICK {
-                        DEFAULT_CLICK_FREQ_HZ
-                    } else {
-                        DEFAULT_NOTE_FREQ_HZ
+                let freq = match InstrumentId::from(inst_id) {
+                    InstrumentId::Synth(id) => {
+                        if note > 0 {
+                            midi_to_freq(note as f32)
+                        } else if id == PatchId::CLICK {
+                            DEFAULT_CLICK_FREQ_HZ
+                        } else {
+                            DEFAULT_NOTE_FREQ_HZ
+                        }
                     }
-                } else if inst_id == DRUM_TOM {
-                    midi_to_freq(note as f32)
-                } else {
-                    DEFAULT_NOTE_FREQ_HZ
+                    InstrumentId::Drum(DrumId::Tom) => midi_to_freq(note as f32),
+                    InstrumentId::Drum(_) => DEFAULT_NOTE_FREQ_HZ,
                 };
                 out_events[count] = (inst_id, freq, vel, dur_s);
                 count += 1;

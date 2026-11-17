@@ -1,11 +1,9 @@
 //! Snare drum voice combining body membrane resonance with filtered wire noise.
 
-use super::{
-    DrumMode, DRUM_SNARE_BODY, DRUM_SNARE_CRACK, DRUM_SNARE_GHOST, DRUM_SNARE_RIM, DRUM_SNARE_WIRE,
-    MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use super::{opt_param, DrumId, DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::core::math::{sin_phase, soft_clip, wrap_phase, xorshift32_norm};
 use crate::domain::effects::StateVariableFilter;
+use crate::domain::{CutoffHz, Drive, DrumPitch, DrumVelocity, Normalized};
 
 // Default Snare Voice Tuning Constants
 pub const DEFAULT_SNARE_BASE_FREQ: f32 = 185.0;
@@ -131,26 +129,40 @@ pub struct SnareVoice {
 }
 
 /// Snare drum synthesis parameters.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SnareParams {
-    pub base_freq: f32,
-    pub tone_decay: f32,
-    pub noise_decay: f32,
-    pub cutoff_hz: f32,
-    pub snappy: f32,
-    pub mode: f32,
+    pub base_freq: DrumPitch,
+    pub tone_decay: Normalized,
+    pub noise_decay: Normalized,
+    pub cutoff: CutoffHz,
+    pub snappy: Drive,
+    pub mode: DrumMode,
+}
+
+impl Default for SnareParams {
+    fn default() -> Self {
+        Self {
+            base_freq: DEFAULT_SNARE_BASE_FREQ.into(),
+            tone_decay: DEFAULT_SNARE_TONE_DECAY.into(),
+            noise_decay: DEFAULT_SNARE_NOISE_DECAY.into(),
+            cutoff: DEFAULT_SNARE_CUTOFF_HZ.into(),
+            snappy: DEFAULT_SNARE_NOISE_GAIN.into(),
+            mode: DrumMode::default(),
+        }
+    }
 }
 
 impl From<[f32; 7]> for SnareParams {
     #[inline(always)]
     fn from(p: [f32; 7]) -> Self {
+        let d = Self::default();
         Self {
-            base_freq: p[0],
-            tone_decay: p[1],
-            noise_decay: p[2],
-            cutoff_hz: p[3],
-            snappy: p[4],
-            mode: p[6],
+            base_freq: opt_param(p[0], d.base_freq),
+            tone_decay: opt_param(p[1], d.tone_decay),
+            noise_decay: opt_param(p[2], d.noise_decay),
+            cutoff: opt_param(p[3], d.cutoff),
+            snappy: opt_param(p[4], d.snappy),
+            mode: p[6].into(),
         }
     }
 }
@@ -180,33 +192,20 @@ impl SnareVoice {
 
     pub fn set_params(&mut self, params: impl Into<SnareParams>) {
         let p = params.into();
-        if p.base_freq > 0.0 {
-            self.base_freq = p.base_freq.clamp(80.0, 500.0);
-        }
-        if p.tone_decay > 0.0 {
-            self.tone_decay = p.tone_decay.clamp(0.990, 0.9999);
-        }
-        if p.noise_decay > 0.0 {
-            self.noise_decay = p.noise_decay.clamp(0.990, 0.9999);
-        }
-        if p.cutoff_hz > 0.0 {
-            self.cutoff_hz = p.cutoff_hz.clamp(800.0, 12000.0);
-        }
-        if p.snappy >= 0.0 {
-            self.noise_gain = p.snappy.clamp(0.0, 2.5);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.base_freq = *p.base_freq;
+        self.tone_decay = *p.tone_decay;
+        self.noise_decay = *p.noise_decay;
+        self.cutoff_hz = *p.cutoff;
+        self.noise_gain = *p.snappy;
+        self.mode = p.mode;
     }
 
-    pub fn trigger_styled(&mut self, vel: f32, style: i32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger_styled(&mut self, vel: impl Into<DrumVelocity>, style: DrumId) {
         self.active = true;
         self.phase = 0.0;
-        self.vel = v;
+        self.vel = *vel.into();
 
-        if style == DRUM_SNARE_RIM {
+        if style == DrumId::SnareRim {
             self.env_rim = 1.0;
             self.phase_rim = 0.0;
         } else {
@@ -214,11 +213,11 @@ impl SnareVoice {
         }
 
         let preset = match style {
-            DRUM_SNARE_CRACK => STYLE_CRACK,
-            DRUM_SNARE_WIRE => STYLE_WIRE,
-            DRUM_SNARE_BODY => STYLE_BODY,
-            DRUM_SNARE_GHOST => STYLE_GHOST,
-            DRUM_SNARE_RIM => STYLE_RIM,
+            DrumId::SnareCrack => STYLE_CRACK,
+            DrumId::SnareWire => STYLE_WIRE,
+            DrumId::SnareBody => STYLE_BODY,
+            DrumId::SnareGhost => STYLE_GHOST,
+            DrumId::SnareRim => STYLE_RIM,
             _ => STYLE_DEFAULT,
         };
 

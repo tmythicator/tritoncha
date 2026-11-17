@@ -254,15 +254,19 @@
         (get drum-remaps (name k))
         k)))
 
+(def ^:private generic-drum-hits
+  #{:kick :snare :hat :hat-closed :tom :ride :clap :drum :drums :hit :beat :x :1})
+
 (defn resolve-target-inst
   "Resolves the actual instrument to trigger for a pattern hit.
-  If the hit matches the base drum type of default-inst-key, default-inst-key is used."
+  If the hit is a generic drum hit matching the base drum type of default-inst-key, default-inst-key is used.
+  Specific drum articulations (e.g. :snare-wire, :snare-rim, :hat-open) are preserved."
   [hit-kw default-inst-key]
   (if (or (nil? default-inst-key) (= default-inst-key hit-kw))
     hit-kw
     (let [hit-type (inst-base-type hit-kw)
           def-type (inst-base-type default-inst-key)]
-      (if (or (= hit-type def-type)
+      (if (or (and (= hit-type def-type) (contains? generic-drum-hits hit-kw))
               (not (drum-keyword? default-inst-key))
               (contains? #{:drum :drums :hit :beat :x :1} hit-kw))
         default-inst-key

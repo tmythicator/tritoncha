@@ -1,10 +1,34 @@
 //! Sequencer track and step pattern representation.
 
+use crate::domain::Normalized;
+
 pub const MAX_STEPS: usize = 128;
 pub const MAX_TRACKS: usize = 16;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TrackId(pub usize);
+
+impl TrackId {
+    #[inline(always)]
+    pub const fn as_usize(self) -> usize {
+        self.0
+    }
+
+    #[inline(always)]
+    pub fn is_valid(self) -> bool {
+        self.0 < MAX_TRACKS
+    }
+}
+
+impl From<usize> for TrackId {
+    #[inline(always)]
+    fn from(idx: usize) -> Self {
+        Self(idx)
+    }
+}
 pub const DEFAULT_TRACK_LENGTH: usize = 16;
 pub const DEFAULT_STEP_MULTIPLIER: usize = 4;
-pub const DEFAULT_SYNTH_PATCH_ID: i16 = 4;
+pub const DEFAULT_SYNTH_PATCH_ID: i16 = crate::domain::PatchId::SAW_BASS.as_usize() as i16;
 pub const REST_NOTE: i16 = -1;
 pub const DEFAULT_STEP_VELOCITY: f32 = 0.9;
 pub const DEFAULT_STEP_DURATION_S: f32 = 0.2;
@@ -45,11 +69,18 @@ impl TrackPattern {
     }
 
     /// Sets a specific step's instrument, pitch, velocity, and duration.
-    pub fn set_step(&mut self, step: usize, inst_kind: i16, note: i16, vel: f32, dur: f32) {
+    pub fn set_step(
+        &mut self,
+        step: usize,
+        inst_kind: i16,
+        note: i16,
+        vel: impl Into<Normalized>,
+        dur: f32,
+    ) {
         if step < MAX_STEPS {
             self.inst_kinds[step] = inst_kind;
             self.notes[step] = note;
-            self.velocities[step] = vel.clamp(0.0, 1.0);
+            self.velocities[step] = *vel.into();
             self.durations[step] = dur.max(0.005);
         }
     }

@@ -8,13 +8,20 @@ pub mod snare;
 
 pub use clap::ClapVoice;
 pub use cymbals::*;
-pub use kick::KickVoice;
+pub use kick::{KickParams, KickVoice};
 pub use membrane::*;
-pub use snare::SnareVoice;
+pub use snare::{SnareParams, SnareVoice};
 
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
-pub const VELOCITY_MIN_CLAMP: f32 = 0.1;
-pub const VELOCITY_MAX_CLAMP: f32 = 1.2;
+
+#[inline(always)]
+pub(crate) fn opt_param<T: From<f32>>(v: f32, default: T) -> T {
+    if v > 0.0 {
+        v.into()
+    } else {
+        default
+    }
+}
 
 /// Drum acoustic character and synthesis modeling mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -53,56 +60,32 @@ impl DrumMode {
     }
 }
 
-// Instrument Identifiers
-pub const DRUM_KICK: i32 = 0;
-pub const DRUM_SNARE: i32 = 1;
-pub const DRUM_HH_CLOSED: i32 = 2;
-pub const DRUM_HH_OPEN: i32 = 3;
-pub const DRUM_CLAP: i32 = 18;
-pub const DRUM_RIDE: i32 = 20;
-pub const DRUM_TOM: i32 = 21;
-pub const DRUM_SNARE_CRACK: i32 = 22;
-pub const DRUM_SNARE_WIRE: i32 = 23;
-pub const DRUM_SNARE_BODY: i32 = 24;
-pub const DRUM_SNARE_GHOST: i32 = 25;
-pub const DRUM_SNARE_RIM: i32 = 26;
-pub const DRUM_RIDE_BELL: i32 = 64;
-pub const DRUM_TOM_HIGH: i32 = 65;
-pub const DRUM_TOM_MID: i32 = 66;
-pub const DRUM_TOM_LOW: i32 = 67;
-pub const DRUM_CRASH_16: i32 = 68;
-pub const DRUM_CRASH_17: i32 = 69;
-pub const DRUM_CRASH_18: i32 = 70;
-pub const DRUM_SPLASH: i32 = 71;
-pub const DRUM_CHINA: i32 = 72;
-pub const DRUM_COWBELL: i32 = 73;
-
 /// Strongly-typed drum instrument identifier.
 #[repr(i32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum DrumId {
-    Kick = DRUM_KICK,
-    Snare = DRUM_SNARE,
-    HhClosed = DRUM_HH_CLOSED,
-    HhOpen = DRUM_HH_OPEN,
-    Clap = DRUM_CLAP,
-    Ride = DRUM_RIDE,
-    Tom = DRUM_TOM,
-    SnareCrack = DRUM_SNARE_CRACK,
-    SnareWire = DRUM_SNARE_WIRE,
-    SnareBody = DRUM_SNARE_BODY,
-    SnareGhost = DRUM_SNARE_GHOST,
-    SnareRim = DRUM_SNARE_RIM,
-    RideBell = DRUM_RIDE_BELL,
-    TomHigh = DRUM_TOM_HIGH,
-    TomMid = DRUM_TOM_MID,
-    TomLow = DRUM_TOM_LOW,
-    Crash16 = DRUM_CRASH_16,
-    Crash17 = DRUM_CRASH_17,
-    Crash18 = DRUM_CRASH_18,
-    Splash = DRUM_SPLASH,
-    China = DRUM_CHINA,
-    Cowbell = DRUM_COWBELL,
+    Kick = 0,
+    Snare = 1,
+    HhClosed = 2,
+    HhOpen = 3,
+    Clap = 18,
+    Ride = 20,
+    Tom = 21,
+    SnareCrack = 22,
+    SnareWire = 23,
+    SnareBody = 24,
+    SnareGhost = 25,
+    SnareRim = 26,
+    RideBell = 64,
+    TomHigh = 65,
+    TomMid = 66,
+    TomLow = 67,
+    Crash16 = 68,
+    Crash17 = 69,
+    Crash18 = 70,
+    Splash = 71,
+    China = 72,
+    Cowbell = 73,
 }
 
 impl DrumId {
@@ -142,31 +125,7 @@ impl TryFrom<i32> for DrumId {
 
     #[inline(always)]
     fn try_from(val: i32) -> Result<Self, Self::Error> {
-        match val {
-            DRUM_KICK => Ok(Self::Kick),
-            DRUM_SNARE => Ok(Self::Snare),
-            DRUM_HH_CLOSED => Ok(Self::HhClosed),
-            DRUM_HH_OPEN => Ok(Self::HhOpen),
-            DRUM_CLAP => Ok(Self::Clap),
-            DRUM_RIDE => Ok(Self::Ride),
-            DRUM_TOM => Ok(Self::Tom),
-            DRUM_SNARE_CRACK => Ok(Self::SnareCrack),
-            DRUM_SNARE_WIRE => Ok(Self::SnareWire),
-            DRUM_SNARE_BODY => Ok(Self::SnareBody),
-            DRUM_SNARE_GHOST => Ok(Self::SnareGhost),
-            DRUM_SNARE_RIM => Ok(Self::SnareRim),
-            DRUM_RIDE_BELL => Ok(Self::RideBell),
-            DRUM_TOM_HIGH => Ok(Self::TomHigh),
-            DRUM_TOM_MID => Ok(Self::TomMid),
-            DRUM_TOM_LOW => Ok(Self::TomLow),
-            DRUM_CRASH_16 => Ok(Self::Crash16),
-            DRUM_CRASH_17 => Ok(Self::Crash17),
-            DRUM_CRASH_18 => Ok(Self::Crash18),
-            DRUM_SPLASH => Ok(Self::Splash),
-            DRUM_CHINA => Ok(Self::China),
-            DRUM_COWBELL => Ok(Self::Cowbell),
-            _ => Err(()),
-        }
+        Self::ALL.into_iter().find(|d| d.as_i32() == val).ok_or(())
     }
 }
 
@@ -180,12 +139,13 @@ pub trait DrumVoice {
     fn is_active(&self) -> bool;
     fn process(&mut self, sample_rate: f32) -> f32;
     fn set_mode(&mut self, mode: DrumMode);
+    fn reset(&mut self);
 }
 
 macro_rules! impl_drum_voice {
-    ($($t:ident),* $(,)?) => {
+    ($($t:ident $(<$n:ident>)?),* $(,)?) => {
         $(
-            impl DrumVoice for $t {
+            impl $(<const $n: usize>)? DrumVoice for $t $(<$n>)? {
                 #[inline(always)]
                 fn is_active(&self) -> bool {
                     self.active
@@ -197,6 +157,10 @@ macro_rules! impl_drum_voice {
                 #[inline(always)]
                 fn set_mode(&mut self, mode: DrumMode) {
                     self.mode = mode;
+                }
+                #[inline(always)]
+                fn reset(&mut self) {
+                    self.reset();
                 }
             }
         )*
@@ -211,22 +175,8 @@ impl_drum_voice!(
     MembraneVoice,
     RideVoice,
     RideBellVoice,
+    MetallicVoice<N>,
 );
-
-impl<const N: usize> DrumVoice for MetallicVoice<N> {
-    #[inline(always)]
-    fn is_active(&self) -> bool {
-        self.active
-    }
-    #[inline(always)]
-    fn process(&mut self, sample_rate: f32) -> f32 {
-        self.process(sample_rate)
-    }
-    #[inline(always)]
-    fn set_mode(&mut self, mode: DrumMode) {
-        self.mode = mode;
-    }
-}
 
 #[inline(always)]
 fn render_voice<V: DrumVoice>(voice: &mut V, sample_rate: f32) -> f32 {
@@ -235,6 +185,19 @@ fn render_voice<V: DrumVoice>(voice: &mut V, sample_rate: f32) -> f32 {
     } else {
         0.0
     }
+}
+
+macro_rules! for_all_drum_voices {
+    (@each $self:ident, $v:ident, $body:expr; $($field:ident),+ $(,)?) => {
+        $( { let $v = &mut $self.$field; $body; } )+
+    };
+    ($self:ident, |$v:ident| $body:expr) => {
+        for_all_drum_voices!(
+            @each $self, $v, $body;
+            kick, snare, hat, clap, tom, tom_high, tom_mid, tom_low, ride, ride_bell, crash_16,
+            crash_17, crash_18, splash, china, cowbell
+        )
+    };
 }
 
 /// Drum machine managing all drum voices.
@@ -279,47 +242,44 @@ impl DrumMachine {
         }
     }
 
-    pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
-        match drum_id {
-            DRUM_KICK => self.kick.set_params(params),
-            DRUM_SNARE | DRUM_SNARE_CRACK | DRUM_SNARE_BODY | DRUM_SNARE_WIRE
-            | DRUM_SNARE_GHOST | DRUM_SNARE_RIM => self.snare.set_params(params),
-            DRUM_HH_CLOSED | DRUM_HH_OPEN => self.hat.set_params(params),
-            DRUM_TOM => self.tom.set_params(params),
-            DRUM_TOM_HIGH => self.tom_high.set_params(params),
-            DRUM_TOM_MID => self.tom_mid.set_params(params),
-            DRUM_TOM_LOW => self.tom_low.set_params(params),
-            DRUM_RIDE => self.ride.set_params(params),
-            DRUM_RIDE_BELL => self.ride_bell.set_params(params),
-            DRUM_CRASH_16 => self.crash_16.set_params(params),
-            DRUM_CRASH_17 => self.crash_17.set_params(params),
-            DRUM_CRASH_18 => self.crash_18.set_params(params),
-            DRUM_SPLASH => self.splash.set_params(params),
-            DRUM_CHINA => self.china.set_params(params),
-            DRUM_COWBELL => self.cowbell.set_params(params),
-            DRUM_CLAP => self.clap.set_params(params),
-            _ => {}
+    pub fn set_drum_patch(&mut self, drum: DrumId, params: [f32; 7]) {
+        match drum {
+            DrumId::Kick => self.kick.set_params(params),
+            DrumId::Snare
+            | DrumId::SnareCrack
+            | DrumId::SnareBody
+            | DrumId::SnareWire
+            | DrumId::SnareGhost
+            | DrumId::SnareRim => self.snare.set_params(params),
+            DrumId::HhClosed | DrumId::HhOpen => self.hat.set_params(params),
+            DrumId::Tom => self.tom.set_params(params),
+            DrumId::TomHigh => self.tom_high.set_params(params),
+            DrumId::TomMid => self.tom_mid.set_params(params),
+            DrumId::TomLow => self.tom_low.set_params(params),
+            DrumId::Ride => self.ride.set_params(params),
+            DrumId::RideBell => self.ride_bell.set_params(params),
+            DrumId::Crash16 => self.crash_16.set_params(params),
+            DrumId::Crash17 => self.crash_17.set_params(params),
+            DrumId::Crash18 => self.crash_18.set_params(params),
+            DrumId::Splash => self.splash.set_params(params),
+            DrumId::China => self.china.set_params(params),
+            DrumId::Cowbell => self.cowbell.set_params(params),
+            DrumId::Clap => self.clap.set_params(params),
+        }
+    }
+
+    pub fn set_drum_patch_by_id(&mut self, inst_id: i32, params: [f32; 7]) -> bool {
+        if let Ok(drum) = DrumId::try_from(inst_id) {
+            self.set_drum_patch(drum, params);
+            true
+        } else {
+            false
         }
     }
 
     pub fn set_mode_all(&mut self, mode: impl Into<DrumMode>) {
         let m = mode.into();
-        self.kick.set_mode(m);
-        self.snare.set_mode(m);
-        self.hat.set_mode(m);
-        self.clap.set_mode(m);
-        self.tom.set_mode(m);
-        self.tom_high.set_mode(m);
-        self.tom_mid.set_mode(m);
-        self.tom_low.set_mode(m);
-        self.ride.set_mode(m);
-        self.ride_bell.set_mode(m);
-        self.crash_16.set_mode(m);
-        self.crash_17.set_mode(m);
-        self.crash_18.set_mode(m);
-        self.splash.set_mode(m);
-        self.china.set_mode(m);
-        self.cowbell.set_mode(m);
+        for_all_drum_voices!(self, |v| v.set_mode(m));
     }
 
     /// Dispatches a trigger to the corresponding drum voice by strongly-typed DrumId.
@@ -327,17 +287,17 @@ impl DrumMachine {
     pub fn trigger_drum(&mut self, drum: DrumId, vel: f32, freq: f32) {
         match drum {
             DrumId::Kick => self.kick.trigger(vel),
-            DrumId::Snare => self.snare.trigger_styled(vel, DRUM_SNARE),
+            DrumId::Snare
+            | DrumId::SnareCrack
+            | DrumId::SnareWire
+            | DrumId::SnareBody
+            | DrumId::SnareGhost
+            | DrumId::SnareRim => self.snare.trigger_styled(vel, drum),
             DrumId::HhClosed => self.hat.trigger(vel, false),
             DrumId::HhOpen => self.hat.trigger(vel, true),
             DrumId::Clap => self.clap.trigger(vel),
             DrumId::Ride => self.ride.trigger(vel),
             DrumId::Tom => self.tom.trigger_freq(vel, freq),
-            DrumId::SnareCrack => self.snare.trigger_styled(vel, DRUM_SNARE_CRACK),
-            DrumId::SnareWire => self.snare.trigger_styled(vel, DRUM_SNARE_WIRE),
-            DrumId::SnareBody => self.snare.trigger_styled(vel, DRUM_SNARE_BODY),
-            DrumId::SnareGhost => self.snare.trigger_styled(vel, DRUM_SNARE_GHOST),
-            DrumId::SnareRim => self.snare.trigger_styled(vel, DRUM_SNARE_RIM),
             DrumId::RideBell => self.ride_bell.trigger(vel),
             DrumId::TomHigh => self.tom_high.trigger(vel),
             DrumId::TomMid => self.tom_mid.trigger(vel),
@@ -370,41 +330,13 @@ impl DrumMachine {
 
     #[inline(always)]
     pub fn process(&mut self, sample_rate: f32) -> f32 {
-        render_voice(&mut self.kick, sample_rate)
-            + render_voice(&mut self.snare, sample_rate)
-            + render_voice(&mut self.hat, sample_rate)
-            + render_voice(&mut self.clap, sample_rate)
-            + render_voice(&mut self.tom, sample_rate)
-            + render_voice(&mut self.tom_high, sample_rate)
-            + render_voice(&mut self.tom_mid, sample_rate)
-            + render_voice(&mut self.tom_low, sample_rate)
-            + render_voice(&mut self.ride, sample_rate)
-            + render_voice(&mut self.ride_bell, sample_rate)
-            + render_voice(&mut self.crash_16, sample_rate)
-            + render_voice(&mut self.crash_17, sample_rate)
-            + render_voice(&mut self.crash_18, sample_rate)
-            + render_voice(&mut self.splash, sample_rate)
-            + render_voice(&mut self.china, sample_rate)
-            + render_voice(&mut self.cowbell, sample_rate)
+        let mut sum = 0.0;
+        for_all_drum_voices!(self, |v| sum += render_voice(v, sample_rate));
+        sum
     }
 
     pub fn reset(&mut self) {
-        self.kick.reset();
-        self.snare.reset();
-        self.hat.reset();
-        self.clap.reset();
-        self.tom.reset();
-        self.tom_high.reset();
-        self.tom_mid.reset();
-        self.tom_low.reset();
-        self.ride.reset();
-        self.ride_bell.reset();
-        self.crash_16.reset();
-        self.crash_17.reset();
-        self.crash_18.reset();
-        self.splash.reset();
-        self.china.reset();
-        self.cowbell.reset();
+        for_all_drum_voices!(self, |v| v.reset());
     }
 }
 
@@ -417,7 +349,7 @@ impl Default for DrumMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::DEFAULT_SAMPLE_RATE;
+    use crate::domain::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_membrane_drum_sweep_and_decay() {
@@ -453,7 +385,7 @@ mod tests {
     #[test]
     fn test_snare_artistic_styles() {
         let mut snare = SnareVoice::new();
-        snare.trigger_styled(1.0, DRUM_SNARE_CRACK);
+        snare.trigger_styled(1.0, DrumId::SnareCrack);
         assert!(snare.active);
         let s = snare.process(DEFAULT_SAMPLE_RATE);
         assert!(!s.is_nan());
@@ -491,5 +423,93 @@ mod tests {
             assert!(s_ride.abs() < 4.0);
             assert!(s_bell.abs() < 4.0);
         }
+    }
+
+    #[test]
+    fn test_drum_patch_clamping_and_dispatch() {
+        let mut dm = DrumMachine::new();
+
+        let raw_kick = [5000.0, 9999.0, 5.0, 10.0, 20.0, 50.0, 2.0];
+        assert_eq!(
+            KickParams::from(raw_kick),
+            KickParams {
+                base_pitch: 1000.0.into(),
+                pitch_drop: 1000.0.into(),
+                pitch_decay: 0.150.into(),
+                decay: 10.0.into(),
+                click_level: 10.0.into(),
+                drive: 10.0.into(),
+                mode: DrumMode::Idm,
+            }
+        );
+
+        let raw_snare = [10.0, 5.0, 5.0, 50000.0, 20.0, 0.0, 3.0];
+        assert_eq!(
+            SnareParams::from(raw_snare),
+            SnareParams {
+                base_freq: 20.0.into(),
+                tone_decay: 1.0.into(),
+                noise_decay: 1.0.into(),
+                cutoff: 20000.0.into(),
+                snappy: 10.0.into(),
+                mode: DrumMode::Industrial,
+            }
+        );
+
+        let raw_perc = [50000.0, 2.0, 50.0, 50.0, 0.0, 0.0, 0.0];
+        assert_eq!(
+            PercussionParams::from(raw_perc),
+            PercussionParams {
+                cutoff: 20000.0.into(),
+                resonance: 0.98.into(),
+                decay: 10.0.into(),
+                drive: 10.0.into(),
+                mode: DrumMode::Analog,
+            }
+        );
+
+        for &drum in &DrumId::ALL {
+            dm.reset();
+            dm.set_drum_patch(drum, [50000.0, 9999.0, 50.0, 50.0, 50.0, 50.0, 3.0]);
+            dm.trigger_drum(drum, 1.0, 440.0);
+            let s = dm.process(DEFAULT_SAMPLE_RATE);
+            assert!(!s.is_nan() && s.abs() < 5.0);
+        }
+    }
+
+    #[test]
+    fn test_drum_patch_partial_zeros_preserve_voice_defaults() {
+        let mut dm = DrumMachine::new();
+
+        // 1. Snare Wire (:snare-wire sends [0.0, 0.0, 0.9993, 5200.0, 0.0, 0.0, 0.0])
+        // p[4] (snappy) == 0.0 must preserve default noise_gain (0.85) so :snare-wire is audible!
+        dm.set_drum_patch(DrumId::SnareWire, [0.0, 0.0, 0.9993, 5200.0, 0.0, 0.0, 0.0]);
+        dm.trigger_drum(DrumId::SnareWire, 0.9, 440.0);
+        let mut snare_wire_peak = 0.0_f32;
+        for _ in 0..512 {
+            snare_wire_peak = snare_wire_peak.max(dm.process(DEFAULT_SAMPLE_RATE).abs());
+        }
+        assert!(
+            snare_wire_peak > 0.05,
+            "Snare wire must produce audible noise when snappy (p[4]) is 0.0 (unset), got {snare_wire_peak}"
+        );
+
+        // 2. Closed Hat (:hat-closed sends [7200.0, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0])
+        // p[2] (decay-open) == 0.0 must NOT overwrite decay_open with 1ms (0.001s) pop!
+        dm.reset();
+        dm.set_drum_patch(DrumId::HhClosed, [7200.0, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        dm.trigger_drum(DrumId::HhOpen, 0.9, 440.0);
+        // After 500 samples (~10ms at 48kHz), open hat must still be ringing (not popped out in 1ms)
+        for _ in 0..500 {
+            dm.process(DEFAULT_SAMPLE_RATE);
+        }
+        let mut open_hat_tail_peak = 0.0_f32;
+        for _ in 0..500 {
+            open_hat_tail_peak = open_hat_tail_peak.max(dm.process(DEFAULT_SAMPLE_RATE).abs());
+        }
+        assert!(
+            open_hat_tail_peak > 0.01,
+            "Open hat must sustain after :hat-closed patch with decay-open=0.0, got {open_hat_tail_peak}"
+        );
     }
 }

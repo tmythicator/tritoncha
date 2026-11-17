@@ -2,6 +2,7 @@
 
 use crate::core::adaa::AdaaDrive;
 use crate::core::math::{tanh_approx, wrap_phase};
+use crate::domain::Normalized;
 use std::f32::consts::PI;
 
 pub const DEFAULT_BIT_DEPTH: f32 = 16.0;
@@ -36,6 +37,16 @@ pub enum DriveMode {
     Adaa = 1,
 }
 
+impl From<u8> for DriveMode {
+    #[inline(always)]
+    fn from(val: u8) -> Self {
+        match val {
+            0 => DriveMode::Classic,
+            _ => DriveMode::Adaa,
+        }
+    }
+}
+
 /// Bitcrusher and analog drive / saturation effect with selectable ADAA-1 antialiased core.
 pub struct BitcrusherDrive {
     pub drive: f32,       // 0.0 to 1.0
@@ -68,9 +79,16 @@ impl BitcrusherDrive {
     }
 
     /// Updates the drive gain parameter across classic and ADAA engines.
-    pub fn set_drive(&mut self, drive: f32) {
-        self.drive = drive.clamp(0.0, 1.0);
+    pub fn set_drive(&mut self, drive: impl Into<Normalized>) {
+        self.drive = *drive.into();
         self.adaa.set_drive(self.drive);
+    }
+
+    /// Updates drive, bit depth, and sample hold parameters with domain clamping.
+    pub fn set_params(&mut self, drive: impl Into<Normalized>, bits: f32, sample_hold: f32) {
+        self.set_drive(drive);
+        self.bit_depth = bits.clamp(MIN_BIT_DEPTH, MAX_BIT_DEPTH);
+        self.sample_hold = sample_hold.clamp(1.0, MAX_SAMPLE_HOLD);
     }
 
     #[inline(always)]
@@ -152,6 +170,18 @@ impl StereoChorus {
             depth: DEFAULT_CHORUS_DEPTH,
             mix: 0.0,
         }
+    }
+
+    /// Updates chorus rate, depth, and wet/dry mix with domain clamping.
+    pub fn set_params(
+        &mut self,
+        rate_hz: f32,
+        depth: impl Into<Normalized>,
+        mix: impl Into<Normalized>,
+    ) {
+        self.rate_hz = rate_hz.clamp(0.1, 10.0);
+        self.depth = *depth.into();
+        self.mix = *mix.into();
     }
 
     #[inline(always)]
@@ -269,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_chorus_mix_passthrough_when_zero() {
-        use crate::engine::DEFAULT_SAMPLE_RATE;
+        use crate::domain::DEFAULT_SAMPLE_RATE;
 
         let mut chorus = StereoChorus::new();
         chorus.mix = 0.0;

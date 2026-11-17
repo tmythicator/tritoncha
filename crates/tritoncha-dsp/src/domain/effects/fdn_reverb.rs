@@ -5,6 +5,7 @@
 //! modulation for modal density and smooth spatial decay without metallic comb flutter.
 
 use crate::core::math::lerp;
+use crate::domain::{Normalized, Resonance};
 use std::f32::consts::PI;
 
 /// Number of parallel delay lines in the FDN topology.
@@ -24,7 +25,7 @@ pub const MIN_DELAY_LINE_LENGTH: usize = 64;
 pub const DELAY_LINE_SAFETY_HEADROOM: usize = 64;
 
 /// Reference standard audio sample rate in Hz.
-pub use crate::engine::DEFAULT_SAMPLE_RATE;
+pub use crate::domain::DEFAULT_SAMPLE_RATE;
 
 /// Minimum valid audio sample rate in Hz.
 pub const MIN_VALID_SAMPLE_RATE: f32 = 1000.0;
@@ -187,8 +188,8 @@ impl FdnReverb {
     }
 
     /// Sets room size, scaling decay feedback between 0.0 and 0.98.
-    pub fn set_room_size(&mut self, size: f32) {
-        self.room_size = size.clamp(0.0, MAX_FDN_ROOM_SIZE);
+    pub fn set_room_size(&mut self, size: impl Into<Resonance>) {
+        self.room_size = *size.into();
     }
 
     /// Sets high frequency absorption damping (0.0 to 0.85).
@@ -197,8 +198,8 @@ impl FdnReverb {
     }
 
     /// Sets wet mix gain.
-    pub fn set_wet(&mut self, wet: f32) {
-        self.wet = wet.clamp(0.0, 1.0);
+    pub fn set_wet(&mut self, wet: impl Into<Normalized>) {
+        self.wet = *wet.into();
     }
 
     /// Resets all delay buffers and filters to silence.

@@ -1,15 +1,14 @@
 //! Modular synthesizer voice DSP implementation with bandlimited anti-aliased oscillators.
 
-pub use super::envelope::{
-    AdsrEnvelope, EnvelopeStage, ENVELOPE_SILENCE_THRESHOLD, SUSTAIN_ACTIVE_THRESHOLD,
-};
-pub use super::oscillator::*;
-pub use super::patch::*;
+use super::envelope::{AdsrEnvelope, EnvelopeStage};
+use super::oscillator::*;
+use super::patch::*;
 use crate::core::math::{
     calc_rate, sin_phase, soft_clip, time_to_samples, wrap_phase, xorshift32_norm,
     SEMITONES_PER_OCTAVE,
 };
 use crate::domain::effects::{LadderFilter, StateVariableFilter};
+use crate::domain::GlideTime;
 
 // Voice Tuning and Timing Constants
 pub const MIN_PORTAMENTO_TIME_SEC: f32 = 0.001;
@@ -38,7 +37,7 @@ pub const NOISE_SEED_PRIME: u32 = 2654435761;
 /// Polyphonic synthesizer voice.
 pub struct SynthVoice {
     pub active: bool,
-    pub patch_id: usize,
+    pub patch_id: PatchId,
     pub freq: f32,
     pub target_freq: f32,
     pub glide_rate: f32,
@@ -71,7 +70,7 @@ impl SynthVoice {
     pub fn new() -> Self {
         Self {
             active: false,
-            patch_id: PATCH_SAW_BASS,
+            patch_id: PatchId::SAW_BASS,
             freq: 440.0,
             target_freq: 440.0,
             glide_rate: 1.0,
@@ -114,13 +113,13 @@ impl SynthVoice {
         target_freq: f32,
         vel: f32,
         sample_rate: f32,
-        glide_time: f32,
+        glide_time: impl Into<GlideTime>,
         dur_s: f32,
     ) {
         self.target_freq = target_freq.clamp(MIN_FREQ_HZ, MAX_FREQ_HZ);
         self.velocity = vel.clamp(MIN_VELOCITY, MAX_VELOCITY);
-        let time_s = glide_time.max(MIN_PORTAMENTO_TIME_SEC);
-        self.glide_rate = (1.0 / (time_s * sample_rate)).clamp(MIN_GLIDE_RATE, MAX_GLIDE_RATE);
+        let time_s: f32 = (*glide_time.into()).max(MIN_PORTAMENTO_TIME_SEC);
+        self.glide_rate = (1.0_f32 / (time_s * sample_rate)).clamp(MIN_GLIDE_RATE, MAX_GLIDE_RATE);
         self.age = 0;
         self.amp_env.hold_samples =
             time_to_samples(dur_s, sample_rate, 10.0 / sample_rate, MAX_HOLD_SEC);
@@ -132,13 +131,14 @@ impl SynthVoice {
         &mut self,
         freq: f32,
         vel: f32,
-        patch_id: usize,
+        patch_id: impl Into<PatchId>,
         patch: &ModularPatch,
         sample_rate: f32,
         dur_s: f32,
     ) {
+        let pid = patch_id.into();
         self.active = true;
-        self.patch_id = patch_id;
+        self.patch_id = pid;
         self.freq = freq.clamp(MIN_FREQ_HZ, MAX_FREQ_HZ);
         self.target_freq = self.freq;
         self.glide_rate = 1.0;
@@ -151,28 +151,28 @@ impl SynthVoice {
 
         let hold_time = if dur_s > MIN_HOLD_SEC {
             dur_s
-        } else if patch.polyphony > 1 {
+        } else if *patch.polyphony > 1 {
             DEFAULT_POLY_HOLD_SEC
         } else {
             DEFAULT_MONO_HOLD_SEC
         };
 
         self.amp_env.trigger(
-            patch.attack.max(MIN_ATTACK_SEC),
+            *patch.attack,
             patch.decay.max(MIN_DECAY_SEC),
-            patch.sustain.clamp(0.0, 1.0),
-            patch.release.max(MIN_RELEASE_SEC),
+            *patch.sustain,
+            patch.release.max(MIN_DECAY_SEC),
             hold_time,
             sample_rate,
         );
 
         self.mod_env.trigger_ad(
-            patch.mod_attack.max(MIN_ATTACK_SEC),
+            *patch.mod_attack,
             patch.mod_decay.max(MIN_DECAY_SEC),
             sample_rate,
         );
 
-        if patch.osc_type == OSC_KARPLUS {
+        if patch.osc_type == OscillatorType::Karplus {
             // Initialize Karplus-Strong string burst with white noise excitation
             self.ks_len =
                 (sample_rate / self.freq).clamp(KARPLUS_MIN_LEN, KARPLUS_MAX_LEN) as usize;
@@ -188,12 +188,13 @@ impl SynthVoice {
             ^ (self.age.wrapping_mul(NOISE_SEED_PRIME)).wrapping_add((self.freq as u32) << 8);
 
         // Pitch attack transient snap
-        if patch.pitch_snap > 0.01 {
+        if *patch.pitch_snap > 0.01 {
             self.pitch_snap_level = 1.0;
-            let decay_s = patch
-                .pitch_snap_decay
-                .clamp(MIN_PITCH_SNAP_DECAY_SEC, MAX_PITCH_SNAP_DECAY_SEC);
-            self.pitch_snap_rate = calc_rate(decay_s, sample_rate, MIN_PITCH_SNAP_DECAY_SEC);
+            self.pitch_snap_rate = calc_rate(
+                *patch.pitch_snap_decay,
+                sample_rate,
+                MIN_PITCH_SNAP_DECAY_SEC,
+            );
         } else {
             self.pitch_snap_level = 0.0;
             self.pitch_snap_rate = 0.0;
@@ -201,11 +202,11 @@ impl SynthVoice {
 
         // Low-frequency VCO drift rate (0.2 .. 0.6 Hz)
         let drift_hz = VCO_BASE_DRIFT_HZ
-            + ((patch_id % NUM_DRIFT_VOICE_SLOTS) as f32) * VCO_DRIFT_INCREMENT_HZ;
+            + ((pid.as_usize() % NUM_DRIFT_VOICE_SLOTS) as f32) * VCO_DRIFT_INCREMENT_HZ;
         self.drift_phase_inc = drift_hz / sample_rate;
 
         // Initialize free-running supersaw phase offsets
-        if patch.osc_type == OSC_SUPERSAW {
+        if patch.osc_type == OscillatorType::Supersaw {
             let mut seed = self.noise_seed;
             for phase in &mut self.supersaw_phases {
                 *phase = (xorshift32_norm(&mut seed) * 0.5 + 0.5).fract();
@@ -235,10 +236,10 @@ impl SynthVoice {
         }
 
         // Calculate pitch modulation from transient snap and VCO analog drift
-        let pitch_snap_st = patch.pitch_snap * self.pitch_snap_level;
-        let drift_st = if patch.analog_drift > 0.001 {
+        let pitch_snap_st = *patch.pitch_snap * self.pitch_snap_level;
+        let drift_st = if *patch.analog_drift > 0.001 {
             self.drift_phase = wrap_phase(self.drift_phase + self.drift_phase_inc);
-            sin_phase(self.drift_phase) * patch.analog_drift * MAX_ANALOG_DRIFT_SEMITONES
+            sin_phase(self.drift_phase) * *patch.analog_drift * MAX_ANALOG_DRIFT_SEMITONES
         } else {
             0.0
         };
@@ -260,11 +261,9 @@ impl SynthVoice {
         let mod_env_level = self.mod_env.process_sample();
 
         let dt = self.phase_inc;
-        let osc_type = OscillatorType::from(patch.osc_type);
-
-        let mut osc = match osc_type {
+        let mut osc = match patch.osc_type {
             OscillatorType::Saw => render_saw(self.phase, dt),
-            OscillatorType::Pulse => render_pulse(self.phase, dt, patch.pulse_width),
+            OscillatorType::Pulse => render_pulse(self.phase, dt, *patch.pulse_width),
             OscillatorType::Triangle => render_triangle(self.phase),
             OscillatorType::Sine => render_sine(self.phase),
             OscillatorType::Supersaw => {
@@ -272,7 +271,7 @@ impl SynthVoice {
                 render_supersaw(&self.supersaw_phases, dt)
             }
             OscillatorType::Organ => render_organ(self.phase),
-            OscillatorType::Chiptune => render_chiptune(self.phase, patch.pulse_width),
+            OscillatorType::Chiptune => render_chiptune(self.phase, *patch.pulse_width),
             OscillatorType::Fm => {
                 let mod_freq = dt * FM_MOD_RATIO;
                 self.mod_phase = wrap_phase(self.mod_phase + mod_freq);
@@ -295,42 +294,44 @@ impl SynthVoice {
         };
 
         // Sub-oscillator synthesis
-        if patch.sub_level > 0.0 {
+        let sub_lvl = *patch.sub_level;
+        if sub_lvl > 0.0 {
             let sub = sin_phase(self.sub_phase);
-            osc = osc * (1.0 - patch.sub_level * 0.5) + sub * patch.sub_level;
+            osc = osc * (1.0 - sub_lvl * 0.5) + sub * sub_lvl;
         }
 
         // Per-voice white noise injection via xorshift32 PRNG
-        if patch.noise_level > 0.001 {
+        let noise_lvl = *patch.noise_level;
+        if noise_lvl > 0.001 {
             let white = xorshift32_norm(&mut self.noise_seed);
-            osc += white * patch.noise_level.clamp(0.0, 1.0);
+            osc += white * noise_lvl;
         }
 
         self.phase = wrap_phase(self.phase + dt);
         self.sub_phase = wrap_phase(self.sub_phase + dt * 0.5);
 
         // Dynamic filter cutoff with base + key tracking + envelope modulation
-        let cutoff = (patch.cutoff_base
-            + self.freq * patch.cutoff_key_track
-            + patch.cutoff_env_amt * mod_env_level)
+        let cutoff = (*patch.cutoff_base
+            + self.freq * *patch.cutoff_key_track
+            + *patch.cutoff_env_amt * mod_env_level)
             .clamp(20.0, 20000.0);
 
-        let filtered = if patch.filter_type == FILTER_LADDER_24DB {
+        let filtered = if patch.filter_type == FilterMode::Ladder24 {
             self.ladder_filter.process(
                 osc,
                 cutoff,
-                patch.resonance,
+                *patch.resonance,
                 sample_rate,
-                patch.filter_drive,
+                *patch.filter_drive,
             )
         } else {
-            self.filter.process_with_drive(
+            self.filter.process_mode(
                 osc,
                 cutoff,
-                patch.resonance,
+                *patch.resonance,
                 sample_rate,
                 patch.filter_type,
-                patch.filter_drive,
+                *patch.filter_drive,
             )
         };
 
@@ -348,7 +349,7 @@ impl Default for SynthVoice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::DEFAULT_SAMPLE_RATE;
+    use crate::domain::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_voice_initial_state() {
@@ -364,7 +365,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(440.0, 0.9, PATCH_LEAD, &patch, sr, 0.1);
+        voice.trigger(440.0, 0.9, PatchId::LEAD, &patch, sr, 0.1);
         assert!(voice.active);
         assert_eq!(voice.env_stage(), EnvelopeStage::Attack);
         assert_eq!(voice.freq, 440.0);
@@ -383,7 +384,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(220.0, 0.8, PATCH_LEAD, &patch, sr, 0.5);
+        voice.trigger(220.0, 0.8, PatchId::LEAD, &patch, sr, 0.5);
         voice.glide_to(440.0, 0.8, sr, 0.05, 0.5);
         assert_eq!(voice.target_freq, 440.0);
         assert!(voice.freq < 440.0);
@@ -401,7 +402,7 @@ mod tests {
 
         for osc_id in 0..12 {
             let mut patch = ModularPatch::default_lead();
-            patch.osc_type = osc_id;
+            patch.osc_type = OscillatorType::from(osc_id);
             voice.trigger(440.0, 0.9, 0, &patch, sr, 0.1);
 
             for _ in 0..50 {
@@ -421,7 +422,7 @@ mod tests {
     fn test_karplus_strong_synthesis() {
         let mut voice = SynthVoice::new();
         let mut patch = ModularPatch::default_lead();
-        patch.osc_type = OSC_KARPLUS;
+        patch.osc_type = OscillatorType::Karplus;
         let sr = DEFAULT_SAMPLE_RATE;
 
         voice.trigger(330.0, 1.0, 0, &patch, sr, 0.2);

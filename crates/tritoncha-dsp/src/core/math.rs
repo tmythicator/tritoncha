@@ -135,7 +135,7 @@ pub fn xorshift32_norm(seed: &mut u32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::DEFAULT_SAMPLE_RATE;
+    use crate::domain::DEFAULT_SAMPLE_RATE;
 
     #[test]
     fn test_lerp() {

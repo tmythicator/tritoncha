@@ -2,56 +2,11 @@
 //! Simulates non-linear strike deformation, stick tip contact transient,
 //! and five inharmonic modal plate resonances of B20 bronze.
 
-use super::ride::RideParams;
-use crate::core::math::{soft_clip, xorshift32_norm, LN_MIN_60DB};
-use crate::domain::drums::{
-    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use super::{ModalFilter, PercussionParams};
+use crate::core::math::{soft_clip, xorshift32_norm};
+use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
-use std::f32::consts::PI;
-
-/// Second-order resonant modal filter for acoustic cymbal cups.
-#[derive(Clone, Copy)]
-struct ModalFilter {
-    y1: f32,
-    y2: f32,
-    base_freq: f32,
-    decay_s: f32,
-    gain: f32,
-}
-
-impl ModalFilter {
-    fn new(base_freq: f32, decay_s: f32, gain: f32) -> Self {
-        Self {
-            y1: 0.0,
-            y2: 0.0,
-            base_freq,
-            decay_s,
-            gain,
-        }
-    }
-
-    fn reset(&mut self) {
-        self.y1 = 0.0;
-        self.y2 = 0.0;
-    }
-
-    #[inline(always)]
-    fn process(&mut self, input: f32, pitch_ratio: f32, decay_scale: f32, sample_rate: f32) -> f32 {
-        let f = (self.base_freq * pitch_ratio).clamp(40.0, sample_rate * 0.46);
-        let theta = 2.0 * PI * f / sample_rate;
-        let decay_samples = (self.decay_s * decay_scale * sample_rate).max(20.0);
-        let r = (LN_MIN_60DB / decay_samples).exp().clamp(0.85, 0.99995);
-
-        let a1 = 2.0 * r * theta.cos();
-        let a2 = -(r * r);
-
-        let y0 = soft_clip(a1 * self.y1 + a2 * self.y2) + input * self.gain;
-        self.y2 = self.y1;
-        self.y1 = y0;
-        y0
-    }
-}
+use crate::domain::DrumVelocity;
 
 /// Ride Cymbal Bell (Cup) Physical Modeling Voice.
 /// Utilizes a 5-mode modal resonator bank calibrated to acoustic B20 bronze cup geometry,
@@ -103,29 +58,17 @@ impl RideBellVoice {
         }
     }
 
-    pub fn set_params(&mut self, params: impl Into<RideParams>) {
+    pub fn set_params(&mut self, params: impl Into<PercussionParams>) {
         let p = params.into();
-        if p.cutoff_hz > 0.0 {
-            self.tune_ratio = (p.cutoff_hz / 1385.0).clamp(0.6, 1.8);
-        }
-        if p.resonance >= 0.0 {
-            self.drive = (1.0 + p.resonance * 1.5).clamp(0.5, 3.5);
-        }
-        if p.decay_s > 0.0 {
-            self.decay_scale = (p.decay_s / 1.45).clamp(0.15, 3.5);
-        }
-        if p.drive > 0.0 {
-            self.drive = p.drive.clamp(0.2, 4.0);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.tune_ratio = (*p.cutoff / 1385.0).clamp(0.6, 1.8);
+        self.decay_scale = (*p.decay / 1.45).clamp(0.15, 3.5);
+        self.drive = *p.drive;
+        self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
-        self.vel = v;
+        self.vel = *vel.into();
         self.click_env = 1.0;
         self.impulse_env = 1.0;
         self.pitch_env = 1.0;

@@ -1,7 +1,7 @@
 //! Stereo VCA-style studio bus compressor with soft-knee dynamic gain reduction.
 
 use crate::core::math::{db_to_gain, gain_to_db, lerp};
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::DEFAULT_SAMPLE_RATE;
 
 pub const DEFAULT_COMP_THRESHOLD_DB: f32 = -12.0;
 pub const DEFAULT_COMP_RATIO: f32 = 4.0;
@@ -35,6 +35,21 @@ pub struct CompressorConfig {
     pub mix: f32,
 }
 
+impl CompressorConfig {
+    #[inline(always)]
+    pub fn clamped(self) -> Self {
+        Self {
+            enabled: self.enabled,
+            threshold_db: self.threshold_db.clamp(MIN_THRESHOLD_DB, MAX_THRESHOLD_DB),
+            ratio: self.ratio.clamp(MIN_RATIO, MAX_RATIO),
+            attack_sec: self.attack_sec.clamp(MIN_ATTACK_SEC, MAX_ATTACK_SEC),
+            release_sec: self.release_sec.clamp(MIN_RELEASE_SEC, MAX_RELEASE_SEC),
+            makeup_gain_db: self.makeup_gain_db.clamp(MIN_MAKEUP_DB, MAX_MAKEUP_DB),
+            mix: self.mix.clamp(0.0, 1.0),
+        }
+    }
+}
+
 impl Default for CompressorConfig {
     fn default() -> Self {
         Self {
@@ -52,14 +67,8 @@ impl Default for CompressorConfig {
 /// Stereo-linked VCA studio bus compressor.
 #[derive(Debug, Clone)]
 pub struct BusCompressor {
-    pub enabled: bool,
-    pub threshold_db: f32,
-    pub ratio: f32,
-    pub attack_sec: f32,
-    pub release_sec: f32,
-    pub makeup_gain_db: f32,
+    pub config: CompressorConfig,
     pub knee_db: f32,
-    pub mix: f32,
 
     // Runtime state
     attack_coeff: f32,
@@ -67,6 +76,15 @@ pub struct BusCompressor {
     makeup_linear: f32,
     envelope_db: f32,
     sample_rate: f32,
+}
+
+impl std::ops::Deref for BusCompressor {
+    type Target = CompressorConfig;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.config
+    }
 }
 
 impl BusCompressor {
@@ -77,14 +95,8 @@ impl BusCompressor {
             DEFAULT_SAMPLE_RATE
         };
         let mut comp = Self {
-            enabled: false,
-            threshold_db: DEFAULT_COMP_THRESHOLD_DB,
-            ratio: DEFAULT_COMP_RATIO,
-            attack_sec: DEFAULT_COMP_ATTACK_SEC,
-            release_sec: DEFAULT_COMP_RELEASE_SEC,
-            makeup_gain_db: DEFAULT_COMP_MAKEUP_DB,
+            config: CompressorConfig::default(),
             knee_db: DEFAULT_COMP_KNEE_DB,
-            mix: 1.0,
             attack_coeff: 0.0,
             release_coeff: 0.0,
             makeup_linear: 1.0,
@@ -97,15 +109,7 @@ impl BusCompressor {
 
     /// Updates compressor parameters from config.
     pub fn set_config(&mut self, config: CompressorConfig) {
-        self.enabled = config.enabled;
-        self.threshold_db = config
-            .threshold_db
-            .clamp(MIN_THRESHOLD_DB, MAX_THRESHOLD_DB);
-        self.ratio = config.ratio.clamp(MIN_RATIO, MAX_RATIO);
-        self.attack_sec = config.attack_sec.clamp(MIN_ATTACK_SEC, MAX_ATTACK_SEC);
-        self.release_sec = config.release_sec.clamp(MIN_RELEASE_SEC, MAX_RELEASE_SEC);
-        self.makeup_gain_db = config.makeup_gain_db.clamp(MIN_MAKEUP_DB, MAX_MAKEUP_DB);
-        self.mix = config.mix.clamp(0.0, 1.0);
+        self.config = config.clamped();
         self.update_coefficients();
     }
 

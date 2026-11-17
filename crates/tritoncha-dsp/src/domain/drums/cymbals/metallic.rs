@@ -1,35 +1,12 @@
 //! Inharmonic metallic cymbal and percussion voice.
 
-use crate::core::math::{soft_clip, t60_decay_coeff, wrap_phase, xorshift32_norm};
-use crate::domain::drums::{
-    DrumMode, MIN_AUDIBLE_VELOCITY, VELOCITY_MAX_CLAMP, VELOCITY_MIN_CLAMP,
-};
+use crate::core::math::{sin_phase, soft_clip, t60_decay_coeff, wrap_phase, xorshift32_norm};
+use crate::domain::drums::{DrumMode, MIN_AUDIBLE_VELOCITY};
 use crate::domain::effects::StateVariableFilter;
-use crate::engine::DEFAULT_SAMPLE_RATE;
+use crate::domain::{DrumVelocity, DEFAULT_SAMPLE_RATE};
 use std::f32::consts::PI;
 
-/// Inharmonic metallic cymbal and percussion parameters.
-#[derive(Clone, Copy, Debug)]
-pub struct MetallicParams {
-    pub cutoff_hz: f32,
-    pub resonance: f32,
-    pub decay_s: f32,
-    pub drive: f32,
-    pub mode: f32,
-}
-
-impl From<[f32; 7]> for MetallicParams {
-    #[inline(always)]
-    fn from(p: [f32; 7]) -> Self {
-        Self {
-            cutoff_hz: p[0],
-            resonance: p[1],
-            decay_s: p[2],
-            drive: p[3],
-            mode: p[6],
-        }
-    }
-}
+use super::PercussionParams;
 
 /// Metallic Inharmonic Cymbal and Percussion Voice.
 #[derive(Clone)]
@@ -84,33 +61,21 @@ impl<const N: usize> MetallicVoice<N> {
         }
     }
 
-    pub fn set_params(&mut self, params: impl Into<MetallicParams>) {
+    pub fn set_params(&mut self, params: impl Into<PercussionParams>) {
         let p = params.into();
-        if p.cutoff_hz > 0.0 {
-            self.cutoff_hz = p.cutoff_hz.clamp(100.0, 18000.0);
-        }
-        if p.resonance >= 0.0 {
-            self.resonance = p.resonance.clamp(0.05, 0.95);
-        }
-        if p.decay_s > 0.0 {
-            self.decay_coeff = t60_decay_coeff(p.decay_s.clamp(0.02, 5.0), DEFAULT_SAMPLE_RATE)
-                .clamp(0.980, 0.99998);
-        }
-        if p.drive > 0.0 {
-            self.drive = p.drive.clamp(0.1, 5.0);
-        }
-        if p.mode >= 0.0 {
-            self.mode = DrumMode::from(p.mode);
-        }
+        self.cutoff_hz = *p.cutoff;
+        self.resonance = *p.resonance;
+        self.decay_coeff = t60_decay_coeff(*p.decay, DEFAULT_SAMPLE_RATE);
+        self.drive = *p.drive;
+        self.mode = p.mode;
     }
 
-    pub fn trigger(&mut self, vel: f32) {
-        let v = vel.clamp(VELOCITY_MIN_CLAMP, VELOCITY_MAX_CLAMP);
+    pub fn trigger(&mut self, vel: impl Into<DrumVelocity>) {
         self.active = true;
         self.env = 1.0;
         self.click_env = 1.0;
         self.impact_env = 1.0;
-        self.vel = v;
+        self.vel = *vel.into();
     }
 
     #[inline(always)]
@@ -123,7 +88,7 @@ impl<const N: usize> MetallicVoice<N> {
         let click = if self.click_env > 0.001 {
             let click_freq = (self.freqs[0] * 2.5).clamp(3500.0, 8500.0);
             let click_phase = self.phases[0] * (click_freq / self.freqs[0]);
-            let c = (click_phase * 2.0 * PI).sin() * self.click_env * 0.45;
+            let c = sin_phase(click_phase) * self.click_env * 0.45;
             self.click_env *= 0.975; // ~4ms wooden stick tip crack
             c
         } else {
@@ -149,7 +114,7 @@ impl<const N: usize> MetallicVoice<N> {
 
                     // Dynamic modulation index: high energy at impact, settling into warm singing shimmer
                     let beta = 1.35 + 0.75 * impact;
-                    let mod_sig = (p_m * 2.0 * PI).sin();
+                    let mod_sig = sin_phase(p_m);
                     let carrier_sig = (p_c * 2.0 * PI + beta * mod_sig).sin();
                     fm_sum += carrier_sig;
 
@@ -161,7 +126,7 @@ impl<const N: usize> MetallicVoice<N> {
                 if N % 2 == 1 {
                     let last_idx = N - 1;
                     let p_last = self.phases[last_idx];
-                    let mod_sig = (self.phases[0] * 2.0 * PI).sin();
+                    let mod_sig = sin_phase(self.phases[0]);
                     let s = (p_last * 2.0 * PI + 1.2 * mod_sig).sin();
                     fm_sum += s;
                     self.phases[last_idx] =
@@ -191,7 +156,7 @@ impl<const N: usize> MetallicVoice<N> {
                         wrap_phase(self.phases[i] + (self.freqs[i] * 1.15) / sample_rate);
                 }
                 sum /= N as f32;
-                let carrier = (self.phases[0] * 3.7 * 2.0 * PI).sin();
+                let carrier = sin_phase(self.phases[0] * 3.7);
                 sum *= carrier;
                 let raw_noise = xorshift32_norm(&mut self.noise_seed);
                 let sizzle = self
