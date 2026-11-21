@@ -7,7 +7,7 @@ use crate::domain::effects::{
     FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
     NUM_ROUTABLE_BUSSES,
 };
-use crate::domain::sequencer::{MasterSequencer, MAX_STEPS, MAX_TRACKS};
+use crate::domain::sequencer::{MasterSequencer, SequencerEvent, MAX_STEPS, MAX_TRACKS};
 use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES, VOICE_PATCH_PARAM_COUNT};
 use crate::domain::{Bpm, BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
@@ -21,6 +21,7 @@ pub use crate::services::mixer::*;
 
 pub const NUM_VOICES: usize = 32;
 pub const FFI_BLOCK_SIZE: usize = 128;
+pub const ONE_SHOT_SLOTS: usize = 4;
 
 // Master Filter Cutoff Boundaries and Headroom
 pub const MIN_MASTER_CUTOFF_HZ: f32 = 40.0;
@@ -68,6 +69,7 @@ pub struct TritonchaEngine {
     pub voices: [SynthVoice; NUM_VOICES],
     voice_bus_map: [BusTarget; NUM_VOICES],
     patches: [ModularPatch; MAX_PATCHES],
+    next_one_shot: usize,
     drums: DrumMachine,
 
     pub mixer: Mixer,
@@ -109,6 +111,7 @@ impl TritonchaEngine {
             voices: std::array::from_fn(|_| SynthVoice::new()),
             voice_bus_map: [BusTarget::Bass; NUM_VOICES],
             patches: std::array::from_fn(ModularPatch::default_for),
+            next_one_shot: 0,
             drums: DrumMachine::new(),
             mixer: Mixer::new(),
             bus_chains,
@@ -210,12 +213,53 @@ impl TritonchaEngine {
         }
     }
 
+    /// Assigns the active modular synthesizer patch owned directly by a sequencer track (0..15).
+    pub fn set_track_patch(&mut self, track_id: impl Into<TrackId>, patch: ModularPatch) {
+        let tid = track_id.into();
+        if tid.is_valid() {
+            self.patches[tid.as_usize()] = patch;
+        }
+    }
+
     pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
         self.drums.set_drum_patch_by_id(drum_id, params);
     }
 
     pub fn set_drum_mode(&mut self, mode: impl Into<DrumMode>) {
         self.drums.set_mode_all(mode);
+    }
+
+    #[inline(always)]
+    fn trigger_synth_slot(&mut self, pid: PatchId, freq: f32, vel: f32, dur_s: f32) {
+        let pid = pid.clamped();
+        let patch = self.patches[pid.as_usize()];
+
+        match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
+            VoiceAllocation::LegatoGlide { voice_idx } => {
+                self.voices[voice_idx].glide_to(freq, vel, self.sample_rate, patch.glide, dur_s);
+            }
+            VoiceAllocation::Trigger { voice_idx } => {
+                self.voice_bus_map[voice_idx] = patch.bus_id;
+                self.voices[voice_idx].trigger(freq, vel, pid, &patch, self.sample_rate, dur_s);
+            }
+        }
+    }
+
+    /// Triggers a synthesizer voice using the patch owned by `track_idx` (0..15).
+    #[inline(always)]
+    pub fn trigger_track_synth(&mut self, track_idx: usize, freq: f32, vel: f32, dur_s: f32) {
+        if track_idx < MAX_TRACKS {
+            self.trigger_synth_slot(PatchId(track_idx), freq, vel, dur_s);
+        }
+    }
+
+    /// Triggers a live one-shot synthesizer note using a rotating audition slot (16..19).
+    #[inline(always)]
+    pub fn trigger_one_shot_synth(&mut self, patch: ModularPatch, freq: f32, vel: f32, dur_s: f32) {
+        let slot = MAX_TRACKS + (self.next_one_shot % ONE_SHOT_SLOTS);
+        self.next_one_shot = self.next_one_shot.wrapping_add(1);
+        self.patches[slot] = patch;
+        self.trigger_synth_slot(PatchId(slot), freq, vel, dur_s);
     }
 
     pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
@@ -227,31 +271,7 @@ impl TritonchaEngine {
                 self.drums.trigger_drum(drum, vel, freq);
             }
             InstrumentId::Synth(patch_id) => {
-                let pid = patch_id.clamped();
-                let patch = self.patches[pid.as_usize()];
-
-                match VoiceAllocator::allocate(&self.voices, pid, patch.polyphony, patch.glide) {
-                    VoiceAllocation::LegatoGlide { voice_idx } => {
-                        self.voices[voice_idx].glide_to(
-                            freq,
-                            vel,
-                            self.sample_rate,
-                            patch.glide,
-                            dur_s,
-                        );
-                    }
-                    VoiceAllocation::Trigger { voice_idx } => {
-                        self.voice_bus_map[voice_idx] = patch.bus_id;
-                        self.voices[voice_idx].trigger(
-                            freq,
-                            vel,
-                            pid,
-                            &patch,
-                            self.sample_rate,
-                            dur_s,
-                        );
-                    }
-                }
+                self.trigger_synth_slot(patch_id, freq, vel, dur_s);
             }
         }
     }
@@ -506,12 +526,16 @@ impl TritonchaEngine {
             self.master_cutoff_hz = cutoff;
         }
 
-        let mut step_events = [(-1, 0.0, 0.0, 0.0); MAX_TRACKS];
+        let mut step_events = [SequencerEvent::EMPTY; MAX_TRACKS];
 
         for i in 0..len {
             let event_count = self.sequencer.advance_sample(&mut step_events);
-            for &(inst_id, freq, vel, dur_s) in &step_events[..event_count] {
-                self.trigger_note(inst_id, freq, vel, dur_s);
+            for ev in &step_events[..event_count] {
+                if ev.inst_id < 0 {
+                    self.trigger_track_synth(ev.track_idx, ev.freq, ev.vel, ev.dur_s);
+                } else {
+                    self.trigger_note(ev.inst_id, ev.freq, ev.vel, ev.dur_s);
+                }
             }
 
             let mut bus_accum = [0.0_f32; NUM_BUSSES];

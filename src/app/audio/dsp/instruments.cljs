@@ -44,16 +44,27 @@
 
 (defn sync-instrument-dsp!
   "Transmits instrument DSP configuration to Rust WASM engine without touching REPL registry.
+  For synths, pushes the updated patch to every active track currently playing this instrument.
   Examples: (sync-instrument-dsp! :kick spec)."
   [inst-name spec]
-  (let [ik (keyword inst-name)]
+  (let [ik        (keyword inst-name)
+        canonical (get catalog/instrument-aliases ik ik)]
     (if (or (catalog/drum? ik) (catalog/drum? spec) (= (:category spec) :drums))
       (let [dtype (or (:type spec) :kick)
             did   (get protocol/drum-type->id dtype 0)]
         (protocol/register-custom-drum-id! ik did)
         (worklet/set-worklet-drum-patch! ik spec))
-      (let [patch-id (worklet/register-custom-patch-id! ik)]
-        (worklet/set-worklet-voice-patch! patch-id spec)))
+      (doseq [[tk tr] (:active-tracks @audio-state)]
+        (let [pat-atom   (:pattern tr)
+              pat-data   (if (satisfies? IDeref pat-atom) @pat-atom pat-atom)
+              track-inst (keyword (or (:inst pat-data) (:inst-key tr) tk))
+              track-can  (get catalog/instrument-aliases track-inst track-inst)]
+          (when (or (= track-inst ik) (= track-can canonical))
+            (let [eff-spec (if-let [bus (:bus pat-data)]
+                             (assoc spec :bus bus)
+                             spec)]
+              (doseq [slot (worklet/track-slots-for tk)]
+                (worklet/set-track-patch! slot eff-spec)))))))
     ik))
 
 (defn definst!

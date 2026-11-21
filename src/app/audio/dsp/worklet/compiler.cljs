@@ -77,9 +77,9 @@
    :glide     0.0
    :polyphony 8})
 
-(defn compile-voice-patch-msg
-  "Compiles a declarative Clojure synth patch map into a WebAudio postMessage payload."
-  [patch-id patch-spec]
+(defn compile-patch-params
+  "Compiles a declarative Clojure synth patch map into a packed 22-float JS array matching Rust ModularPatch."
+  [patch-spec]
   (let [spec     (merge synth-patch-spec patch-spec)
         osc      (merge (:osc synth-patch-spec) (:osc spec))
         flt      (merge (:filter synth-patch-spec) (:filter spec))
@@ -89,58 +89,36 @@
         bus-key  (or (:bus spec)
                      (busses/instrument-bus spec)
                      (busses/category-default-bus (:category spec))
-                     :bus/lead)
-        osc-id   (osc-type->id (:type osc))
-        sub-lvl  (float (:sub-level osc))
-        pw       (float (:pulse-width osc))
-        flt-id   (filter-type->id (:type flt))
-        cutoff   (float (:cutoff flt))
-        env-amt  (float (:env-amount flt))
-        key-trk  (float (:key-track flt))
-        res      (float (:q flt))
-        att      (float (:attack amp))
-        dec      (float (:decay amp))
-        sus      (float (:sustain amp))
-        rel      (float (:release amp))
-        mod-att  (float (:attack mod-e))
-        mod-dec  (float (:decay mod-e))
-        bus-id   (int (bus-key->id bus-key))
-        poly     (int (if (= (:type spec) :mono) 1 (:polyphony spec 8)))
-        glide    (float (:glide spec))
-        drive    (float (:drive flt))
-        noise    (float (:noise osc))
-        p-amt    (float (:amount pitch-e))
-        p-dec    (float (:decay pitch-e))
-        drift    (float (:drift osc))]
-    #js {:type           "setVoicePatch"
-         :patchId        (int patch-id)
-         :params         #js [(float osc-id) sub-lvl pw (float flt-id)
-                              cutoff env-amt key-trk res
-                              att dec sus rel mod-att mod-dec
-                              (float bus-id) (float poly) glide drive
-                              noise p-amt p-dec drift]
-         :oscType        osc-id
-         :subLevel       sub-lvl
-         :pulseWidth     pw
-         :filterType     flt-id
-         :cutoffBase     cutoff
-         :cutoffEnvAmt   env-amt
-         :cutoffKeyTrack key-trk
-         :resonance      res
-         :attack         att
-         :decay          dec
-         :sustain        sus
-         :release        rel
-         :modAttack      mod-att
-         :modDecay       mod-dec
-         :busId          bus-id
-         :polyphony      poly
-         :glide          glide
-         :filterDrive    drive
-         :noiseLevel     noise
-         :pitchEnvAmt    p-amt
-         :pitchEnvDecay  p-dec
-         :analogDrift    drift}))
+                     :bus/lead)]
+    #js [(float (osc-type->id (:type osc)))
+         (float (:sub-level osc))
+         (float (:pulse-width osc))
+         (float (filter-type->id (:type flt)))
+         (float (:cutoff flt))
+         (float (:env-amount flt))
+         (float (:key-track flt))
+         (float (:q flt))
+         (float (:attack amp))
+         (float (:decay amp))
+         (float (:sustain amp))
+         (float (:release amp))
+         (float (:attack mod-e))
+         (float (:decay mod-e))
+         (float (int (bus-key->id bus-key)))
+         (float (int (if (= (:type spec) :mono) 1 (:polyphony spec 8))))
+         (float (:glide spec))
+         (float (:drive flt))
+         (float (:noise osc))
+         (float (:amount pitch-e))
+         (float (:decay pitch-e))
+         (float (:drift osc))]))
+
+(defn compile-track-patch-msg
+  "Compiles a declarative Clojure synth patch map into a track-centric setTrackPatch payload."
+  [track-idx patch-spec]
+  #js {:type     "setTrackPatch"
+       :trackIdx (int track-idx)
+       :params   (compile-patch-params patch-spec)})
 
 (def drum-type-specs
   "Parameter contracts for the Rust drum synthesis engine."

@@ -1,6 +1,5 @@
 (ns app.audio.dsp.worklet-test
-  (:require [app.audio.dsp.busses :as busses]
-            [app.audio.dsp.instruments.catalog :refer [drum-keywords find-instrument-spec]]
+  (:require [app.audio.dsp.instruments.catalog :refer [drum-keywords find-instrument-spec]]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
@@ -91,57 +90,44 @@
     (is (= 4 (worklet/filter-type->id :ladder24)))))
 
 (deftest test-sound-registration-no-id-collisions
-  (testing "Zero ID collisions between drum voices and synthesizer voice patches"
-    (let [drum-ids #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73}
-          synth-keys (disj (set (keys synths/core-synths)) :click)
-          synth-ids (set (map protocol/inst-keyword->id synth-keys))]
+  (testing "Track-centric synths use sentinel ID (-1) and never collide with drum IDs"
+    (let [drum-ids   #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73}
+          synth-keys (keys synths/core-synths)
+          synth-ids  (set (map protocol/inst-keyword->id synth-keys))]
       ;; Ensure drums and synths have empty intersection
       (is (empty? (set/intersection drum-ids synth-ids)))
-      ;; Moog instruments must have dedicated IDs without colliding with ride (20) or tom (21)
-      (is (= 42 (protocol/canonical-inst-ids :sub-moog)))
-      (is (= 43 (protocol/canonical-inst-ids :bass-moog)))
-      (is (= 42 (protocol/canonical-inst-ids :moog-sub)))
-      (is (= 43 (protocol/canonical-inst-ids :moog-bass)))
+      ;; All synths resolve to track-centric sentinel -1 (no global slot table)
+      (is (= #{protocol/synth-step-inst-id} synth-ids))
+      (is (= -1 protocol/synth-step-inst-id))
+      (is (= -1 (protocol/inst-keyword->id :test-user-synth)))
+      ;; Drum IDs remain intact until Step 4
       (is (= 20 (protocol/canonical-inst-ids :ride)))
       (is (= 21 (protocol/canonical-inst-ids :tom)))
-      ;; Verify all drum keywords in the catalog resolve to valid drum IDs (or click)
       (doseq [dk (disj drum-keywords :click)]
         (when-let [id (protocol/canonical-inst-ids dk)]
-          (is (contains? drum-ids id))))
-      ;; Custom dynamic synth allocator must stay within the safe range 44..63
-      (let [custom-id (protocol/register-custom-patch-id! :test-user-synth)]
-        (is (<= 44 custom-id 63))
-        (is (not (contains? drum-ids custom-id)))
-        (is (not (contains? synth-ids custom-id)))))))
+          (is (contains? drum-ids id)))))))
 
-(deftest test-resolve-track-inst-bus-override
-  (testing "Resolves instrument without bus override"
-    (is (= :lead-8bit (worklet/resolve-track-inst :lead {:inst :lead-8bit}))))
+(deftest test-resolve-track-patch-spec-bus-override
+  (testing "Resolves instrument spec without bus override"
+    (let [spec (worklet/resolve-track-patch-spec :lead {:inst :lead-8bit})]
+      (is (= :bus/lead (:bus spec)))))
 
-  (testing "Resolves instrument with matching default bus without generating custom patch"
-    (is (= :lead-8bit (worklet/resolve-track-inst :lead {:inst :lead-8bit :bus :bus/lead}))))
+  (testing "Applies custom bus override directly to track spec without mutating registry"
+    (let [spec (worklet/resolve-track-patch-spec :bass {:inst :lead-8bit :bus :bus/bass})]
+      (is (= :bus/bass (:bus spec)))
+      (is (nil? (find-instrument-spec :lead-8bit--bass)))))
 
-  (testing "Generates derived patch with custom bus override for synth"
-    (let [res (worklet/resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass})]
-      (is (= :lead-8bit--bass res))
-      (is (= :bus/bass (:bus (find-instrument-spec res))))
-      (is (= :bus/bass (busses/instrument-bus res)))
-      (let [patch-id (protocol/inst-keyword->id res)]
-        (is (<= 44 patch-id 63)))))
+  (testing "Applies custom bus override for pads"
+    (let [spec (worklet/resolve-track-patch-spec :echo {:inst :pad-strings :bus :bus/lead})]
+      (is (= :bus/lead (:bus spec)))))
 
-  (testing "Generates derived patch with custom bus override for pads"
-    (let [res (worklet/resolve-track-inst :echo {:inst :pad-strings :bus :bus/lead})]
-      (is (= :pad-strings--lead res))
-      (is (= :bus/lead (:bus (find-instrument-spec res))))
-      (is (= :bus/lead (busses/instrument-bus res)))))
+  (testing "Returns nil synth patch spec for drums"
+    (is (nil? (worklet/resolve-track-patch-spec :kick {:inst :kick :bus :bus/direct})))))
 
-  (testing "Does not create custom synth patch for drums with bus specified"
-    (is (= :kick (worklet/resolve-track-inst :kick {:inst :kick :bus :bus/direct})))))
-
-(deftest test-compile-voice-patch-msg-packed-params
-  (testing "Compiles synth spec into packed 22-float :params vector in canonical ABI order"
-    (let [msg (compiler/compile-voice-patch-msg
-               4
+(deftest test-compile-track-patch-msg-packed-params
+  (testing "Compiles synth spec into setTrackPatch with 22-float :params vector"
+    (let [msg (compiler/compile-track-patch-msg
+               3
                {:type :mono
                 :bus :bus/bass
                 :glide 0.035
@@ -151,6 +137,8 @@
                 :mod-env {:attack 0.005 :decay 0.22}
                 :pitch-env {:amount 12 :decay 0.020}})
           params (.-params msg)]
+      (is (= "setTrackPatch" (.-type msg)))
+      (is (= 3 (.-trackIdx msg)))
       (is (some? params) "Message must include packed :params array")
       (is (= 22 (alength params)) "Packed :params array must have exactly 22 floats")
       (is (= 4.0 (aget params 0)))    ;; oscType (:supersaw = 4)

@@ -3,9 +3,9 @@ pub mod domain;
 pub mod engine;
 pub mod services;
 
-use crate::domain::effects::{CompressorConfig, FilterMode};
-use crate::domain::synth::{ModularPatch, OscillatorType, VOICE_PATCH_PARAM_COUNT};
-use crate::domain::{BusId, BusTarget};
+use crate::domain::effects::CompressorConfig;
+use crate::domain::synth::{ModularPatch, VOICE_PATCH_PARAM_COUNT};
+use crate::domain::BusId;
 pub use engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
@@ -46,6 +46,18 @@ ffi_engine_ptr_fn! {
     tritoncha_dsp_patch_params_ptr -> *mut f32 : patch_params;
 }
 
+#[inline(always)]
+unsafe fn read_packed_patch(params_ptr: *const f32, len: i32) -> Option<ModularPatch> {
+    if !params_ptr.is_null() && (len as usize) >= VOICE_PATCH_PARAM_COUNT {
+        let slice = std::slice::from_raw_parts(params_ptr, VOICE_PATCH_PARAM_COUNT);
+        let mut arr = [0.0_f32; VOICE_PATCH_PARAM_COUNT];
+        arr.copy_from_slice(slice);
+        Some(ModularPatch::from(arr))
+    } else {
+        None
+    }
+}
+
 /// Updates a modular synthesizer voice patch from a packed 22-float array.
 ///
 /// # Safety
@@ -57,13 +69,44 @@ pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch_packed(
     params_ptr: *const f32,
     len: i32,
 ) {
-    if let Some(engine) = ptr.as_mut() {
-        if !params_ptr.is_null() && (len as usize) >= VOICE_PATCH_PARAM_COUNT {
-            let slice = std::slice::from_raw_parts(params_ptr, VOICE_PATCH_PARAM_COUNT);
-            let mut arr = [0.0_f32; VOICE_PATCH_PARAM_COUNT];
-            arr.copy_from_slice(slice);
-            engine.set_voice_patch(patch_id.max(0) as usize, ModularPatch::from(arr));
+    if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_patch(params_ptr, len)) {
+        engine.set_voice_patch(patch_id.max(0) as usize, patch);
+    }
+}
+
+/// Assigns the active modular synthesizer patch owned directly by a sequencer track (0..15).
+///
+/// # Safety
+/// `ptr` must be a valid pointer to `TritonchaEngine`, and `params_ptr` must point to at least `len` floats.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_track_patch(
+    ptr: *mut TritonchaEngine,
+    track_idx: i32,
+    params_ptr: *const f32,
+    len: i32,
+) {
+    if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_patch(params_ptr, len)) {
+        if track_idx >= 0 {
+            engine.set_track_patch(track_idx as usize, patch);
         }
+    }
+}
+
+/// Triggers a one-shot live synthesizer note from a packed 22-float patch array.
+///
+/// # Safety
+/// `ptr` must be a valid pointer to `TritonchaEngine`, and `params_ptr` must point to at least `len` floats.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_trigger_one_shot_synth(
+    ptr: *mut TritonchaEngine,
+    params_ptr: *const f32,
+    len: i32,
+    freq: f32,
+    vel: f32,
+    dur_s: f32,
+) {
+    if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_patch(params_ptr, len)) {
+        engine.trigger_one_shot_synth(patch, freq, vel, dur_s);
     }
 }
 
@@ -248,63 +291,6 @@ ffi_engine_fn! {
 
     /// Sets master output volume in decibels.
     tritoncha_dsp_set_master_volume(|e, gain_db: f32| e.set_master_volume(gain_db));
-
-    /// Updates parameters for a modular voice patch.
-    #[allow(clippy::too_many_arguments)]
-    tritoncha_dsp_set_voice_patch(
-        |e,
-         patch_id: i32,
-         osc_type: i32,
-         sub_level: f32,
-         pulse_width: f32,
-         filter_type: i32,
-         cutoff_base: f32,
-         cutoff_env_amt: f32,
-         cutoff_key_track: f32,
-         resonance: f32,
-         attack: f32,
-         decay: f32,
-         sustain: f32,
-         release: f32,
-         mod_attack: f32,
-         mod_decay: f32,
-         bus_id: i32,
-         polyphony: i32,
-         glide: f32,
-         filter_drive: f32,
-         noise_level: f32,
-         pitch_env_amt: f32,
-         pitch_env_decay: f32,
-         analog_drift: f32| {
-            e.set_voice_patch(
-                patch_id as usize,
-                modular_patch! {
-                    osc_type: OscillatorType::from(osc_type as u8),
-                    sub_level,
-                    pulse_width,
-                    filter_type: FilterMode::from(filter_type as u8),
-                    cutoff_base,
-                    cutoff_env_amt,
-                    cutoff_key_track,
-                    resonance,
-                    attack,
-                    decay,
-                    sustain,
-                    release,
-                    mod_attack,
-                    mod_decay,
-                    bus_id: BusTarget::from(bus_id as u8),
-                    polyphony: polyphony as u8,
-                    glide,
-                    filter_drive,
-                    noise_level,
-                    pitch_snap: pitch_env_amt,
-                    pitch_snap_decay: pitch_env_decay,
-                    analog_drift,
-                },
-            )
-        }
-    );
 
     /// Updates parameters for a drum voice patch.
     tritoncha_dsp_set_drum_patch(

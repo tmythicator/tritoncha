@@ -21,8 +21,25 @@ pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
 pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
 pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
 
-/// Event triggered by a track at a sequencer step: (inst_id, freq, vel, dur_s)
-pub type SequencerEvent = (i32, f32, f32, f32);
+/// Event triggered by a track at a sequencer step.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SequencerEvent {
+    pub track_idx: usize,
+    pub inst_id: i32,
+    pub freq: f32,
+    pub vel: f32,
+    pub dur_s: f32,
+}
+
+impl SequencerEvent {
+    pub const EMPTY: Self = Self {
+        track_idx: 0,
+        inst_id: -1,
+        freq: 0.0,
+        vel: 0.0,
+        dur_s: 0.0,
+    };
+}
 
 /// Master sequencer coordinating real-time playback of up to 16 tracks.
 pub struct MasterSequencer {
@@ -206,20 +223,34 @@ impl MasterSequencer {
             let dur_s = tr.durations[pat_idx];
 
             if note >= 0 && vel > MIN_AUDIBLE_VELOCITY {
-                let freq = match InstrumentId::from(inst_id) {
-                    InstrumentId::Synth(id) => {
-                        if note > 0 {
-                            midi_to_freq(note as f32)
-                        } else if id == PatchId::CLICK {
-                            DEFAULT_CLICK_FREQ_HZ
-                        } else {
-                            DEFAULT_NOTE_FREQ_HZ
-                        }
+                let freq = if inst_id < 0 {
+                    if note > 0 {
+                        midi_to_freq(note as f32)
+                    } else {
+                        DEFAULT_NOTE_FREQ_HZ
                     }
-                    InstrumentId::Drum(DrumId::Tom) => midi_to_freq(note as f32),
-                    InstrumentId::Drum(_) => DEFAULT_NOTE_FREQ_HZ,
+                } else {
+                    match InstrumentId::from(inst_id) {
+                        InstrumentId::Synth(id) => {
+                            if note > 0 {
+                                midi_to_freq(note as f32)
+                            } else if id == PatchId::CLICK {
+                                DEFAULT_CLICK_FREQ_HZ
+                            } else {
+                                DEFAULT_NOTE_FREQ_HZ
+                            }
+                        }
+                        InstrumentId::Drum(DrumId::Tom) => midi_to_freq(note as f32),
+                        InstrumentId::Drum(_) => DEFAULT_NOTE_FREQ_HZ,
+                    }
                 };
-                out_events[count] = (inst_id, freq, vel, dur_s);
+                out_events[count] = SequencerEvent {
+                    track_idx: tr_idx,
+                    inst_id,
+                    freq,
+                    vel,
+                    dur_s,
+                };
                 count += 1;
                 self.triggered_mask.set_track(tr_idx);
             }
@@ -257,10 +288,11 @@ mod tests {
         seq.set_track(0, &[1], &[60], &[0.8], &[0.1], 1);
         seq.set_playing(true);
 
-        let mut events = [(-1, 0.0, 0.0, 0.0); MAX_TRACKS];
+        let mut events = [SequencerEvent::EMPTY; MAX_TRACKS];
         let count = seq.collect_step_events(&mut events);
         assert_eq!(count, 1);
-        assert_eq!(events[0].0, 1);
+        assert_eq!(events[0].track_idx, 0);
+        assert_eq!(events[0].inst_id, 1);
         assert!(seq.triggered_mask.is_triggered(0));
     }
 }

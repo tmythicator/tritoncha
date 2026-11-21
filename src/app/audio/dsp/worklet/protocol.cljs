@@ -27,13 +27,16 @@
    "ch"   :china
    "cb"   :cowbell})
 
+(def synth-step-inst-id
+  "Sentinel instrument ID instructing the Rust sequencer to trigger the track's own bound synth patch."
+  -1)
+
 (def canonical-inst-ids
-  {;; Analog Drum Voices (fixed DSP algorithms in Rust)
+  {;; Analog Drum Voices (fixed DSP algorithms in Rust, replaced in Step 4)
    :kick          0  :fat-kick 0
    :snare         1  :sn-roll 1 :lofi-snare 1
    :hat-closed    2  :hat 2 :hh-c 2 :hh-clk 2
    :hat-open      3  :hh-o 3
-   :click         11
    :clap          18
    :ride          20
    :tom           21
@@ -51,45 +54,10 @@
    :crash-18      70
    :splash        71
    :china         72
-   :cowbell       73
-
-   ;; Melodic and Harmonic Synthesizer Patches (Rust modular voice slots 4..44)
-   :bass-analog   4  :bass 4
-   :bass-303      5  :acid 5
-   :sub-pure      6  :sub 6
-   :pad-cinema    7  :pad 7
-   :lead-pluck    8  :lead 8 :pluck 8 :arp 8
-   :lead-fm       9  :fm 9
-   :bass-reese    10 :reese 10
-   :lead-supersaw 12 :supersaw 12
-   :lead-blade    13 :blade 13
-   :lead-hoover   14 :hoover 14
-   :lead-string   15 :karplus 15
-   :lead-organ    16 :organ 16
-   :lead-8bit     17 :8bit 17
-   :pad-glass     19 :glass 19
-   :pad-dreamy    27
-   :tokyo-drift   28
-   :pad-strings   29 :strings 29
-   :pad-vocal     30 :choir 30
-   :pad-drone     31 :drone 31
-   :fx-subdrop    32 :subdrop 32
-   :bass-neuro    33 :neuro 33
-   :sub-808       34 :808 34
-   :bass-slap     35 :slap 35
-   :bass-organ    36
-   :bass-liquid   37 :liquid 37
-   :lead-bell     38 :bell 38
-   :glass-mallet  39
-   :fx-siren      40 :siren 40
-   :fx-laser      41 :laser 41
-   :sub-moog      42 :moog-sub 42
-   :bass-moog     43 :moog-bass 43
-   :lead-nbell    44 :nbell 44
-   :fx-zap        45 :zap 45})
+   :cowbell       73})
 
 (def drum-id-set
-  #{0 1 2 3 11 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73})
+  #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73})
 
 (def drum-type->id
   {:kick       0
@@ -114,30 +82,10 @@
   [drum-key drum-id]
   (swap! custom-drum-ids assoc (keyword drum-key) (int drum-id)))
 
-(defonce custom-synth-patch-ids
-  (atom {}))
-
-(defn register-custom-patch-id!
-  "Resolves or allocates a patch ID for an instrument.
-  Built-in synths preserve their canonical patch ID.
-  Truly custom user synths are allocated from the safe range 46..63."
-  [synth-key]
-  (let [sk (keyword synth-key)]
-    (if-let [cid (get canonical-inst-ids sk)]
-      (if (not (contains? drum-id-set cid))
-        (do
-          (swap! custom-synth-patch-ids assoc sk cid)
-          cid)
-        cid)
-      (if-let [id (get @custom-synth-patch-ids sk)]
-        id
-        (let [used (set (vals @custom-synth-patch-ids))
-              free (first (filter #(not (contains? used %)) (range 46 64)))]
-          (swap! custom-synth-patch-ids assoc sk (or free 46))
-          (or free 46))))))
-
 (defn inst-keyword->id
-  "Resolves an instrument keyword to its numeric ID for the Rust DSP engine."
+  "Resolves an instrument keyword to its numeric ID for the Rust DSP engine.
+  Drums resolve to their Rust drum voice ID; all synths resolve to `synth-step-inst-id` (-1)
+  so the sequencer dispatches directly to the track's own bound patch."
   ([inst-key]
    (inst-keyword->id inst-key nil))
   ([inst-key spec]
@@ -150,8 +98,7 @@
              (let [drum-id (get drum-type->id (:type spec) 0)]
                (register-custom-drum-id! k drum-id)
                drum-id)))
-         (get @custom-synth-patch-ids k)
-         (register-custom-patch-id! k)))))
+         synth-step-inst-id))))
 
 (defn bus-key->id
   "Maps symbolic audio bus keyword to numeric index for the Rust multi-bus DSP mixer."

@@ -8,7 +8,7 @@
             [app.audio.dsp.worklet.transport :as transport]
             [app.audio.theory.harmony :as harmony]
             [app.config :as cfg]
-            [app.state :refer [audio-state repl-registry]]
+            [app.state :refer [audio-state]]
             [app.utils.audio :as audio-utils]))
 
 ;; Low-level WebAudio Transport and Lifecycle
@@ -29,8 +29,6 @@
 
 ;; DSP Protocol, Enums, and Numeric ID Encoders
 (def canonical-inst-ids protocol/canonical-inst-ids)
-(def custom-synth-patch-ids protocol/custom-synth-patch-ids)
-(def register-custom-patch-id! protocol/register-custom-patch-id!)
 (def inst-keyword->id protocol/inst-keyword->id)
 (def bus-key->id protocol/bus-key->id)
 (def osc-type->id protocol/osc-type->id)
@@ -119,48 +117,41 @@
         (deactivate-track! sub-slot)
         (swap! slots/track-slot-assignments dissoc sub-tk)))))
 
-(defn set-worklet-voice-patch!
-  "Compiles and transmits a declarative synth patch into Rust WASM modular DSP."
-  [patch-id patch-spec]
-  (transport/send-msg! (compiler/compile-voice-patch-msg patch-id patch-spec)))
+(defn set-track-patch!
+  "Compiles and transmits a declarative synth patch directly to a hardware sequencer track (0..15)."
+  [track-idx patch-spec]
+  (transport/send-msg! (compiler/compile-track-patch-msg track-idx patch-spec)))
 
-(defn resolve-track-inst
-  "Resolves the effective instrument key for a track, dynamically creating and compiling
-  a derived DSP voice patch when the track specifies a custom audio bus override for a synth."
+(defn resolve-track-patch-spec
+  "Resolves the effective synth patch specification for a track, applying any track-level :bus
+  override directly without mutating the global instrument registry. Returns nil for drum tracks."
   [tk pat-data]
-  (let [inst-k      (or (:inst pat-data) tk)
-        custom-bus  (when-let [b (:bus pat-data)] (busses/normalize-bus-key b))
-        default-bus (busses/instrument-bus inst-k)]
-    (if (and custom-bus
-             (busses/valid-bus? custom-bus)
-             (not (catalog/drum? inst-k))
-             (not= custom-bus default-bus))
-      (let [derived-k (keyword (str (name inst-k) "--" (name custom-bus)))]
-        (when-let [base (catalog/find-instrument-spec inst-k)]
-          (let [derived-spec (assoc base :bus custom-bus)
-                patch-id     (protocol/register-custom-patch-id! derived-k)]
-            (swap! repl-registry assoc-in [:instruments derived-k] derived-spec)
-            (set-worklet-voice-patch! patch-id derived-spec)))
-        derived-k)
-      inst-k)))
+  (let [inst-k (or (:inst pat-data) tk)]
+    (when-not (catalog/drum? inst-k)
+      (let [base       (or (catalog/find-instrument-spec inst-k) {})
+            custom-bus (when-let [b (:bus pat-data)] (busses/normalize-bus-key b))]
+        (if (and custom-bus (busses/valid-bus? custom-bus))
+          (assoc base :bus custom-bus)
+          base)))))
 
 (defn sync-track-to-worklet!
-  "Sends normalized pattern data to the Rust WASM sequencer, supporting velocity and polyphonic chords.
-  Resolves scale degrees against the active musical key if not already resolved."
+  "Sends normalized pattern data and track-owned synth patch to the Rust WASM sequencer,
+  supporting velocity and polyphonic chords. Resolves scale degrees against the active musical key."
   [tk pat-data]
-  (let [inst-k   (resolve-track-inst tk pat-data)
-        raw-hits (or (:notes pat-data) [true])
-        key-ctx  (get @audio-state :key cfg/default-key)
-        track-o  (:oct pat-data)
-        hits     (harmony/resolve-track-notes raw-hits
-                                              [(:root key-ctx) (:mode key-ctx) (or track-o (:octave key-ctx))]
-                                              track-o)
-        notes    (if (sequential? hits) hits [hits])
-        step-m   (audio-utils/step->mult (:step pat-data))
-        bpm      (:bpm @audio-state 168)
-        dur-raw  (or (:dur pat-data) (:step pat-data) "16n")
-        dur-s    (audio-utils/dur->seconds dur-raw bpm)
-        base-vel (or (:vel pat-data) 0.9)]
+  (let [inst-k     (or (:inst pat-data) tk)
+        patch-spec (resolve-track-patch-spec tk pat-data)
+        raw-hits   (or (:notes pat-data) [true])
+        key-ctx    (get @audio-state :key cfg/default-key)
+        track-o    (:oct pat-data)
+        hits       (harmony/resolve-track-notes raw-hits
+                                                [(:root key-ctx) (:mode key-ctx) (or track-o (:octave key-ctx))]
+                                                track-o)
+        notes      (if (sequential? hits) hits [hits])
+        step-m     (audio-utils/step->mult (:step pat-data))
+        bpm        (:bpm @audio-state 168)
+        dur-raw    (or (:dur pat-data) (:step pat-data) "16n")
+        dur-s      (audio-utils/dur->seconds dur-raw bpm)
+        base-vel   (or (:vel pat-data) 0.9)]
     (if (chord-progression? notes)
       (let [max-voices   (min 4 (apply max 1 (map #(if (sequential? %) (count %) 1) notes)))
             scale-factor (if (> max-voices 1) (/ 1.0 (js/Math.sqrt max-voices)) 1.0)
@@ -171,9 +162,13 @@
           (let [sub-tk      (keyword (str (name tk) "-v" (inc v-idx)))
                 voice-notes (mapv #(if (sequential? %) (nth % v-idx nil) (when (zero? v-idx) %)) notes)
                 slot        (slots/get-or-assign-track-slot! sub-tk)]
+            (when patch-spec
+              (set-track-patch! slot patch-spec))
             (set-track! slot inst-k voice-notes step-m dur-s voice-vel)))
         (clear-voice-slots! tk (range max-voices 4)))
       (let [slot (slots/get-or-assign-track-slot! tk)]
+        (when patch-spec
+          (set-track-patch! slot patch-spec))
         (set-track! slot inst-k (vec notes) step-m dur-s base-vel)
         (clear-voice-slots! tk (range 1 4))))))
 
@@ -215,20 +210,28 @@
     (transport/send-msg! msg)))
 
 (defn trigger-worklet-note!
-  "Plays a live note on the Rust WASM modular synth or drum engine."
+  "Plays a live one-shot note on the Rust WASM modular synth or drum engine."
   ([pitch] (trigger-worklet-note! :bass-analog pitch 0.9 0.0))
   ([inst-key pitch] (trigger-worklet-note! inst-key pitch 0.9 0.0))
   ([inst-key pitch vel] (trigger-worklet-note! inst-key pitch vel 0.0))
   ([inst-key pitch vel dur-s]
-   (let [inst-id (protocol/inst-keyword->id inst-key)
-         freq    (audio-utils/note->freq pitch)
-         v       (or vel 0.9)
-         d       (float (or dur-s 0.0))]
-     (transport/send-msg! #js {:type "noteOn"
-                               :instId (int inst-id)
-                               :freq freq
-                               :velocity v
-                               :dur d}))))
+   (let [freq (audio-utils/note->freq pitch)
+         v    (or vel 0.9)
+         d    (float (or dur-s 0.0))]
+     (if (catalog/drum? inst-key)
+       (let [inst-id (protocol/inst-keyword->id inst-key)]
+         (transport/send-msg! #js {:type "noteOn"
+                                   :instId (int inst-id)
+                                   :freq freq
+                                   :velocity v
+                                   :dur d}))
+       (let [spec   (or (catalog/find-instrument-spec inst-key) {})
+             params (compiler/compile-patch-params spec)]
+         (transport/send-msg! #js {:type "noteOn"
+                                   :params params
+                                   :freq freq
+                                   :velocity v
+                                   :dur d}))))))
 
 ;; DSP Effects and Automations
 (defn set-worklet-filter!
