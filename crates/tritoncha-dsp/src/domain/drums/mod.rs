@@ -4,6 +4,7 @@ pub mod clap;
 pub mod cymbals;
 pub mod kick;
 pub mod membrane;
+pub mod perc;
 pub mod snare;
 
 pub use clap::ClapVoice;
