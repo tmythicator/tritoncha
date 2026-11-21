@@ -2,7 +2,6 @@
   "Instrument lifecycle, catalog registry, sound design, and live performance triggers."
   (:require [app.audio.dsp.instruments.catalog :as catalog]
             [app.audio.dsp.worklet :as worklet]
-            [app.audio.dsp.worklet.protocol :as protocol]
             [app.custom.drums :refer [user-drums]]
             [app.custom.synth :refer [user-synths]]
             [app.lib.drums :refer [core-drums]]
@@ -43,28 +42,28 @@
   inst-key)
 
 (defn sync-instrument-dsp!
-  "Transmits instrument DSP configuration to Rust WASM engine without touching REPL registry.
-  For synths, pushes the updated patch to every active track currently playing this instrument.
+  "Transmits updated instrument DSP configuration to every active track playing this instrument.
   Examples: (sync-instrument-dsp! :kick spec)."
   [inst-name spec]
   (let [ik        (keyword inst-name)
-        canonical (get catalog/instrument-aliases ik ik)]
-    (if (or (catalog/drum? ik) (catalog/drum? spec) (= (:category spec) :drums))
-      (let [dtype (or (:type spec) :kick)
-            did   (get protocol/drum-type->id dtype 0)]
-        (protocol/register-custom-drum-id! ik did)
-        (worklet/set-worklet-drum-patch! ik spec))
-      (doseq [[tk tr] (:active-tracks @audio-state)]
-        (let [pat-atom   (:pattern tr)
-              pat-data   (if (satisfies? IDeref pat-atom) @pat-atom pat-atom)
-              track-inst (keyword (or (:inst pat-data) (:inst-key tr) tk))
-              track-can  (get catalog/instrument-aliases track-inst track-inst)]
-          (when (or (= track-inst ik) (= track-can canonical))
-            (let [eff-spec (if-let [bus (:bus pat-data)]
-                             (assoc spec :bus bus)
-                             spec)]
-              (doseq [slot (worklet/track-slots-for tk)]
-                (worklet/set-track-patch! slot eff-spec)))))))
+        canonical (get catalog/instrument-aliases ik ik)
+        is-drum?  (or (catalog/drum? ik) (catalog/drum? spec) (= (:category spec) :drums))]
+    (doseq [[tk tr] (:active-tracks @audio-state)]
+      (let [pat-atom   (:pattern tr)
+            pat-data   (if (satisfies? IDeref pat-atom) @pat-atom pat-atom)
+            track-inst (keyword (or (:inst pat-data) (:inst-key tr) tk))
+            track-can  (get catalog/instrument-aliases track-inst track-inst)]
+        (cond
+          is-drum?
+          (when (and pat-data (or (catalog/drum? track-inst) (catalog/drum? tk)))
+            (worklet/sync-track-to-worklet! tk pat-data))
+
+          (or (= track-inst ik) (= track-can canonical))
+          (let [eff-spec (if-let [bus (:bus pat-data)]
+                           (assoc spec :bus bus)
+                           spec)]
+            (doseq [slot (worklet/track-slots-for tk)]
+              (worklet/set-track-patch! slot eff-spec))))))
     ik))
 
 (defn definst!
@@ -154,7 +153,11 @@
    (trigger-note! inst-key note-val dur vel)))
 
 (defn trigger-drum!
-  "Triggers a drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.)."
+  "Triggers a drum voice (:kick, :snare, :sn-rs, :hh-c, :hh-o, etc.) at its native patch pitch."
   ([drum-key] (trigger-drum! drum-key 0.9))
-  ([drum-key vel] (trigger-note! drum-key "C3" "16n" vel))
+  ([drum-key vel]
+   (let [kw (keyword drum-key)
+         v  (or vel 0.9)]
+     (worklet/trigger-worklet-note! kw nil v 0.0)
+     (pulse! kw (* 1.8 v))))
   ([drum-key _pitch _dur _time vel] (trigger-drum! drum-key vel)))

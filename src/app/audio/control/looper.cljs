@@ -5,7 +5,6 @@
             [app.audio.control.transport :as transport]
             [app.audio.control.triggers]
             [app.audio.dsp.engine :refer [init-audio!]]
-            [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.worklet :as worklet]
             [app.state :refer [audio-state]]
             [app.utils.math :refer [clamp]]
@@ -32,20 +31,6 @@
     (when (and (:active? @audio-state) (seq active))
       (worklet/set-playing! true))))
 
-(defn- patch-drum-on-loop!
-  "Updates drum voice synthesis patch or character mode when specified in pattern options."
-  [tk inst-k pat-data]
-  (let [target-drum (cond (inst/drum? inst-k) inst-k
-                          (inst/drum? tk)     tk
-                          :else nil)]
-    (when target-drum
-      (when-let [base (inst/resolve-instrument-spec target-drum)]
-        (let [active-mod (or (:mod pat-data) (:drum-mode @audio-state) (:mod base))
-              spec       (if active-mod (assoc base :mod active-mod) base)]
-          (worklet/set-worklet-drum-patch! target-drum spec))))
-    (when (and (= target-drum :drums) (:mod pat-data))
-      (worklet/set-drum-mode! (:mod pat-data)))))
-
 (defn loop!
   "Schedules or hot-swaps an audio loop track in the live-coding session.
   Examples: (loop! :bass {:notes (d [1 2 3]) :step \"16n\"})."
@@ -55,7 +40,6 @@
         pat-data (sched/normalize-pattern-data tk pattern-map)]
     (if (pattern/valid-pattern? pat-data)
       (let [inst-k (:inst pat-data)]
-        (patch-drum-on-loop! tk inst-k pat-data)
         (if-let [tr (get (:active-tracks @audio-state) tk)]
           (let [old-pat @(:pattern tr)]
             (swap! (:pattern tr) merge (assoc pat-data :muted? (:muted? old-pat false) :solo? (:solo? old-pat false))))

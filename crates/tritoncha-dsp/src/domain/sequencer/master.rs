@@ -6,8 +6,7 @@ use super::track::{
 };
 use super::trigger_mask::TriggerMask;
 use crate::core::math::midi_to_freq;
-use crate::domain::drums::DrumId;
-use crate::domain::{Bpm, InstrumentId, PatchId};
+use crate::domain::Bpm;
 
 pub use crate::domain::DEFAULT_SAMPLE_RATE;
 pub const DEFAULT_BPM: f32 = 168.0;
@@ -26,6 +25,7 @@ pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
 pub struct SequencerEvent {
     pub track_idx: usize,
     pub inst_id: i32,
+    pub note: i16,
     pub freq: f32,
     pub vel: f32,
     pub dur_s: f32,
@@ -35,6 +35,7 @@ impl SequencerEvent {
     pub const EMPTY: Self = Self {
         track_idx: 0,
         inst_id: -1,
+        note: -1,
         freq: 0.0,
         vel: 0.0,
         dur_s: 0.0,
@@ -223,30 +224,15 @@ impl MasterSequencer {
             let dur_s = tr.durations[pat_idx];
 
             if note >= 0 && vel > MIN_AUDIBLE_VELOCITY {
-                let freq = if inst_id < 0 {
-                    if note > 0 {
-                        midi_to_freq(note as f32)
-                    } else {
-                        DEFAULT_NOTE_FREQ_HZ
-                    }
+                let freq = if note > 0 {
+                    midi_to_freq(note as f32)
                 } else {
-                    match InstrumentId::from(inst_id) {
-                        InstrumentId::Synth(id) => {
-                            if note > 0 {
-                                midi_to_freq(note as f32)
-                            } else if id == PatchId::CLICK {
-                                DEFAULT_CLICK_FREQ_HZ
-                            } else {
-                                DEFAULT_NOTE_FREQ_HZ
-                            }
-                        }
-                        InstrumentId::Drum(DrumId::Tom) => midi_to_freq(note as f32),
-                        InstrumentId::Drum(_) => DEFAULT_NOTE_FREQ_HZ,
-                    }
+                    DEFAULT_NOTE_FREQ_HZ
                 };
                 out_events[count] = SequencerEvent {
                     track_idx: tr_idx,
                     inst_id,
+                    note,
                     freq,
                     vel,
                     dur_s,

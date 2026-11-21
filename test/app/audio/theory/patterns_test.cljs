@@ -18,8 +18,8 @@
   (testing "Mini-notation string parsing into keyword vectors"
     (is (= [:kick nil nil nil :snare nil nil nil]
            (pat/pattern "k . . .  s . . .")))
-    (is (= [:hat-closed :hat-open :hh-clk :sn-rs]
-           (pat/pattern "h o hc rs")))
+    (is (= [:hat-closed :hat-open :clap :snare_]
+           (pat/pattern "h o cp g")))
     (is (= [true nil true nil]
            (pat/pattern "x . 1 0"))))
 

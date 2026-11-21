@@ -1,9 +1,13 @@
+use tritoncha_dsp::domain::drums::{
+    NoiseFilterMode, PercBodyType, PercPatch, MAX_KIT_SLOTS, PERC_PATCH_PARAM_COUNT,
+};
 use tritoncha_dsp::domain::effects::FilterMode;
 use tritoncha_dsp::domain::synth::{ModularPatch, OscillatorType, VOICE_PATCH_PARAM_COUNT};
 use tritoncha_dsp::domain::{BusId, BusTarget};
 use tritoncha_dsp::{
     tritoncha_dsp_create, tritoncha_dsp_destroy, tritoncha_dsp_out_l_ptr, tritoncha_dsp_out_r_ptr,
-    tritoncha_dsp_patch_params_ptr, tritoncha_dsp_process, tritoncha_dsp_set_track_patch,
+    tritoncha_dsp_patch_params_ptr, tritoncha_dsp_process, tritoncha_dsp_set_track_kit_slot,
+    tritoncha_dsp_set_track_patch, tritoncha_dsp_trigger_one_shot_perc,
     tritoncha_dsp_trigger_one_shot_synth, TritonchaEngine, DEFAULT_SAMPLE_RATE,
 };
 
@@ -136,6 +140,114 @@ fn test_c_abi_set_track_patch_and_one_shot_synth() {
         assert!(
             peak > 0.01,
             "One-shot synth trigger via FFI must produce audible output, got peak {peak}"
+        );
+
+        tritoncha_dsp_destroy(engine);
+    }
+}
+
+#[test]
+fn test_per_track_kits_independent_kicks_and_pitched_perc() {
+    assert_eq!(MAX_KIT_SLOTS, 16);
+    let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
+    engine.clear_bus_chain(BusId::MASTER);
+    engine.set_bpm(180.0);
+    engine.set_playing(true);
+
+    // Track 0 has a deep sub kick on kit slot 0; Track 1 has a pitched shell tom on kit slot 0
+    let sub_kick = PercPatch {
+        body_type: PercBodyType::Membrane,
+        pitch_hz: 45.0,
+        pitch_drop: 140.0,
+        decay_s: 0.4,
+        ..PercPatch::default()
+    };
+    let modal_tom = PercPatch {
+        body_type: PercBodyType::Shell,
+        pitch_hz: 160.0,
+        decay_s: 0.3,
+        ..PercPatch::default()
+    };
+
+    engine.set_track_kit_slot(0, 0, sub_kick);
+    engine.set_track_kit_slot(1, 0, modal_tom);
+
+    // Track 0 plays kit slot 0 (note 0 = use patch pitch_hz)
+    engine.set_track(0, &[0, -1], &[0, -1], &[1.0, 0.0], &[0.1, 0.1], 1);
+    // Track 1 plays kit slot 0 with melodic MIDI note 69 (A4 = 440 Hz)
+    engine.set_track(1, &[0, -1], &[69, -1], &[0.9, 0.0], &[0.1, 0.1], 1);
+
+    let mut out_l = [0.0; 1280];
+    let mut out_r = [0.0; 1280];
+    engine.process_block(&mut out_l, &mut out_r);
+
+    let peak = out_l.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));
+    assert!(
+        peak > 0.05,
+        "Per-track kit slots on tracks 0 and 1 must produce audible output, got peak {peak}"
+    );
+    assert_eq!(
+        engine.perc_pool.active_count(),
+        2,
+        "Both Track 0 kick and Track 1 modal tom must be active simultaneously in PercVoicePool"
+    );
+}
+
+#[test]
+fn test_c_abi_set_track_kit_slot_and_one_shot_perc() {
+    unsafe {
+        let engine = tritoncha_dsp_create(DEFAULT_SAMPLE_RATE);
+        assert!(!engine.is_null());
+
+        let out_l = tritoncha_dsp_out_l_ptr(engine);
+        let out_r = tritoncha_dsp_out_r_ptr(engine);
+        let params_ptr = tritoncha_dsp_patch_params_ptr(engine);
+
+        let clap_params: [f32; PERC_PATCH_PARAM_COUNT] = [
+            PercBodyType::Burst as u8 as f32,
+            200.0,
+            0.0,
+            0.02,
+            0.18,
+            0.1,
+            2400.0,
+            4.0,
+            0.011,
+            0.0,
+            2.0,
+            1.0,
+            0.22,
+            1200.0,
+            0.7,
+            NoiseFilterMode::Bandpass as u8 as f32,
+            1.0,
+            1.4,
+            0.0,
+            0.0,
+            0.0,
+            0.4,
+            0.1,
+            0.0,
+        ];
+
+        let slice = std::slice::from_raw_parts_mut(params_ptr, PERC_PATCH_PARAM_COUNT);
+        slice.copy_from_slice(&clap_params);
+
+        tritoncha_dsp_set_track_kit_slot(engine, 0, 2, params_ptr, PERC_PATCH_PARAM_COUNT as i32);
+        tritoncha_dsp_trigger_one_shot_perc(
+            engine,
+            params_ptr,
+            PERC_PATCH_PARAM_COUNT as i32,
+            0.0,
+            0.95,
+        );
+
+        tritoncha_dsp_process(engine, out_l, out_r, 128);
+        let left = std::slice::from_raw_parts(out_l, 128);
+        let peak = left.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));
+        assert!(
+            peak > 0.02,
+            "One-shot percussion trigger via FFI must produce audible output, got peak {peak}"
         );
 
         tritoncha_dsp_destroy(engine);

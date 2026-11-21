@@ -1,11 +1,8 @@
 (ns app.audio.dsp.worklet-test
-  (:require [app.audio.dsp.instruments.catalog :refer [drum-keywords find-instrument-spec]]
+  (:require [app.audio.dsp.instruments.catalog :refer [find-instrument-spec]]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.dsp.worklet.compiler :as compiler]
-            [app.audio.dsp.worklet.protocol :as protocol]
-            [app.lib.synth :as synths]
             [app.utils.audio :as audio]
-            [clojure.set :as set]
             [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest test-worklet-parse-freq
@@ -16,15 +13,15 @@
     (is (= (audio/parse-freq 880.0) 880.0))))
 
 (deftest test-parse-step-hit-articulation
-  (testing "Normal, accent (!), and ghost (_) velocities on drum hits"
+  (testing "Normal, accent (!), and ghost (_) velocities and canonical drum keys on drum hits"
     (let [normal (compiler/parse-step-hit :snare :snare)
           accent (compiler/parse-step-hit :snare! :snare)
           ghost  (compiler/parse-step-hit :snare_ :snare)]
-      (is (= 1 (:inst-id normal)))
+      (is (= :snare (:inst-key normal)))
       (is (< (js/Math.abs (- (:vel normal) 0.9)) 0.01))
-      (is (= 1 (:inst-id accent)))
+      (is (= :snare (:inst-key accent)))
       (is (< (js/Math.abs (- (:vel accent) 1.15)) 0.01))
-      (is (= 1 (:inst-id ghost)))
+      (is (= :snare (:inst-key ghost)))
       (is (< (js/Math.abs (- (:vel ghost) 0.35)) 0.01)))
 
     (let [rb-accent (compiler/parse-step-hit :rb! :drums)
@@ -37,18 +34,18 @@
           sp-ghost  (compiler/parse-step-hit :sp_ :drums)
           ch-accent (compiler/parse-step-hit :ch! :drums)
           cb-hit    (compiler/parse-step-hit :cb :drums)]
-      (is (= 64 (:inst-id rb-accent)))
+      (is (= :ride-bell (:inst-key rb-accent)))
       (is (< (js/Math.abs (- (:vel rb-accent) 1.15)) 0.01))
-      (is (= 65 (:inst-id th-accent)))
-      (is (= 66 (:inst-id tm-ghost)))
+      (is (= :tom-high (:inst-key th-accent)))
+      (is (= :tom-mid (:inst-key tm-ghost)))
       (is (< (js/Math.abs (- (:vel tm-ghost) 0.35)) 0.01))
-      (is (= 67 (:inst-id tl-hit)))
-      (is (= 68 (:inst-id cr16-acc)))
-      (is (= 69 (:inst-id cr17-hit)))
-      (is (= 70 (:inst-id cr18-hit)))
-      (is (= 71 (:inst-id sp-ghost)))
-      (is (= 72 (:inst-id ch-accent)))
-      (is (= 73 (:inst-id cb-hit))))))
+      (is (= :tom-low (:inst-key tl-hit)))
+      (is (= :crash-16 (:inst-key cr16-acc)))
+      (is (= :crash-17 (:inst-key cr17-hit)))
+      (is (= :crash-18 (:inst-key cr18-hit)))
+      (is (= :splash (:inst-key sp-ghost)))
+      (is (= :china (:inst-key ch-accent)))
+      (is (= :cowbell (:inst-key cb-hit))))))
 
 (deftest test-parse-step-hit-custom-velocity
   (testing "Custom track velocity propagates to notes, chords, and accents"
@@ -89,23 +86,28 @@
     (is (= 4 (worklet/filter-type->id :ladder)))
     (is (= 4 (worklet/filter-type->id :ladder24)))))
 
-(deftest test-sound-registration-no-id-collisions
-  (testing "Track-centric synths use sentinel ID (-1) and never collide with drum IDs"
-    (let [drum-ids   #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73}
-          synth-keys (keys synths/core-synths)
-          synth-ids  (set (map protocol/inst-keyword->id synth-keys))]
-      ;; Ensure drums and synths have empty intersection
-      (is (empty? (set/intersection drum-ids synth-ids)))
-      ;; All synths resolve to track-centric sentinel -1 (no global slot table)
-      (is (= #{protocol/synth-step-inst-id} synth-ids))
-      (is (= -1 protocol/synth-step-inst-id))
-      (is (= -1 (protocol/inst-keyword->id :test-user-synth)))
-      ;; Drum IDs remain intact until Step 4
-      (is (= 20 (protocol/canonical-inst-ids :ride)))
-      (is (= 21 (protocol/canonical-inst-ids :tom)))
-      (doseq [dk (disj drum-keywords :click)]
-        (when-let [id (protocol/canonical-inst-ids dk)]
-          (is (contains? drum-ids id)))))))
+(deftest test-per-track-kit-compilation
+  (testing "Track-local kit compiler assigns 0..N kit indices to drums and -1 to synths"
+    (let [drum-res  (compiler/compile-track-steps :drums ["k!" nil "s_" "rb!" "k"] (constantly 0.9))
+          synth-res (compiler/compile-track-steps :bass-analog [36 nil 43 48] (constantly 0.9))]
+      (is (= [:kick :snare :ride-bell] (:kit drum-res)))
+      (is (= [0 0 1 2 0] (:inst-ids drum-res)))
+      (is (empty? (:kit synth-res)))
+      (is (= [-1 -1 -1 -1] (:inst-ids synth-res))))))
+
+(deftest test-compile-perc-params-contract
+  (testing "Compiles drum spec into 24-float JS array with genuine 0.0 preservation"
+    (let [arr (compiler/compile-perc-params
+               {:body :shell :pitch 180.0 :decay 0.35 :click 0.0 :noise-mix 0.0 :fold 0.0
+                :burst-count 4 :choke-group 1})]
+      (is (= 24 (alength arr)))
+      (is (= 1.0 (aget arr 0)))   ;; :shell = 1
+      (is (= 180.0 (aget arr 1))) ;; pitch
+      (is (= 0.0 (aget arr 5)))   ;; genuine 0.0 click
+      (is (= 4.0 (aget arr 7)))   ;; burst-count
+      (is (= 0.0 (aget arr 11)))  ;; genuine 0.0 noise-mix
+      (is (= 0.0 (aget arr 18)))  ;; genuine 0.0 fold
+      (is (= 1.0 (aget arr 23)))))) ;; choke-group
 
 (deftest test-resolve-track-patch-spec-bus-override
   (testing "Resolves instrument spec without bus override"

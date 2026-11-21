@@ -1,5 +1,5 @@
 use tritoncha_dsp::core::math::{midi_to_freq, poly_blep, soft_clip};
-use tritoncha_dsp::domain::drums::DrumMachine;
+use tritoncha_dsp::domain::drums::{PercBodyType, PercPatch, PercVoicePool};
 use tritoncha_dsp::domain::effects::{
     BitcrusherDrive, FilterMode, SidechainPump, StateVariableFilter, StereoChorus, StereoDelay,
     StereoReverb,
@@ -16,7 +16,7 @@ fn test_dsp_defaults() {
     let _ = TritonchaEngine::default();
     let _ = ModularPatch::default();
     let _ = SynthVoice::default();
-    let _ = DrumMachine::default();
+    let _ = PercVoicePool::default();
     let _ = StateVariableFilter::default();
     let _ = StereoDelay::default();
     let _ = StereoReverb::default();
@@ -215,32 +215,42 @@ fn test_monophonic_glide_and_stealing() {
 }
 
 #[test]
-fn test_drum_machine_triggers() {
-    use tritoncha_dsp::domain::drums::DrumId;
-
-    let mut drums = DrumMachine::new();
+fn test_perc_voice_pool_triggers() {
+    let mut pool = PercVoicePool::new();
     let sample_rate = DEFAULT_SAMPLE_RATE;
 
-    for &drum in &DrumId::ALL {
-        drums.trigger_drum(drum, 0.9, 120.0);
+    for body in [
+        PercBodyType::Membrane,
+        PercBodyType::Shell,
+        PercBodyType::Cymbal,
+        PercBodyType::Idiophone,
+        PercBodyType::Burst,
+    ] {
+        let patch = PercPatch {
+            body_type: body,
+            noise_mix: 0.5,
+            ..PercPatch::default()
+        };
+        pool.trigger(&patch, 0.9, Some(120.0), sample_rate);
     }
 
     for _ in 0..1024 {
-        let sample = drums.process(sample_rate);
+        let sample = pool.process(sample_rate);
         assert!(sample.is_finite());
     }
 }
 
 #[test]
-fn test_engine_expanded_drum_dispatch() {
-    use tritoncha_dsp::engine::{is_drum_inst, DrumId};
-
+fn test_engine_per_track_kit_dispatch() {
     let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
 
-    for &drum in &DrumId::ALL {
-        let id = drum.as_i32();
-        assert!(is_drum_inst(id), "ID {id} should be identified as drum");
-        engine.trigger_note(id, 440.0, 0.9, 0.2);
+    for slot in 0..4 {
+        let patch = PercPatch {
+            pitch_hz: 60.0 + slot as f32 * 80.0,
+            ..PercPatch::default()
+        };
+        engine.set_track_kit_slot(0, slot, patch);
+        engine.trigger_track_perc(0, slot, 0.9, None);
     }
 
     let mut out_l = [0.0; 256];
@@ -535,7 +545,7 @@ fn test_audio_flows_through_all_individual_busses() {
     engine.clear_bus_chain(BusId::MASTER);
 
     // Drums bus
-    engine.trigger_note(0, 55.0, 1.0, 0.2); // Kick
+    engine.trigger_one_shot_perc(PercPatch::default(), 1.0, None); // Kick
     let mut out_l = [0.0; 128];
     let mut out_r = [0.0; 128];
     engine.process_block(&mut out_l, &mut out_r);

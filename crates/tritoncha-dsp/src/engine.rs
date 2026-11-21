@@ -1,18 +1,17 @@
 //! Core real-time DSP audio engine and mixer orchestration.
 
 use crate::core::math::soft_clip;
-use crate::domain::drums::{DrumMachine, DrumMode};
+use crate::domain::drums::{PercPatch, PercVoicePool, MAX_KIT_SLOTS, PERC_PATCH_PARAM_COUNT};
 use crate::domain::effects::{
     BitcrusherDrive, BusCompressor, BusEffectChain, BusEffectNode, CompressorConfig, DriveMode,
     FrequencySweep, ReverbMode, StereoChorus, StereoDelay, StereoReverb, StereoSvfFilter,
     NUM_ROUTABLE_BUSSES,
 };
 use crate::domain::sequencer::{MasterSequencer, SequencerEvent, MAX_STEPS, MAX_TRACKS};
-use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES, VOICE_PATCH_PARAM_COUNT};
-use crate::domain::{Bpm, BusId, CutoffHz, InstrumentId, Normalized, PatchId, Resonance, TrackId};
+use crate::domain::synth::{ModularPatch, SynthVoice, MAX_PATCHES};
+use crate::domain::{Bpm, BusId, CutoffHz, Normalized, PatchId, Resonance, TrackId};
 use crate::services::voice_allocator::{VoiceAllocation, VoiceAllocator};
 
-pub use crate::domain::drums::{is_drum_inst, DrumId};
 pub use crate::domain::sequencer::{
     DEFAULT_BPM, DEFAULT_CLICK_FREQ_HZ, DEFAULT_NOTE_FREQ_HZ, DEFAULT_SAMPLE_RATE,
     MIN_AUDIBLE_VELOCITY, SEQUENCER_TICK_MODULO,
@@ -38,7 +37,7 @@ pub struct FfiScratchBuffers {
     pub track_notes: [i16; MAX_STEPS],
     pub track_vels: [f32; MAX_STEPS],
     pub track_durs: [f32; MAX_STEPS],
-    pub patch_params: [f32; VOICE_PATCH_PARAM_COUNT],
+    pub patch_params: [f32; PERC_PATCH_PARAM_COUNT],
 }
 
 impl Default for FfiScratchBuffers {
@@ -56,7 +55,7 @@ impl FfiScratchBuffers {
             track_notes: [-1; MAX_STEPS],
             track_vels: [0.0; MAX_STEPS],
             track_durs: [0.0; MAX_STEPS],
-            patch_params: [0.0; VOICE_PATCH_PARAM_COUNT],
+            patch_params: [0.0; PERC_PATCH_PARAM_COUNT],
         }
     }
 }
@@ -70,7 +69,9 @@ pub struct TritonchaEngine {
     voice_bus_map: [BusTarget; NUM_VOICES],
     patches: [ModularPatch; MAX_PATCHES],
     next_one_shot: usize,
-    drums: DrumMachine,
+
+    pub perc_pool: PercVoicePool,
+    track_kits: [[PercPatch; MAX_KIT_SLOTS]; MAX_TRACKS],
 
     pub mixer: Mixer,
 
@@ -112,7 +113,8 @@ impl TritonchaEngine {
             voice_bus_map: [BusTarget::Bass; NUM_VOICES],
             patches: std::array::from_fn(ModularPatch::default_for),
             next_one_shot: 0,
-            drums: DrumMachine::new(),
+            perc_pool: PercVoicePool::new(),
+            track_kits: [[PercPatch::default(); MAX_KIT_SLOTS]; MAX_TRACKS],
             mixer: Mixer::new(),
             bus_chains,
             master_cutoff_hz: DEFAULT_MASTER_CUTOFF_HZ,
@@ -221,12 +223,17 @@ impl TritonchaEngine {
         }
     }
 
-    pub fn set_drum_patch(&mut self, drum_id: i32, params: [f32; 7]) {
-        self.drums.set_drum_patch_by_id(drum_id, params);
-    }
-
-    pub fn set_drum_mode(&mut self, mode: impl Into<DrumMode>) {
-        self.drums.set_mode_all(mode);
+    /// Assigns a layered percussion patch to a track-local kit slot (`0..15` on track `0..15`).
+    pub fn set_track_kit_slot(
+        &mut self,
+        track_id: impl Into<TrackId>,
+        slot_idx: usize,
+        patch: PercPatch,
+    ) {
+        let tid = track_id.into();
+        if tid.is_valid() && slot_idx < MAX_KIT_SLOTS {
+            self.track_kits[tid.as_usize()][slot_idx] = patch;
+        }
     }
 
     #[inline(always)]
@@ -262,18 +269,37 @@ impl TritonchaEngine {
         self.trigger_synth_slot(PatchId(slot), freq, vel, dur_s);
     }
 
-    pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
-        match InstrumentId::from(inst_id) {
-            InstrumentId::Drum(drum) => {
-                if drum == DrumId::Kick {
-                    self.mixer.trigger_sidechain_kick();
-                }
-                self.drums.trigger_drum(drum, vel, freq);
+    /// Triggers a percussion voice from `track_idx`'s local kit at `slot_idx`.
+    #[inline(always)]
+    pub fn trigger_track_perc(
+        &mut self,
+        track_idx: usize,
+        slot_idx: usize,
+        vel: f32,
+        note_freq_hz: Option<f32>,
+    ) {
+        if track_idx < MAX_TRACKS && slot_idx < MAX_KIT_SLOTS {
+            let patch = self.track_kits[track_idx][slot_idx];
+            if patch.is_kick() {
+                self.mixer.trigger_sidechain_kick();
             }
-            InstrumentId::Synth(patch_id) => {
-                self.trigger_synth_slot(patch_id, freq, vel, dur_s);
-            }
+            self.perc_pool
+                .trigger(&patch, vel, note_freq_hz, self.sample_rate);
         }
+    }
+
+    /// Triggers a live one-shot percussion hit directly into the polyphonic voice pool.
+    #[inline(always)]
+    pub fn trigger_one_shot_perc(&mut self, patch: PercPatch, vel: f32, note_freq_hz: Option<f32>) {
+        if patch.is_kick() {
+            self.mixer.trigger_sidechain_kick();
+        }
+        self.perc_pool
+            .trigger(&patch, vel, note_freq_hz, self.sample_rate);
+    }
+
+    pub fn trigger_note(&mut self, inst_id: i32, freq: f32, vel: f32, dur_s: f32) {
+        self.trigger_synth_slot(PatchId(inst_id.max(0) as usize), freq, vel, dur_s);
     }
 
     pub fn master_cutoff_hz(&self) -> f32 {
@@ -534,12 +560,13 @@ impl TritonchaEngine {
                 if ev.inst_id < 0 {
                     self.trigger_track_synth(ev.track_idx, ev.freq, ev.vel, ev.dur_s);
                 } else {
-                    self.trigger_note(ev.inst_id, ev.freq, ev.vel, ev.dur_s);
+                    let note_freq = if ev.note > 0 { Some(ev.freq) } else { None };
+                    self.trigger_track_perc(ev.track_idx, ev.inst_id as usize, ev.vel, note_freq);
                 }
             }
 
             let mut bus_accum = [0.0_f32; NUM_BUSSES];
-            bus_accum[BusTarget::Drums.as_usize()] += self.drums.process(self.sample_rate);
+            bus_accum[BusTarget::Drums.as_usize()] += self.perc_pool.process(self.sample_rate);
 
             for v_idx in 0..NUM_VOICES {
                 let voice = &mut self.voices[v_idx];
@@ -599,10 +626,10 @@ mod tests {
     #[test]
     fn test_engine_trigger_drum_and_synth() {
         let mut engine = TritonchaEngine::new(DEFAULT_SAMPLE_RATE);
-        engine.trigger_note(DrumId::Kick.as_i32(), 60.0, 0.9, 0.1);
-        assert!(engine.drums.kick.active);
+        engine.trigger_one_shot_perc(PercPatch::default(), 0.9, None);
+        assert_eq!(engine.perc_pool.active_count(), 1);
 
-        engine.trigger_note(4, 55.0, 0.85, 0.2);
+        engine.trigger_track_synth(0, 55.0, 0.85, 0.2);
         assert!(engine.voices.iter().any(|v| v.active));
     }
 
@@ -615,7 +642,7 @@ mod tests {
         engine.process_block(&mut out_l, &mut out_r);
         assert!(out_l.iter().all(|&s| s == 0.0));
 
-        engine.trigger_note(DrumId::Kick.as_i32(), 60.0, 1.0, 0.1);
+        engine.trigger_one_shot_perc(PercPatch::default(), 1.0, None);
         engine.process_block(&mut out_l, &mut out_r);
 
         let max_amp = out_l.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));

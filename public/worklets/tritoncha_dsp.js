@@ -99,7 +99,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
       this.velsBufferView = new Float32Array(wasmMemory.buffer, this.velsBufferPtr, 128);
       this.dursBufferView = new Float32Array(wasmMemory.buffer, this.dursBufferPtr, 128);
       if (this.patchParamsPtr) {
-        this.patchParamsView = new Float32Array(wasmMemory.buffer, this.patchParamsPtr, 22);
+        this.patchParamsView = new Float32Array(wasmMemory.buffer, this.patchParamsPtr, 24);
       }
     }
   }
@@ -327,7 +327,20 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
 
         case 'noteOn':
           if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            if (data.params && this.wasmExports.tritoncha_dsp_trigger_one_shot_synth) {
+            if (data.percParams && this.wasmExports.tritoncha_dsp_trigger_one_shot_perc) {
+              this.ensureMemoryViews();
+              const n = Math.min(data.percParams.length, 24);
+              for (let i = 0; i < n; i++) {
+                this.patchParamsView[i] = data.percParams[i];
+              }
+              this.wasmExports.tritoncha_dsp_trigger_one_shot_perc(
+                this.wasmEnginePtr,
+                this.patchParamsPtr,
+                n,
+                data.freq || 0.0,
+                data.velocity || 0.9
+              );
+            } else if (data.params && this.wasmExports.tritoncha_dsp_trigger_one_shot_synth) {
               this.ensureMemoryViews();
               const n = Math.min(data.params.length, 22);
               for (let i = 0; i < n; i++) {
@@ -337,14 +350,6 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
                 this.wasmEnginePtr,
                 this.patchParamsPtr,
                 n,
-                data.freq || 440.0,
-                data.velocity || 0.9,
-                data.dur || 0.0
-              );
-            } else {
-              this.wasmExports.tritoncha_dsp_note_on(
-                this.wasmEnginePtr,
-                data.instId || 0,
                 data.freq || 440.0,
                 data.velocity || 0.9,
                 data.dur || 0.0
@@ -445,43 +450,19 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
           }
           break;
 
-        case 'setVoicePatch':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && data.params && this.wasmExports.tritoncha_dsp_set_voice_patch_packed) {
+        case 'setTrackKitSlot':
+          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && data.params && this.wasmExports.tritoncha_dsp_set_track_kit_slot) {
             this.ensureMemoryViews();
-            const n = Math.min(data.params.length, 22);
+            const n = Math.min(data.params.length, 24);
             for (let i = 0; i < n; i++) {
               this.patchParamsView[i] = data.params[i];
             }
-            this.wasmExports.tritoncha_dsp_set_voice_patch_packed(
+            this.wasmExports.tritoncha_dsp_set_track_kit_slot(
               this.wasmEnginePtr,
-              data.patchId !== undefined ? data.patchId : 4,
+              data.trackIdx !== undefined ? data.trackIdx : 0,
+              data.slotIdx !== undefined ? data.slotIdx : 0,
               this.patchParamsPtr,
               n
-            );
-          }
-          break;
-
-        case 'setDrumPatch':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drum_patch) {
-            this.wasmExports.tritoncha_dsp_set_drum_patch(
-              this.wasmEnginePtr,
-              data.drumId !== undefined ? data.drumId : 0,
-              data.p0 !== undefined ? data.p0 : 0.0,
-              data.p1 !== undefined ? data.p1 : 0.0,
-              data.p2 !== undefined ? data.p2 : 0.0,
-              data.p3 !== undefined ? data.p3 : 0.0,
-              data.p4 !== undefined ? data.p4 : 0.0,
-              data.p5 !== undefined ? data.p5 : 0.0,
-              data.p6 !== undefined ? data.p6 : 0.0
-            );
-          }
-          break;
-
-        case 'setDrumMode':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drum_mode) {
-            this.wasmExports.tritoncha_dsp_set_drum_mode(
-              this.wasmEnginePtr,
-              data.mode !== undefined ? data.mode : 0.0
             );
           }
           break;

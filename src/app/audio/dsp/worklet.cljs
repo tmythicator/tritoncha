@@ -2,6 +2,7 @@
   "Unified public facade for the WebAudio AudioWorklet processor and Rust WASM DSP."
   (:require [app.audio.dsp.busses :as busses]
             [app.audio.dsp.instruments.catalog :as catalog]
+            [app.audio.dsp.styles :as styles]
             [app.audio.dsp.worklet.compiler :as compiler]
             [app.audio.dsp.worklet.protocol :as protocol]
             [app.audio.dsp.worklet.slots :as slots]
@@ -27,13 +28,10 @@
 (def track-slots-for slots/track-slots-for)
 (def get-or-assign-track-slot! slots/get-or-assign-track-slot!)
 
-;; DSP Protocol, Enums, and Numeric ID Encoders
-(def canonical-inst-ids protocol/canonical-inst-ids)
-(def inst-keyword->id protocol/inst-keyword->id)
+;; DSP Protocol and Enum Encoders
 (def bus-key->id protocol/bus-key->id)
 (def osc-type->id protocol/osc-type->id)
 (def filter-type->id protocol/filter-type->id)
-(def drum-mod->id protocol/drum-mod->id)
 
 ;; Master Clock and Sequencer Commands
 (defn set-bpm!
@@ -46,13 +44,20 @@
   [playing?]
   (transport/send-msg! #js {:type "setPlaying" :playing (boolean playing?)}))
 
+(defn set-track-kit-slot!
+  "Compiles and transmits a layered percussion patch to a track-local kit slot (0..15)."
+  [track-idx slot-idx perc-spec]
+  (transport/send-msg! (compiler/compile-track-kit-slot-msg track-idx slot-idx perc-spec)))
+
 (defn set-track!
-  "Sends a track's hits into the Rust WASM sequencer with note durations and velocities."
+  "Compiles and sends a track's hits, durations, velocities, and track-local drum kit into Rust WASM."
   ([track-idx default-inst-key hits-vec step-mult]
-   (set-track! track-idx default-inst-key hits-vec step-mult 0.2 0.9))
+   (set-track! track-idx default-inst-key hits-vec step-mult 0.2 0.9 nil))
   ([track-idx default-inst-key hits-vec step-mult dur-s]
-   (set-track! track-idx default-inst-key hits-vec step-mult dur-s 0.9))
+   (set-track! track-idx default-inst-key hits-vec step-mult dur-s 0.9 nil))
   ([track-idx default-inst-key hits-vec step-mult dur-s vel-spec]
+   (set-track! track-idx default-inst-key hits-vec step-mult dur-s vel-spec nil))
+  ([track-idx default-inst-key hits-vec step-mult dur-s vel-spec style-override]
    (let [vel-fn   (cond
                     (sequential? vel-spec)
                     (let [v-cycle (cycle vel-spec)]
@@ -61,15 +66,17 @@
                     (constantly (float vel-spec))
                     :else
                     (constantly 0.9))
-         parsed   (map-indexed (fn [i hit]
-                                 (compiler/parse-step-hit hit default-inst-key (vel-fn i)))
-                               hits-vec)
-         inst-ids (mapv :inst-id parsed)
-         notes    (mapv :note parsed)
-         vels     (mapv :vel parsed)
+         {:keys [kit inst-ids notes vels]}
+         (compiler/compile-track-steps default-inst-key hits-vec vel-fn)
+         active-style (or style-override (:drum-mode @audio-state))
          durs     (if (sequential? dur-s)
                     (mapv float dur-s)
-                    (vec (repeat (count parsed) (float (or dur-s 0.2)))))]
+                    (vec (repeat (count notes) (float (or dur-s 0.2)))))]
+     (doseq [[kit-slot drum-kw] (map-indexed vector kit)]
+       (let [base-spec   (or (catalog/find-instrument-spec drum-kw) {})
+             eff-style   (or style-override (:mod base-spec) (:drum-mode @audio-state))
+             styled-spec (styles/apply-style base-spec eff-style)]
+         (set-track-kit-slot! track-idx kit-slot styled-spec)))
      (transport/send-msg! #js {:type "setTrack"
                                :trackIdx (int track-idx)
                                :instIds (to-array inst-ids)
@@ -77,7 +84,8 @@
                                :vels (to-array vels)
                                :durs (to-array durs)
                                :dur (float (if (number? dur-s) dur-s 0.2))
-                               :stepMult (or step-mult 1)}))))
+                               :stepMult (or step-mult 1)})
+     active-style)))
 
 (defn clear-tracks!
   "Clears all hardware sequencer tracks and resets slot assignments."
@@ -169,7 +177,7 @@
       (let [slot (slots/get-or-assign-track-slot! tk)]
         (when patch-spec
           (set-track-patch! slot patch-spec))
-        (set-track! slot inst-k (vec notes) step-m dur-s base-vel)
+        (set-track! slot inst-k (vec notes) step-m dur-s base-vel (:mod pat-data))
         (clear-voice-slots! tk (range 1 4))))))
 
 (def sync-track! sync-track-to-worklet!)
@@ -195,37 +203,28 @@
   (transport/send-msg! #js {:type "setVolume"
                             :gainDb (float (or gain-db 0.0))}))
 
-(defn set-drum-mode!
-  "Configures character synthesis mode across all drum voices in Rust WASM.
-  Supported modes: :analog, :natural, :idm, :industrial."
-  [mode-kw]
-  (let [mode-id (protocol/drum-mod->id mode-kw)]
-    (transport/send-msg! #js {:type "setDrumMode"
-                              :mode mode-id})))
-
-(defn set-worklet-drum-patch!
-  "Transmits drum sound design parameters into the Rust WASM drum synthesis engine."
-  [drum-key drum-spec]
-  (when-let [msg (compiler/compile-drum-patch-msg drum-key drum-spec)]
-    (transport/send-msg! msg)))
-
 (defn trigger-worklet-note!
-  "Plays a live one-shot note on the Rust WASM modular synth or drum engine."
+  "Plays a live one-shot note on the Rust WASM modular synth or layered percussion engine."
   ([pitch] (trigger-worklet-note! :bass-analog pitch 0.9 0.0))
   ([inst-key pitch] (trigger-worklet-note! inst-key pitch 0.9 0.0))
   ([inst-key pitch vel] (trigger-worklet-note! inst-key pitch vel 0.0))
   ([inst-key pitch vel dur-s]
-   (let [freq (audio-utils/note->freq pitch)
-         v    (or vel 0.9)
-         d    (float (or dur-s 0.0))]
+   (let [v (or vel 0.9)
+         d (float (or dur-s 0.0))]
      (if (catalog/drum? inst-key)
-       (let [inst-id (protocol/inst-keyword->id inst-key)]
+       (let [base-spec   (or (catalog/find-instrument-spec inst-key) {})
+             eff-style   (or (:mod base-spec) (:drum-mode @audio-state))
+             styled-spec (styles/apply-style base-spec eff-style)
+             perc-params (compiler/compile-perc-params styled-spec)
+             freq        (if (and pitch (not= pitch "C4") (not= pitch 60))
+                           (audio-utils/note->freq pitch)
+                           0.0)]
          (transport/send-msg! #js {:type "noteOn"
-                                   :instId (int inst-id)
+                                   :percParams perc-params
                                    :freq freq
-                                   :velocity v
-                                   :dur d}))
-       (let [spec   (or (catalog/find-instrument-spec inst-key) {})
+                                   :velocity v}))
+       (let [freq   (audio-utils/note->freq pitch)
+             spec   (or (catalog/find-instrument-spec inst-key) {})
              params (compiler/compile-patch-params spec)]
          (transport/send-msg! #js {:type "noteOn"
                                    :params params

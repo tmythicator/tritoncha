@@ -38,18 +38,18 @@
       (is (= 2 (:oct pat)))))
 
   (testing "Normalizes :pattern alias into canonical :notes"
-    (let [pat (sched/normalize-pattern-data :snare {:pattern [:snare! :snare_ nil :sn-rs!]
+    (let [pat (sched/normalize-pattern-data :snare {:pattern [:snare! :snare_ nil :clap!]
                                                     :step "32n"})]
       (is (true? (pattern/valid-pattern? pat)))
       (is (= :snare (:inst pat)))
-      (is (= [:snare! :snare_ nil :sn-rs!] (:notes pat)))
+      (is (= [:snare! :snare_ nil :clap!] (:notes pat)))
       (is (= "32n" (:step pat)))))
 
   (testing "Normalizes string mini-notation directly into :notes"
-    (let [pat (sched/normalize-pattern-data :snare {:pattern "s! s_ . rs!"
+    (let [pat (sched/normalize-pattern-data :snare {:pattern "s! s_ . cp!"
                                                     :step "16n"})]
       (is (true? (pattern/valid-pattern? pat)))
-      (is (= [:snare! :snare_ nil :sn-rs!] (:notes pat)))))
+      (is (= [:snare! :snare_ nil :clap!] (:notes pat)))))
 
   (testing "Normalizes raw mini-notation string as direct argument"
     (let [pat (sched/normalize-pattern-data :kick "k . . .  k . . .")]

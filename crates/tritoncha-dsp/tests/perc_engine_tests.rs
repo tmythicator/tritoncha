@@ -1,4 +1,4 @@
-use tritoncha_dsp::domain::drums::perc::{
+use tritoncha_dsp::domain::drums::{
     NoiseFilterMode, PercBodyType, PercPatch, PercVoice, PercVoicePool, MAX_PERC_VOICES,
     PERC_PATCH_PARAM_COUNT,
 };
@@ -10,7 +10,7 @@ fn test_perc_patch_from_packed_array_and_genuine_zero() {
     assert_eq!(MAX_PERC_VOICES, 16);
 
     let raw: [f32; PERC_PATCH_PARAM_COUNT] = [
-        1.0,    // 0: ModalBank
+        1.0,    // 0: Shell
         180.0,  // 1: pitch_hz
         90.0,   // 2: pitch_drop
         0.025,  // 3: pitch_decay_s
@@ -37,7 +37,7 @@ fn test_perc_patch_from_packed_array_and_genuine_zero() {
     ];
 
     let patch = PercPatch::from(raw);
-    assert_eq!(patch.body_type, PercBodyType::ModalBank);
+    assert_eq!(patch.body_type, PercBodyType::Shell);
     assert_eq!(patch.click_level, 0.0, "click_level 0.0 must remain 0.0");
     assert_eq!(patch.noise_mix, 0.0, "noise_mix 0.0 must remain 0.0");
     assert_eq!(patch.fold, 0.0, "fold 0.0 must remain 0.0");
@@ -49,7 +49,7 @@ fn test_perc_patch_from_packed_array_and_genuine_zero() {
 #[test]
 fn test_perc_voice_sample_rate_invariance() {
     let kick = PercPatch {
-        body_type: PercBodyType::PitchedOsc,
+        body_type: PercBodyType::Membrane,
         pitch_hz: 52.0,
         pitch_drop: 160.0,
         pitch_decay_s: 0.03,
@@ -100,7 +100,7 @@ fn test_perc_voice_sample_rate_invariance() {
 #[test]
 fn test_perc_voice_velocity_to_tone_monotonicity() {
     let snare = PercPatch {
-        body_type: PercBodyType::PitchedOsc,
+        body_type: PercBodyType::Membrane,
         pitch_hz: 185.0,
         decay_s: 0.15,
         noise_mix: 0.9,
@@ -143,7 +143,7 @@ fn test_perc_voice_pool_polyphony_and_choke_groups() {
 
     // 1. Overlapping polyphonic rolls when choke_group == 0
     let tom = PercPatch {
-        body_type: PercBodyType::ModalBank,
+        body_type: PercBodyType::Shell,
         pitch_hz: 160.0,
         decay_s: 0.4,
         choke_group: 0,
@@ -163,7 +163,7 @@ fn test_perc_voice_pool_polyphony_and_choke_groups() {
     // 2. Choke group dampening (open hat choked by closed hat in group 1)
     pool.reset();
     let open_hat = PercPatch {
-        body_type: PercBodyType::MetallicCluster,
+        body_type: PercBodyType::Cymbal,
         pitch_hz: 320.0,
         decay_s: 1.2,
         noise_mix: 0.5,
@@ -172,7 +172,7 @@ fn test_perc_voice_pool_polyphony_and_choke_groups() {
         ..PercPatch::default()
     };
     let closed_hat = PercPatch {
-        body_type: PercBodyType::MetallicCluster,
+        body_type: PercBodyType::Cymbal,
         pitch_hz: 320.0,
         decay_s: 0.025,
         noise_mix: 0.5,
@@ -210,31 +210,66 @@ fn test_perc_voice_pool_polyphony_and_choke_groups() {
 fn test_perc_voice_all_body_types_clap_and_variation() {
     let sr = DEFAULT_SAMPLE_RATE;
 
+    // Verify 5 canonical physical percussion body discriminant mappings
+    assert_eq!(PercBodyType::from(0), PercBodyType::Membrane);
+    assert_eq!(PercBodyType::from(1), PercBodyType::Shell);
+    assert_eq!(PercBodyType::from(2), PercBodyType::Cymbal);
+    assert_eq!(PercBodyType::from(3), PercBodyType::Idiophone);
+    assert_eq!(PercBodyType::from(4), PercBodyType::Burst);
+
     let patches = [
+        // 0: Membrane
         PercPatch {
-            body_type: PercBodyType::PitchedOsc,
+            body_type: PercBodyType::Membrane,
             pitch_hz: 50.0,
             pitch_drop: 180.0,
             fold: 0.5,
             drive: 2.0,
             ..PercPatch::default()
         },
+        // 1: Shell
         PercPatch {
-            body_type: PercBodyType::ModalBank,
+            body_type: PercBodyType::Shell,
             pitch_hz: 240.0,
             modal_spread: 1.6,
             decay_s: 0.6,
             ..PercPatch::default()
         },
+        // 2a: Cymbal — Bell/Bow strike (low noise_mix)
         PercPatch {
-            body_type: PercBodyType::MetallicCluster,
+            body_type: PercBodyType::Cymbal,
+            pitch_hz: 580.0,
+            modal_spread: 1.65,
+            noise_mix: 0.2,
+            decay_s: 1.1,
+            ..PercPatch::default()
+        },
+        // 2b: Cymbal — Edge Crash strike (high noise_mix, wide spread)
+        PercPatch {
+            body_type: PercBodyType::Cymbal,
             pitch_hz: 400.0,
-            noise_mix: 0.6,
+            modal_spread: 1.7,
+            noise_mix: 0.9,
+            decay_s: 0.2,
+            noise_decay_s: 1.8,
             crush: 0.3,
             ..PercPatch::default()
         },
+        // 3: Idiophone — dual-mode cavity (808 cowbell / agogo / woodblock)
         PercPatch {
-            body_type: PercBodyType::NoiseOnly,
+            body_type: PercBodyType::Idiophone,
+            pitch_hz: 540.0,
+            modal_spread: 0.50,
+            decay_s: 0.36,
+            noise_mix: 0.0,
+            noise_cutoff_hz: 820.0,
+            noise_q: 0.72,
+            noise_filter_mode: NoiseFilterMode::Bandpass,
+            ..PercPatch::default()
+        },
+        // 4: Burst — multi-tap burst (clap)
+        PercPatch {
+            body_type: PercBodyType::Burst,
             burst_count: 4,
             burst_spacing_s: 0.011,
             noise_mix: 1.0,
@@ -266,7 +301,7 @@ fn test_perc_voice_all_body_types_clap_and_variation() {
 
     // Variation > 0 must humanize consecutive hits so they are not bit-identical
     let varied = PercPatch {
-        body_type: PercBodyType::PitchedOsc,
+        body_type: PercBodyType::Membrane,
         pitch_hz: 150.0,
         variation: 0.5,
         ..PercPatch::default()

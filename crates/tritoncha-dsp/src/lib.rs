@@ -3,6 +3,7 @@ pub mod domain;
 pub mod engine;
 pub mod services;
 
+use crate::domain::drums::{PercPatch, PERC_PATCH_PARAM_COUNT};
 use crate::domain::effects::CompressorConfig;
 use crate::domain::synth::{ModularPatch, VOICE_PATCH_PARAM_COUNT};
 use crate::domain::BusId;
@@ -58,22 +59,6 @@ unsafe fn read_packed_patch(params_ptr: *const f32, len: i32) -> Option<ModularP
     }
 }
 
-/// Updates a modular synthesizer voice patch from a packed 22-float array.
-///
-/// # Safety
-/// `ptr` must be a valid pointer to `TritonchaEngine`, and `params_ptr` must point to at least `len` floats.
-#[no_mangle]
-pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch_packed(
-    ptr: *mut TritonchaEngine,
-    patch_id: i32,
-    params_ptr: *const f32,
-    len: i32,
-) {
-    if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_patch(params_ptr, len)) {
-        engine.set_voice_patch(patch_id.max(0) as usize, patch);
-    }
-}
-
 /// Assigns the active modular synthesizer patch owned directly by a sequencer track (0..15).
 ///
 /// # Safety
@@ -92,6 +77,18 @@ pub unsafe extern "C" fn tritoncha_dsp_set_track_patch(
     }
 }
 
+#[inline(always)]
+unsafe fn read_packed_perc(params_ptr: *const f32, len: i32) -> Option<PercPatch> {
+    if !params_ptr.is_null() && (len as usize) >= PERC_PATCH_PARAM_COUNT {
+        let slice = std::slice::from_raw_parts(params_ptr, PERC_PATCH_PARAM_COUNT);
+        let mut arr = [0.0_f32; PERC_PATCH_PARAM_COUNT];
+        arr.copy_from_slice(slice);
+        Some(PercPatch::from(arr))
+    } else {
+        None
+    }
+}
+
 /// Triggers a one-shot live synthesizer note from a packed 22-float patch array.
 ///
 /// # Safety
@@ -107,6 +104,44 @@ pub unsafe extern "C" fn tritoncha_dsp_trigger_one_shot_synth(
 ) {
     if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_patch(params_ptr, len)) {
         engine.trigger_one_shot_synth(patch, freq, vel, dur_s);
+    }
+}
+
+/// Assigns a layered percussion patch to a track-local kit slot (`0..15` on track `0..15`).
+///
+/// # Safety
+/// `ptr` must be a valid pointer to `TritonchaEngine`, and `params_ptr` must point to at least `len` floats.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_track_kit_slot(
+    ptr: *mut TritonchaEngine,
+    track_idx: i32,
+    slot_idx: i32,
+    params_ptr: *const f32,
+    len: i32,
+) {
+    if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_perc(params_ptr, len)) {
+        if track_idx >= 0 && slot_idx >= 0 {
+            engine.set_track_kit_slot(track_idx as usize, slot_idx as usize, patch);
+        }
+    }
+}
+
+/// Triggers a live one-shot percussion hit from a packed 24-float patch array.
+/// Pass `freq <= 0.0` to use the patch's own base pitch, or `freq > 0.0` to override pitch.
+///
+/// # Safety
+/// `ptr` must be a valid pointer to `TritonchaEngine`, and `params_ptr` must point to at least `len` floats.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_trigger_one_shot_perc(
+    ptr: *mut TritonchaEngine,
+    params_ptr: *const f32,
+    len: i32,
+    freq: f32,
+    vel: f32,
+) {
+    if let (Some(engine), Some(patch)) = (ptr.as_mut(), read_packed_perc(params_ptr, len)) {
+        let note_freq = if freq > 0.0 { Some(freq) } else { None };
+        engine.trigger_one_shot_perc(patch, vel, note_freq);
     }
 }
 
@@ -291,15 +326,6 @@ ffi_engine_fn! {
 
     /// Sets master output volume in decibels.
     tritoncha_dsp_set_master_volume(|e, gain_db: f32| e.set_master_volume(gain_db));
-
-    /// Updates parameters for a drum voice patch.
-    tritoncha_dsp_set_drum_patch(
-        |e, drum_id: i32, p0: f32, p1: f32, p2: f32, p3: f32, p4: f32, p5: f32, p6: f32|
-            e.set_drum_patch(drum_id, [p0, p1, p2, p3, p4, p5, p6])
-    );
-
-    /// Configures global character synthesis mode across all drum machine voices.
-    tritoncha_dsp_set_drum_mode(|e, mode: f32| e.set_drum_mode(mode.round() as u8));
 
     /// Clears all effect inserts and resets target_out for a bus chain.
     tritoncha_dsp_clear_bus_chain(|e, bus_idx: i32| e.clear_bus_chain(bus_idx as usize));
