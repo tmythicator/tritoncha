@@ -8,7 +8,7 @@ use crate::core::math::{
     SEMITONES_PER_OCTAVE,
 };
 use crate::domain::effects::{LadderFilter, StateVariableFilter};
-use crate::domain::GlideTime;
+use crate::domain::{GlideTime, TrackId};
 
 // Voice Tuning and Timing Constants
 pub const MIN_PORTAMENTO_TIME_SEC: f32 = 0.001;
@@ -34,10 +34,10 @@ pub const KARPLUS_OUTPUT_GAIN: f32 = 1.5;
 pub const DEFAULT_INITIAL_NOISE_SEED: u32 = 0x9e3779b9;
 pub const NOISE_SEED_PRIME: u32 = 2654435761;
 
-/// Polyphonic synthesizer voice.
+/// Polyphonic synthesizer voice bound to its triggering track channel.
 pub struct SynthVoice {
     pub active: bool,
-    pub patch_id: PatchId,
+    pub track_id: TrackId,
     pub freq: f32,
     pub target_freq: f32,
     pub glide_rate: f32,
@@ -70,7 +70,7 @@ impl SynthVoice {
     pub fn new() -> Self {
         Self {
             active: false,
-            patch_id: PatchId(4),
+            track_id: TrackId(0),
             freq: 440.0,
             target_freq: 440.0,
             glide_rate: 1.0,
@@ -131,14 +131,14 @@ impl SynthVoice {
         &mut self,
         freq: f32,
         vel: f32,
-        patch_id: impl Into<PatchId>,
+        track_id: impl Into<TrackId>,
         patch: &ModularPatch,
         sample_rate: f32,
         dur_s: f32,
     ) {
-        let pid = patch_id.into();
+        let tid = track_id.into();
         self.active = true;
-        self.patch_id = pid;
+        self.track_id = tid;
         self.freq = freq.clamp(MIN_FREQ_HZ, MAX_FREQ_HZ);
         self.target_freq = self.freq;
         self.glide_rate = 1.0;
@@ -202,7 +202,7 @@ impl SynthVoice {
 
         // Low-frequency VCO drift rate (0.2 .. 0.6 Hz)
         let drift_hz = VCO_BASE_DRIFT_HZ
-            + ((pid.as_usize() % NUM_DRIFT_VOICE_SLOTS) as f32) * VCO_DRIFT_INCREMENT_HZ;
+            + ((tid.as_usize() % NUM_DRIFT_VOICE_SLOTS) as f32) * VCO_DRIFT_INCREMENT_HZ;
         self.drift_phase_inc = drift_hz / sample_rate;
 
         // Initialize free-running supersaw phase offsets
@@ -365,7 +365,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(440.0, 0.9, PatchId(8), &patch, sr, 0.1);
+        voice.trigger(440.0, 0.9, TrackId(0), &patch, sr, 0.1);
         assert!(voice.active);
         assert_eq!(voice.env_stage(), EnvelopeStage::Attack);
         assert_eq!(voice.freq, 440.0);
@@ -384,7 +384,7 @@ mod tests {
         let patch = ModularPatch::default_lead();
         let sr = DEFAULT_SAMPLE_RATE;
 
-        voice.trigger(220.0, 0.8, PatchId(8), &patch, sr, 0.5);
+        voice.trigger(220.0, 0.8, TrackId(0), &patch, sr, 0.5);
         voice.glide_to(440.0, 0.8, sr, 0.05, 0.5);
         assert_eq!(voice.target_freq, 440.0);
         assert!(voice.freq < 440.0);

@@ -7,11 +7,11 @@ pub mod pool;
 pub mod voice;
 
 pub use patch::{
-    NoiseFilterMode, PercBodyType, PercPatch, MAX_KIT_SLOTS, MAX_PERC_VOICES,
-    PERC_PATCH_PARAM_COUNT,
+    KitIndex, NoiseFilterMode, NoiseFilterSpec, PercBodyType, PercPatch, MAX_KIT_SLOTS,
+    MAX_PERC_VOICES, PERC_PATCH_PARAM_COUNT,
 };
 pub use pool::PercVoicePool;
-pub use voice::PercVoice;
+pub use voice::{PercShaper, PercVoice};
 
 /// Minimum audible envelope threshold (-80 dB) below which a percussion voice deactivates.
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.0001;

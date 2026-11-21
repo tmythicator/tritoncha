@@ -1,8 +1,8 @@
 //! Master sequencer managing timing, transport, and 16-track patterns.
 
 use super::track::{
-    TrackId, TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, DEFAULT_SYNTH_PATCH_ID,
-    MAX_STEPS, MAX_TRACKS,
+    TrackId, TrackPattern, DEFAULT_STEP_DURATION_S, DEFAULT_STEP_VELOCITY, MAX_STEPS, MAX_TRACKS,
+    SYNTH_TRACK_SENTINEL,
 };
 use super::trigger_mask::TriggerMask;
 use crate::core::math::midi_to_freq;
@@ -16,8 +16,6 @@ pub const SECONDS_PER_MINUTE: f32 = 60.0;
 pub const STEPS_PER_BEAT_64TH: f32 = 16.0;
 pub const SEQUENCER_TICK_MODULO: usize = 65536;
 pub const MIN_AUDIBLE_VELOCITY: f32 = 0.001;
-
-pub const DEFAULT_CLICK_FREQ_HZ: f32 = 2400.0;
 pub const DEFAULT_NOTE_FREQ_HZ: f32 = 440.0;
 
 /// Event triggered by a track at a sequencer step.
@@ -141,7 +139,7 @@ impl MasterSequencer {
             let inst = if i < inst_ids.len() {
                 inst_ids[i]
             } else {
-                DEFAULT_SYNTH_PATCH_ID
+                SYNTH_TRACK_SENTINEL
             };
             let vel = if i < vels.len() {
                 vels[i]

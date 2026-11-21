@@ -113,14 +113,14 @@
      :routing :industrial-crush
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
+      :hats  {:notes (pat ". . o_ .  . . o_ .  . . o_ .  . . o_ .") :step "16n"}
       :perc  {:notes (pat "s . . ch  s . . .  . cb . .  s_ s_ s_ s!") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [1 1 1 1 1 1 1 1 2 2 2 2 1 1 1 1] 1)
-              :step "16n" :dur "32n" :vel 0.45}
+              :step "16n" :dur "16n" :vel 0.78}
       :sub   {:inst :sub-pure
               :notes (deg [1 _ _ _ 1 _ _ _ 1 _ _ _ 2 _ _ _] 1)
-              :step "16n" :dur "8n" :vel 0.7}
+              :step "16n" :dur "8n" :vel 0.80}
       :drone {:inst :lead-fm
               :notes (deg [1 _ _ _ _ _ _ _ 2 _ _ _ _ _ _ _] 2)
               :step "16n" :dur "8n" :vel 0.4}}}]
@@ -161,9 +161,9 @@
      :colors  ["#140404" "#ff3300"]
      :routing :crematorium
      :tracks
-     {:kick  {:notes (pat "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
+     {:kick  {:notes (pat "k . . .  . . . k_  . . k .  . . . .") :step "16n"}
       :snare {:notes (pat ". . . .  s! . . .  . . . .  s! . s_ .") :step "16n"}
-      :hats  {:notes (pat "h_ . h .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
+      :hats  {:notes (pat "h_ . h_ .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
       :bass  {:inst :bass-303
               :notes (deg [1 _ _ 3 1 _ 4 _ 1 _ :b7 1 _ _ 5 _] 1)
               :step "16n" :dur "16n" :vel 0.70}
@@ -252,7 +252,7 @@
      :routing :crematorium
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
+      :hats  {:notes (pat ". . o_ .  . . o_ .  . . o_ .  . . o_ .") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [_ 1 _ 1  _ 1 _ 1  _ 1 _ 1  _ :b7 _ 1] 1)
               :step "16n" :dur "16n" :vel 0.82}

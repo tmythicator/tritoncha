@@ -89,7 +89,7 @@
                         cbs  @trigger-callbacks]
                     (doseq [cb cbs]
                       (try (cb mask) (catch :default _)))))))))
-    (.postMessage (.-port node) #js {:type "initWasm" :wasmBinary wasm-buffer :wasmBytes wasm-buffer})
+    (.postMessage (.-port node) #js {:type "initWasm" :wasmBinary wasm-buffer})
     (swap! worklet-state assoc :node node)
     (flush-pending-messages! node)
     true))

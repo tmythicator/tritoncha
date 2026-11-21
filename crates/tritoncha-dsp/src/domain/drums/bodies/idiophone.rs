@@ -2,9 +2,8 @@
 //! (TR-808 dual-square cowbell, agogo bell, woodblock, claves).
 
 use crate::core::math::wrap_phase;
-use crate::domain::drums::bodies::NUM_MODES;
-use crate::domain::drums::patch::NoiseFilterMode;
-use crate::domain::effects::StateVariableFilter;
+use crate::domain::drums::bodies::{ResonatorBank, NUM_MODES};
+use crate::domain::drums::patch::NoiseFilterSpec;
 
 /// Classic TR-808 dual-square cowbell frequency ratio (800 Hz / 540 Hz).
 const COWBELL_RATIO: f32 = 1.481_481_4;
@@ -21,34 +20,28 @@ pub fn configure_idiophone_freqs(
 }
 
 /// Renders one sample of a dual-mode hollow cavity idiophone filtered through the cavity formant SVF.
-#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 pub fn render_idiophone(
-    metallic_phases: &mut [f32; NUM_MODES],
-    metallic_freqs: &[f32; NUM_MODES],
-    body_filter: &mut StateVariableFilter,
-    noise_cutoff_hz: f32,
-    noise_q: f32,
-    noise_filter_mode: NoiseFilterMode,
+    bank: &mut ResonatorBank,
+    filter_spec: &NoiseFilterSpec,
     body_env: f32,
     sample_rate: f32,
 ) -> f32 {
-    let sq0 = if metallic_phases[0] < 0.5 { 1.0 } else { -1.0 };
-    let sq1 = if metallic_phases[1] < 0.5 { 1.0 } else { -1.0 };
-    metallic_phases[0] = wrap_phase(metallic_phases[0] + metallic_freqs[0] / sample_rate);
-    metallic_phases[1] = wrap_phase(metallic_phases[1] + metallic_freqs[1] / sample_rate);
-    let raw_cavity = (sq0 + sq1) * 0.5;
-
-    let filtered = match noise_filter_mode {
-        NoiseFilterMode::Bandpass => {
-            body_filter.process_bp(raw_cavity, noise_cutoff_hz, noise_q, sample_rate)
-        }
-        NoiseFilterMode::Highpass => {
-            body_filter.process_hp(raw_cavity, noise_cutoff_hz, noise_q, sample_rate)
-        }
-        NoiseFilterMode::Lowpass => {
-            body_filter.process_lp(raw_cavity, noise_cutoff_hz, noise_q, sample_rate)
-        }
+    let sq0 = if bank.metallic_phases[0] < 0.5 {
+        1.0
+    } else {
+        -1.0
     };
+    let sq1 = if bank.metallic_phases[1] < 0.5 {
+        1.0
+    } else {
+        -1.0
+    };
+    bank.metallic_phases[0] =
+        wrap_phase(bank.metallic_phases[0] + bank.metallic_freqs[0] / sample_rate);
+    bank.metallic_phases[1] =
+        wrap_phase(bank.metallic_phases[1] + bank.metallic_freqs[1] / sample_rate);
+    let raw_cavity = (sq0 + sq1) * 0.5;
+    let filtered = filter_spec.apply(&mut bank.body_filter, raw_cavity, sample_rate);
     filtered * body_env * 0.85
 }

@@ -43,7 +43,7 @@ ffi_engine_ptr_fn! {
     tritoncha_dsp_track_vels_ptr -> *mut f32 : track_vels;
     /// Returns a writable pointer to the engine-owned 128-step track duration buffer.
     tritoncha_dsp_track_durs_ptr -> *mut f32 : track_durs;
-    /// Returns a writable pointer to the engine-owned 22-float voice patch parameter buffer.
+    /// Returns a writable pointer to the engine-owned 24-float patch parameter scratch buffer.
     tritoncha_dsp_patch_params_ptr -> *mut f32 : patch_params;
 }
 
@@ -279,9 +279,6 @@ ffi_engine_fn! {
         |e, bus_idx: i32, gain_db: f32, muted: i32, send_delay: f32, send_reverb: f32, bypass_master_fx: i32|
             e.set_bus_params(bus_idx as usize, gain_db, muted != 0, send_delay, send_reverb, bypass_master_fx != 0)
     );
-
-    /// Triggers a real-time note on or drum hit.
-    tritoncha_dsp_note_on(|e, inst_id: i32, freq: f32, vel: f32, dur_s: f32| e.trigger_note(inst_id, freq, vel, dur_s));
 
     /// Sets master lowpass filter cutoff frequency and resonance.
     tritoncha_dsp_set_master_filter(|e, cutoff_hz: f32, resonance: f32| e.set_master_filter(cutoff_hz, resonance));

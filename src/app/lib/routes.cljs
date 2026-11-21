@@ -51,9 +51,10 @@
   "Classic dub setup."
   {:title "DUB ECHO"
    :graph {:drums  [:compressor]
+           :bass   [:distort]
            :lead   [:filter :delay :reverb]
            :space  [:reverb :out]
-           :master [:distort :compressor :limiter]}
+           :master [:compressor :limiter]}
    :processors {:filter     4200
                 :distort    {:drive 0.18 :algo :adaa :wet 0.50}
                 :compressor {:threshold -15.0 :ratio 3.5 :attack 0.020 :release 0.160 :makeup 2.2 :mix 0.90}
@@ -111,7 +112,7 @@
            :lead   [:distort]
            :master [:filter :compressor :limiter]}
    :processors {:filter     [4600 0.45]
-                :crusher    [5.0 2.2 0.65]
+                :crusher    [8.0 1.6 0.25]
                 :distort    {:drive 0.28 :algo :classic :wet 0.75}
                 :compressor {:threshold -16.0 :ratio 6.0 :attack 0.005 :release 0.080 :makeup 3.5 :mix 1.0}
                 :delay      ["16n" 0.28 0.22]

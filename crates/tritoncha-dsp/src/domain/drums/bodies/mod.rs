@@ -12,8 +12,49 @@ pub mod shell;
 use std::f32::consts::TAU;
 
 use crate::core::math::{soft_clip, LN_MIN_60DB};
+use crate::domain::effects::StateVariableFilter;
 
 pub const NUM_MODES: usize = 6;
+
+/// Shared modal resonator bank, metallic oscillator state, and body SVF filter for a percussion voice.
+#[derive(Clone)]
+pub struct ResonatorBank {
+    pub modes: [CachedModalFilter; NUM_MODES],
+    pub metallic_phases: [f32; NUM_MODES],
+    pub metallic_freqs: [f32; NUM_MODES],
+    pub body_filter: StateVariableFilter,
+}
+
+impl Default for ResonatorBank {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ResonatorBank {
+    pub fn new() -> Self {
+        Self {
+            modes: [CachedModalFilter::default(); NUM_MODES],
+            metallic_phases: [0.0; NUM_MODES],
+            metallic_freqs: [300.0; NUM_MODES],
+            body_filter: StateVariableFilter::new(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn reset_trigger(&mut self) {
+        self.metallic_phases = [0.0; NUM_MODES];
+        self.body_filter.reset();
+    }
+
+    #[inline(always)]
+    pub fn reset(&mut self) {
+        self.reset_trigger();
+        for m in &mut self.modes {
+            m.reset();
+        }
+    }
+}
 
 /// Coefficient-cached 2nd-order resonant modal filter (zero transcendental math per sample).
 #[derive(Clone, Copy, Default)]

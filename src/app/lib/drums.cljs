@@ -91,16 +91,16 @@
     :bus          :bus/drums
     :body         :cymbal
     :pitch        340.0
-    :decay        0.045
-    :click        0.18
+    :decay        0.042
+    :click        0.08
     :click-freq   7800.0
     :modal-spread 1.35
-    :noise-mix    0.72
-    :noise-decay  0.048
+    :noise-mix    0.46
+    :noise-decay  0.045
     :noise-cutoff 7200.0
-    :noise-q      0.45
+    :noise-q      0.38
     :noise-filter :hp
-    :drive        1.15
+    :drive        1.05
     :vel->tone    0.45
     :variation    0.12
     :choke-group  1}
@@ -113,16 +113,16 @@
     :bus          :bus/drums
     :body         :cymbal
     :pitch        340.0
-    :decay        0.42
-    :click        0.16
+    :decay        0.38
+    :click        0.08
     :click-freq   7400.0
     :modal-spread 1.35
-    :noise-mix    0.75
-    :noise-decay  0.46
+    :noise-mix    0.48
+    :noise-decay  0.42
     :noise-cutoff 6800.0
-    :noise-q      0.40
+    :noise-q      0.35
     :noise-filter :hp
-    :drive        1.15
+    :drive        1.05
     :vel->tone    0.45
     :variation    0.10
     :choke-group  1}

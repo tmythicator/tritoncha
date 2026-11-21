@@ -40,7 +40,7 @@ impl PercVoicePool {
         note_freq_hz: Option<f32>,
         sample_rate: f32,
     ) {
-        if patch.choke_group > 0 {
+        if patch.choke_group.is_active() {
             for v in &mut self.voices {
                 if v.active && v.choke_group == patch.choke_group {
                     v.choke(sample_rate);

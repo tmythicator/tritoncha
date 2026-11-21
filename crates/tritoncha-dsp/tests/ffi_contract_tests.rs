@@ -118,7 +118,7 @@ fn test_engine_owned_ffi_buffer_pointers_and_packed_patch_render() {
         assert!(tritoncha_dsp_out_l_ptr(std::ptr::null_mut()).is_null());
         assert!(tritoncha_dsp_patch_params_ptr(std::ptr::null_mut()).is_null());
 
-        // Write a packed patch into engine-owned patch_params buffer and apply to slot 4
+        // Write a packed patch into engine-owned patch_params buffer and apply to Track 0
         let raw_patch: [f32; 22] = [
             0.0, 0.4, 0.5, 0.0, 1800.0, 2400.0, 1.0, 0.4, 0.002, 0.15, 0.5, 0.1, 0.002, 0.15, 1.0,
             1.0, 0.0, 0.2, 0.0, 0.0, 0.015, 0.02,
@@ -134,7 +134,7 @@ fn test_engine_owned_ffi_buffer_pointers_and_packed_patch_render() {
         let peak = left_slice.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));
         assert!(
             peak > 0.01,
-            "Packed voice patch on slot 4 must produce audible output, got peak {peak}"
+            "Packed voice patch on Track 0 must produce audible output, got peak {peak}"
         );
 
         tritoncha_dsp_destroy(engine);

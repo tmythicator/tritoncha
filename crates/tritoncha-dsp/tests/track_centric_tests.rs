@@ -1,14 +1,15 @@
 use tritoncha_dsp::domain::drums::{
-    NoiseFilterMode, PercBodyType, PercPatch, MAX_KIT_SLOTS, PERC_PATCH_PARAM_COUNT,
+    NoiseFilterMode, PercBodyType, MAX_KIT_SLOTS, PERC_PATCH_PARAM_COUNT,
 };
 use tritoncha_dsp::domain::effects::FilterMode;
 use tritoncha_dsp::domain::synth::{ModularPatch, OscillatorType, VOICE_PATCH_PARAM_COUNT};
 use tritoncha_dsp::domain::{BusId, BusTarget};
 use tritoncha_dsp::{
-    tritoncha_dsp_create, tritoncha_dsp_destroy, tritoncha_dsp_out_l_ptr, tritoncha_dsp_out_r_ptr,
-    tritoncha_dsp_patch_params_ptr, tritoncha_dsp_process, tritoncha_dsp_set_track_kit_slot,
-    tritoncha_dsp_set_track_patch, tritoncha_dsp_trigger_one_shot_perc,
-    tritoncha_dsp_trigger_one_shot_synth, TritonchaEngine, DEFAULT_SAMPLE_RATE,
+    perc_patch, tritoncha_dsp_create, tritoncha_dsp_destroy, tritoncha_dsp_out_l_ptr,
+    tritoncha_dsp_out_r_ptr, tritoncha_dsp_patch_params_ptr, tritoncha_dsp_process,
+    tritoncha_dsp_set_track_kit_slot, tritoncha_dsp_set_track_patch,
+    tritoncha_dsp_trigger_one_shot_perc, tritoncha_dsp_trigger_one_shot_synth, TritonchaEngine,
+    DEFAULT_SAMPLE_RATE,
 };
 
 #[test]
@@ -155,18 +156,16 @@ fn test_per_track_kits_independent_kicks_and_pitched_perc() {
     engine.set_playing(true);
 
     // Track 0 has a deep sub kick on kit slot 0; Track 1 has a pitched shell tom on kit slot 0
-    let sub_kick = PercPatch {
+    let sub_kick = perc_patch! {
         body_type: PercBodyType::Membrane,
         pitch_hz: 45.0,
         pitch_drop: 140.0,
         decay_s: 0.4,
-        ..PercPatch::default()
     };
-    let modal_tom = PercPatch {
+    let modal_tom = perc_patch! {
         body_type: PercBodyType::Shell,
         pitch_hz: 160.0,
         decay_s: 0.3,
-        ..PercPatch::default()
     };
 
     engine.set_track_kit_slot(0, 0, sub_kick);

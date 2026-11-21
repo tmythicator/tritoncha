@@ -6,11 +6,11 @@ pub mod params;
 pub mod sequencer;
 pub mod synth;
 
-pub use drums::{NoiseFilterMode, PercBodyType, PercPatch, PercVoice, PercVoicePool};
+pub use drums::{KitIndex, NoiseFilterMode, PercBodyType, PercPatch, PercVoice, PercVoicePool};
 pub use effects::{BusId, BusTarget};
 pub use params::*;
 pub use sequencer::TrackId;
-pub use synth::{ModularPatch, PatchId};
+pub use synth::ModularPatch;
 
 #[cfg(test)]
 mod tests {
@@ -35,20 +35,16 @@ mod tests {
     }
 
     #[test]
-    fn test_patch_id_bounds_and_clamping() {
-        let p = PatchId(4);
-        assert_eq!(p.as_usize(), 4);
-
-        let over = PatchId(100);
-        assert_eq!(over.clamped().as_usize(), 63);
-
-        let from_usize: PatchId = 8.into();
-        assert_eq!(from_usize, PatchId(8));
-
+    fn test_clamped_value_objects_and_kit_index_bounds() {
         assert_eq!(*Bpm::new(10.0), 30.0);
         assert_eq!(*Bpm::new(500.0), 300.0);
         assert_eq!(*DrumVelocity::new(0.01), 0.1);
         assert_eq!(*DrumVelocity::new(2.0), 1.2);
+
+        let k0 = KitIndex(0);
+        assert!(k0.is_valid());
+        assert!(KitIndex(15).is_valid());
+        assert!(!KitIndex(16).is_valid());
     }
 
     #[test]

@@ -14,7 +14,6 @@
 
 ;; Low-level WebAudio Transport and Lifecycle
 (def init-audio-worklet! transport/init-audio-worklet!)
-(def init-worklet-engine! transport/init-audio-worklet!)
 (def worklet-ready? transport/worklet-ready?)
 (def get-audio-context transport/get-audio-context)
 (def on-worklet-ready! transport/on-worklet-ready!)
@@ -24,7 +23,6 @@
 ;; Hardware Sequencer Slot Management
 (def track-slot-assignments slots/track-slot-assignments)
 (def track-slot slots/track-slot)
-(def all-track-slots slots/all-track-slots)
 (def track-slots-for slots/track-slots-for)
 (def get-or-assign-track-slot! slots/get-or-assign-track-slot!)
 

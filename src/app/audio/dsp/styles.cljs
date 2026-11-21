@@ -29,7 +29,7 @@
    {:all    {:variation 0.32 :vel->tone 0.65 :vel->pitch 0.25 :fold 0.0 :crush 0.0}
     :kick   {:body :membrane :fm-depth [:+ 0.14] :fm-ratio 1.594 :pitch-drop [:* 0.72] :decay [:* 0.85] :drive [:* 0.72] :click [:* 0.80]}
     :snare  {:body :shell :modal-spread 1.15 :noise-mix [:* 0.95] :drive [:* 0.80]}
-    :hat    {:noise-mix [:* 1.15] :drive [:* 0.80]}
+    :hat    {:noise-mix [:* 0.90] :drive [:* 0.80]}
     :cymbal {:body :cymbal :modal-spread 1.65 :drive [:* 0.85]}
     :tom    {:body :shell :modal-spread 1.05 :drive [:* 0.85]}}
 
