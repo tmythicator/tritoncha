@@ -4,11 +4,68 @@ pub mod engine;
 pub mod services;
 
 use crate::domain::effects::{CompressorConfig, FilterMode};
-use crate::domain::synth::OscillatorType;
+use crate::domain::synth::{ModularPatch, OscillatorType, VOICE_PATCH_PARAM_COUNT};
 use crate::domain::{BusId, BusTarget};
 pub use engine::{TritonchaEngine, DEFAULT_SAMPLE_RATE};
 
 // WebAssembly C-ABI Foreign Function Interface (FFI)
+
+macro_rules! ffi_engine_ptr_fn {
+    ($(
+        $(#[$meta:meta])*
+        $fn_name:ident -> *mut $elem_ty:ty : $field:ident;
+    )*) => {
+        $(
+            $(#[$meta])*
+            ///
+            /// # Safety
+            /// `ptr` must be either null or a valid pointer to an initialized `TritonchaEngine`.
+            #[no_mangle]
+            pub unsafe extern "C" fn $fn_name(ptr: *mut TritonchaEngine) -> *mut $elem_ty {
+                ptr.as_mut()
+                    .map_or(std::ptr::null_mut(), |e| e.ffi.$field.as_mut_ptr())
+            }
+        )*
+    };
+}
+
+ffi_engine_ptr_fn! {
+    /// Returns a writable pointer to the engine-owned 128-sample left output buffer.
+    tritoncha_dsp_out_l_ptr -> *mut f32 : out_l;
+    /// Returns a writable pointer to the engine-owned 128-sample right output buffer.
+    tritoncha_dsp_out_r_ptr -> *mut f32 : out_r;
+    /// Returns a writable pointer to the engine-owned 128-step track instrument ID buffer.
+    tritoncha_dsp_track_inst_ids_ptr -> *mut i16 : track_inst_ids;
+    /// Returns a writable pointer to the engine-owned 128-step track MIDI note buffer.
+    tritoncha_dsp_track_notes_ptr -> *mut i16 : track_notes;
+    /// Returns a writable pointer to the engine-owned 128-step track velocity buffer.
+    tritoncha_dsp_track_vels_ptr -> *mut f32 : track_vels;
+    /// Returns a writable pointer to the engine-owned 128-step track duration buffer.
+    tritoncha_dsp_track_durs_ptr -> *mut f32 : track_durs;
+    /// Returns a writable pointer to the engine-owned 22-float voice patch parameter buffer.
+    tritoncha_dsp_patch_params_ptr -> *mut f32 : patch_params;
+}
+
+/// Updates a modular synthesizer voice patch from a packed 22-float array.
+///
+/// # Safety
+/// `ptr` must be a valid pointer to `TritonchaEngine`, and `params_ptr` must point to at least `len` floats.
+#[no_mangle]
+pub unsafe extern "C" fn tritoncha_dsp_set_voice_patch_packed(
+    ptr: *mut TritonchaEngine,
+    patch_id: i32,
+    params_ptr: *const f32,
+    len: i32,
+) {
+    if let Some(engine) = ptr.as_mut() {
+        if !params_ptr.is_null() && (len as usize) >= VOICE_PATCH_PARAM_COUNT {
+            let slice = std::slice::from_raw_parts(params_ptr, VOICE_PATCH_PARAM_COUNT);
+            let mut arr = [0.0_f32; VOICE_PATCH_PARAM_COUNT];
+            arr.copy_from_slice(slice);
+            engine.set_voice_patch(patch_id.max(0) as usize, ModularPatch::from(arr));
+        }
+    }
+}
 
 macro_rules! ffi_engine_fn {
     ($(

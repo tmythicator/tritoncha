@@ -1,43 +1,13 @@
 //! Modular synthesizer voice patch definitions and presets.
 
 pub const MAX_PATCHES: usize = 64;
+pub const VOICE_PATCH_PARAM_COUNT: usize = 22;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PatchId(pub usize);
 
 impl PatchId {
-    pub const SAW_BASS: Self = Self(4);
-    pub const ACID_BASS: Self = Self(5);
-    pub const SUB_SINE: Self = Self(6);
-    pub const DARK_PAD: Self = Self(7);
-    pub const LEAD: Self = Self(8);
-    pub const FM: Self = Self(9);
-    pub const REESE: Self = Self(10);
     pub const CLICK: Self = Self(11);
-    pub const SUPERSAW: Self = Self(12);
-    pub const BLADE: Self = Self(13);
-    pub const HOOVER: Self = Self(14);
-    pub const KARPLUS: Self = Self(15);
-    pub const ORGAN: Self = Self(16);
-    pub const CHIPTUNE: Self = Self(17);
-    pub const AMBIENT_GLASS: Self = Self(19);
-    pub const ETHEREAL_PAD: Self = Self(27);
-    pub const ICE_PAD: Self = Self(28);
-    pub const WARM_STRINGS: Self = Self(29);
-    pub const CHOIR_PAD: Self = Self(30);
-    pub const SPACE_DRONE: Self = Self(31);
-    pub const PLUCK_LEAD: Self = Self(32);
-    pub const NEURO_BASS: Self = Self(33);
-    pub const SUB_808: Self = Self(34);
-    pub const SLAP_BASS: Self = Self(35);
-    pub const ORGAN_BASS: Self = Self(36);
-    pub const ACID_LEAD: Self = Self(37);
-    pub const FM_BELL: Self = Self(38);
-    pub const GLASS_KEYS: Self = Self(39);
-    pub const SIREN: Self = Self(40);
-    pub const LASER: Self = Self(41);
-    pub const LEAD_NBELL: Self = Self(44);
-    pub const ZAP: Self = Self(45);
 
     #[inline(always)]
     pub const fn as_usize(self) -> usize {
@@ -186,14 +156,40 @@ impl ModularPatch {
         }
     }
 
+    pub fn default_click() -> Self {
+        modular_patch! {
+            osc_type: OscillatorType::Click,
+            sub_level: 0.0,
+            pulse_width: 0.5,
+            filter_type: FilterMode::Lowpass,
+            cutoff_base: 8000.0,
+            cutoff_env_amt: 0.0,
+            cutoff_key_track: 1.0,
+            resonance: 0.1,
+            attack: 0.001,
+            decay: 0.025,
+            sustain: 0.0,
+            release: 0.015,
+            mod_attack: 0.001,
+            mod_decay: 0.01,
+            bus_id: BusTarget::Direct,
+            polyphony: 2,
+            glide: 0.0,
+            filter_drive: 0.1,
+            noise_level: 0.0,
+            pitch_snap: 0.0,
+            pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
+            analog_drift: 0.0,
+        }
+    }
+
     /// Returns default patch for a given patch identifier or index.
     pub fn default_for(patch_id: impl Into<PatchId>) -> Self {
         let pid = patch_id.into();
-        let all = init_default_patches();
-        if pid.is_valid() {
-            all[pid.as_usize()]
+        if pid == PatchId::CLICK {
+            Self::default_click()
         } else {
-            ModularPatch::default()
+            Self::default_lead()
         }
     }
 }
@@ -204,7 +200,39 @@ impl Default for ModularPatch {
     }
 }
 
-pub use super::presets::init_default_patches;
+impl From<[f32; VOICE_PATCH_PARAM_COUNT]> for ModularPatch {
+    #[inline(always)]
+    fn from(p: [f32; VOICE_PATCH_PARAM_COUNT]) -> Self {
+        modular_patch! {
+            osc_type: (p[0].round() as u8),
+            sub_level: p[1],
+            pulse_width: p[2],
+            filter_type: (p[3].round() as u8),
+            cutoff_base: p[4],
+            cutoff_env_amt: p[5],
+            cutoff_key_track: p[6],
+            resonance: p[7],
+            attack: p[8],
+            decay: p[9],
+            sustain: p[10],
+            release: p[11],
+            mod_attack: p[12],
+            mod_decay: p[13],
+            bus_id: (p[14].round() as u8),
+            polyphony: (p[15].round() as u8),
+            glide: p[16],
+            filter_drive: p[17],
+            noise_level: p[18],
+            pitch_snap: p[19],
+            pitch_snap_decay: p[20],
+            analog_drift: p[21],
+        }
+    }
+}
+
+pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
+    std::array::from_fn(ModularPatch::default_for)
+}
 
 #[cfg(test)]
 mod tests {
@@ -232,13 +260,12 @@ mod tests {
     #[test]
     fn test_init_default_patches() {
         let patches = init_default_patches();
+        assert_eq!(patches[4].osc_type, OscillatorType::Saw);
         assert_eq!(
-            patches[PatchId::SAW_BASS.as_usize()].osc_type,
-            OscillatorType::Saw
+            patches[PatchId::CLICK.as_usize()].osc_type,
+            OscillatorType::Click
         );
-        assert_eq!(*patches[PatchId::ACID_BASS.as_usize()].polyphony, 1);
-        assert_eq!(*patches[PatchId::DARK_PAD.as_usize()].polyphony, 8);
-        assert!(*patches[PatchId::SUB_808.as_usize()].pitch_snap > 0.0);
+        assert_eq!(patches[PatchId::CLICK.as_usize()].bus_id, BusTarget::Direct);
     }
 
     #[test]

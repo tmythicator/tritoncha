@@ -65,14 +65,14 @@ mod tests {
 
     #[test]
     fn test_patch_id_bounds_and_clamping() {
-        let p = PatchId::SAW_BASS;
+        let p = PatchId(4);
         assert_eq!(p.as_usize(), 4);
 
         let over = PatchId(100);
         assert_eq!(over.clamped().as_usize(), 63);
 
         let from_usize: PatchId = 8.into();
-        assert_eq!(from_usize, PatchId::LEAD);
+        assert_eq!(from_usize, PatchId(8));
 
         assert_eq!(*Bpm::new(10.0), 30.0);
         assert_eq!(*Bpm::new(500.0), 300.0);
@@ -108,11 +108,8 @@ mod tests {
         );
 
         // Synth Patches
-        assert_eq!(
-            InstrumentId::from(PatchId::SAW_BASS.as_usize() as i32),
-            InstrumentId::Synth(PatchId::SAW_BASS)
-        );
-        assert_eq!(InstrumentId::from(8), InstrumentId::Synth(PatchId::LEAD));
+        assert_eq!(InstrumentId::from(4), InstrumentId::Synth(PatchId(4)));
+        assert_eq!(InstrumentId::from(8), InstrumentId::Synth(PatchId(8)));
 
         // Introspection helpers
         assert!(InstrumentId::from(DrumId::Kick.as_i32()).is_drum());
