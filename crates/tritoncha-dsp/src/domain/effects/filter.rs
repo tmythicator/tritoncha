@@ -45,11 +45,18 @@ impl From<u8> for FilterMode {
 }
 
 /// Unconditionally stable Topology-Preserving Transform (TPT) State Variable Filter (SVF)
-/// with non-linear feedback saturation modeling analog filter drive.
+/// with coefficient caching and non-linear feedback saturation modeling analog filter drive.
 #[derive(Clone, Copy)]
 pub struct StateVariableFilter {
     ic1eq: f32,
     ic2eq: f32,
+    cached_cutoff: f32,
+    cached_res: f32,
+    cached_sr: f32,
+    k: f32,
+    a1: f32,
+    a2: f32,
+    a3: f32,
 }
 
 impl StateVariableFilter {
@@ -57,12 +64,38 @@ impl StateVariableFilter {
         Self {
             ic1eq: 0.0,
             ic2eq: 0.0,
+            cached_cutoff: -1.0,
+            cached_res: -1.0,
+            cached_sr: -1.0,
+            k: 1.0 / MIN_Q,
+            a1: 0.0,
+            a2: 0.0,
+            a3: 0.0,
         }
     }
 
     pub fn reset(&mut self) {
         self.ic1eq = 0.0;
         self.ic2eq = 0.0;
+    }
+
+    #[inline(always)]
+    fn update_coeffs(&mut self, cutoff_hz: f32, resonance: f32, sample_rate: f32) {
+        if cutoff_hz != self.cached_cutoff
+            || resonance != self.cached_res
+            || sample_rate != self.cached_sr
+        {
+            self.cached_cutoff = cutoff_hz;
+            self.cached_res = resonance;
+            self.cached_sr = sample_rate;
+            let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
+            let f = (clamped_cutoff * PI / sample_rate).tan();
+            let q = MIN_Q + resonance.clamp(0.0, MAX_RESONANCE) * MAX_Q_SCALE;
+            self.k = 1.0 / q;
+            self.a1 = 1.0 / (1.0 + f * (f + self.k));
+            self.a2 = f * self.a1;
+            self.a3 = f * self.a2;
+        }
     }
 
     #[inline(always)]
@@ -101,14 +134,11 @@ impl StateVariableFilter {
         mode: FilterMode,
         drive: f32,
     ) -> f32 {
-        let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
-        let f = (clamped_cutoff * PI / sample_rate).tan();
-        let q = MIN_Q + resonance.clamp(0.0, MAX_RESONANCE) * MAX_Q_SCALE;
-        let k = 1.0 / q;
-
-        let a1 = 1.0 / (1.0 + f * (f + k));
-        let a2 = f * a1;
-        let a3 = f * a2;
+        self.update_coeffs(cutoff_hz, resonance, sample_rate);
+        let k = self.k;
+        let a1 = self.a1;
+        let a2 = self.a2;
+        let a3 = self.a3;
 
         let in_driven = if drive > DRIVE_THRESHOLD {
             input * (1.0 + drive * DRIVE_INPUT_SCALE)
@@ -225,13 +255,25 @@ impl Default for StateVariableFilter {
     }
 }
 
-/// Virtual Analog 4-Pole (24 dB/oct) Moog Ladder Filter with non-linear feedback saturation.
-#[derive(Clone, Copy, Debug, Default)]
+/// Virtual Analog 4-Pole (24 dB/oct) Moog Ladder Filter with coefficient caching and feedback saturation.
+#[derive(Clone, Copy, Debug)]
 pub struct LadderFilter {
     s1: f32,
     s2: f32,
     s3: f32,
     s4: f32,
+    cached_cutoff: f32,
+    cached_sr: f32,
+    big_g: f32,
+    big_g2: f32,
+    big_g3: f32,
+    big_g4: f32,
+}
+
+impl Default for LadderFilter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LadderFilter {
@@ -241,6 +283,12 @@ impl LadderFilter {
             s2: 0.0,
             s3: 0.0,
             s4: 0.0,
+            cached_cutoff: -1.0,
+            cached_sr: -1.0,
+            big_g: 0.0,
+            big_g2: 0.0,
+            big_g3: 0.0,
+            big_g4: 0.0,
         }
     }
 
@@ -260,12 +308,20 @@ impl LadderFilter {
         sample_rate: f32,
         drive: f32,
     ) -> f32 {
-        let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
-        let g = (clamped_cutoff * PI / sample_rate).tan();
-        let big_g = g / (1.0 + g);
-        let big_g2 = big_g * big_g;
-        let big_g3 = big_g2 * big_g;
-        let big_g4 = big_g2 * big_g2;
+        if cutoff_hz != self.cached_cutoff || sample_rate != self.cached_sr {
+            self.cached_cutoff = cutoff_hz;
+            self.cached_sr = sample_rate;
+            let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
+            let g = (clamped_cutoff * PI / sample_rate).tan();
+            self.big_g = g / (1.0 + g);
+            self.big_g2 = self.big_g * self.big_g;
+            self.big_g3 = self.big_g2 * self.big_g;
+            self.big_g4 = self.big_g2 * self.big_g2;
+        }
+        let big_g = self.big_g;
+        let big_g2 = self.big_g2;
+        let big_g3 = self.big_g3;
+        let big_g4 = self.big_g4;
 
         let res_clamped = resonance.clamp(0.0, LADDER_MAX_RESONANCE);
         let k = res_clamped * LADDER_SELF_OSC_K;
