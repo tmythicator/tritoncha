@@ -15,13 +15,112 @@ use crate::core::math::{soft_clip, LN_MIN_60DB};
 use crate::domain::effects::StateVariableFilter;
 
 pub const NUM_MODES: usize = 6;
+pub const PLATE_FDN_LINES: usize = 4;
+pub const PLATE_FDN_BUF_SIZE: usize = 256;
 
-/// Shared modal resonator bank, metallic oscillator state, and body SVF filter for a percussion voice.
+/// Zero-allocation 4-line Householder Feedback Delay Network simulating a hammered bronze cymbal plate.
+/// Creates thousands of dense, inharmonic metallic partials with natural high-frequency damping and zero howling.
+#[derive(Clone)]
+pub struct BronzePlateDiffuser {
+    bufs: [[f32; PLATE_FDN_BUF_SIZE]; PLATE_FDN_LINES],
+    lens: [usize; PLATE_FDN_LINES],
+    pos: [usize; PLATE_FDN_LINES],
+    damp: [f32; PLATE_FDN_LINES],
+    feedback: f32,
+    damp_coeff: f32,
+}
+
+impl Default for BronzePlateDiffuser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl BronzePlateDiffuser {
+    pub fn new() -> Self {
+        Self {
+            bufs: [[0.0; PLATE_FDN_BUF_SIZE]; PLATE_FDN_LINES],
+            lens: [71, 107, 151, 211],
+            pos: [0; PLATE_FDN_LINES],
+            damp: [0.0; PLATE_FDN_LINES],
+            feedback: 0.92,
+            damp_coeff: 0.35,
+        }
+    }
+
+    /// Configures prime delay lengths scaled by cymbal diameter (pitch_hz & modal_spread) and T60 decay.
+    #[inline(always)]
+    pub fn configure(&mut self, pitch_hz: f32, decay_s: f32, spread: f32, sample_rate: f32) {
+        const BASE_PRIMES: [f32; PLATE_FDN_LINES] = [67.0, 101.0, 149.0, 211.0];
+        let sr_scale = sample_rate / 48000.0;
+        let size_scale = (400.0 / pitch_hz.clamp(160.0, 1400.0)).clamp(0.45, 1.45);
+        let spread_warp = (spread / 1.55).clamp(0.7, 1.45);
+
+        let mut avg_len = 0.0_f32;
+        for (i, &base_prime) in BASE_PRIMES.iter().enumerate() {
+            let warp = 1.0 + (i as f32 - 1.5) * 0.08 * (spread_warp - 1.0);
+            let len = (base_prime * sr_scale * size_scale * warp)
+                .round()
+                .clamp(23.0, (PLATE_FDN_BUF_SIZE - 1) as f32) as usize;
+            self.lens[i] = len;
+            avg_len += len as f32;
+        }
+        avg_len /= PLATE_FDN_LINES as f32;
+
+        // Sample-rate-invariant feedback gain targeting T60 = decay_s
+        let decay_samples = (decay_s.clamp(0.08, 3.0) * sample_rate).max(avg_len * 2.0);
+        self.feedback = (LN_MIN_60DB * avg_len / decay_samples)
+            .exp()
+            .clamp(0.65, 0.992);
+        // Larger/darker cymbals damp highs slightly faster
+        self.damp_coeff = (0.18 + 0.14 * (size_scale - 0.5).max(0.0)).clamp(0.15, 0.45);
+    }
+
+    #[inline(always)]
+    pub fn process(&mut self, input: f32) -> f32 {
+        let mut y = [0.0_f32; PLATE_FDN_LINES];
+        for (i, out_y) in y.iter_mut().enumerate() {
+            let raw = self.bufs[i][self.pos[i]];
+            // One-pole lowpass damping in each line: highs decay naturally faster than mid-bronze body
+            self.damp[i] += (raw - self.damp[i]) * (1.0 - self.damp_coeff);
+            *out_y = self.damp[i];
+        }
+
+        // 4x4 Householder orthogonal scattering matrix (energy-preserving: y_i - 0.5 * sum(y))
+        let half_sum = 0.5 * (y[0] + y[1] + y[2] + y[3]);
+        const IN_SIGNS: [f32; PLATE_FDN_LINES] = [1.0, -1.0, 1.0, -1.0];
+
+        for i in 0..PLATE_FDN_LINES {
+            let scattered = (y[i] - half_sum) * self.feedback;
+            // Subtle odd-harmonic nonlinearity models von Karman bronze plate energy transfer
+            let next = soft_clip(scattered + input * IN_SIGNS[i] * 0.45);
+            self.bufs[i][self.pos[i]] = next;
+            self.pos[i] += 1;
+            if self.pos[i] >= self.lens[i] {
+                self.pos[i] = 0;
+            }
+        }
+
+        (y[0] - y[1] + y[2] - y[3]) * 0.45
+    }
+
+    #[inline(always)]
+    pub fn reset(&mut self) {
+        for b in &mut self.bufs {
+            b.fill(0.0);
+        }
+        self.pos = [0; PLATE_FDN_LINES];
+        self.damp = [0.0; PLATE_FDN_LINES];
+    }
+}
+
+/// Shared modal resonator bank, metallic oscillator state, bronze plate FDN, and body SVF filter.
 #[derive(Clone)]
 pub struct ResonatorBank {
     pub modes: [CachedModalFilter; NUM_MODES],
     pub metallic_phases: [f32; NUM_MODES],
     pub metallic_freqs: [f32; NUM_MODES],
+    pub plate_fdn: BronzePlateDiffuser,
     pub body_filter: StateVariableFilter,
 }
 
@@ -37,6 +136,7 @@ impl ResonatorBank {
             modes: [CachedModalFilter::default(); NUM_MODES],
             metallic_phases: [0.0; NUM_MODES],
             metallic_freqs: [300.0; NUM_MODES],
+            plate_fdn: BronzePlateDiffuser::new(),
             body_filter: StateVariableFilter::new(),
         }
     }
@@ -44,6 +144,7 @@ impl ResonatorBank {
     #[inline(always)]
     pub fn reset_trigger(&mut self) {
         self.metallic_phases = [0.0; NUM_MODES];
+        self.plate_fdn.reset();
         self.body_filter.reset();
     }
 

@@ -240,15 +240,16 @@ impl PercVoice {
                     filter: self.noise_filter_spec,
                     choke_group: self.choke_group,
                 };
-                if strike.is_edge_crash() {
-                    self.exciter_decay = t60_decay_coeff(0.18, sr);
+                if !strike.is_clamped_hat() {
+                    let exc_s = 0.0025 + 0.0095 * strike.crash_blend();
+                    self.exciter_decay = t60_decay_coeff(exc_s, sr);
                 }
                 configure_cymbal(
                     &mut self.bank,
                     eff_pitch,
                     eff_decay,
                     spread,
-                    strike.is_edge_crash(),
+                    strike.is_clamped_hat(),
                     sr,
                 );
             }
