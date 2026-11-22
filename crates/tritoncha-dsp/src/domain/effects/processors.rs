@@ -1,9 +1,8 @@
 //! Audio effect processors: BitcrusherDrive, StereoChorus, and SidechainPump.
 
 use crate::core::adaa::AdaaDrive;
-use crate::core::math::{tanh_approx, wrap_phase};
+use crate::core::math::{sin_phase, tanh_approx, wrap_phase};
 use crate::domain::Normalized;
-use std::f32::consts::PI;
 
 pub const DEFAULT_BIT_DEPTH: f32 = 16.0;
 pub const MIN_BIT_DEPTH: f32 = 1.0;
@@ -193,8 +192,8 @@ impl StereoChorus {
         let lfo_inc = self.rate_hz / sample_rate;
         self.lfo_phase = wrap_phase(self.lfo_phase + lfo_inc);
 
-        let lfo_l = (self.lfo_phase * 2.0 * PI).sin();
-        let lfo_r = ((self.lfo_phase + CHORUS_QUADRATURE_OFFSET) * 2.0 * PI).sin();
+        let lfo_l = sin_phase(self.lfo_phase);
+        let lfo_r = sin_phase(self.lfo_phase + CHORUS_QUADRATURE_OFFSET);
 
         let base_delay = sample_rate * CHORUS_BASE_DELAY_SEC;
         let mod_depth = sample_rate * CHORUS_MOD_DEPTH_SEC * self.depth;

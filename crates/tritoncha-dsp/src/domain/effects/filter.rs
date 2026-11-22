@@ -1,7 +1,7 @@
 //! Unconditionally stable Topology-Preserving Transform (TPT) State Variable Filter (SVF)
 //! with non-linear feedback saturation modeling analog filter drive.
 
-use crate::core::math::tanh_approx;
+use crate::core::math::{fast_tan, tanh_approx};
 use std::f32::consts::PI;
 
 pub const MIN_CUTOFF_HZ: f32 = 20.0;
@@ -89,7 +89,7 @@ impl StateVariableFilter {
             self.cached_res = resonance;
             self.cached_sr = sample_rate;
             let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
-            let f = (clamped_cutoff * PI / sample_rate).tan();
+            let f = fast_tan(clamped_cutoff * PI / sample_rate);
             let q = MIN_Q + resonance.clamp(0.0, MAX_RESONANCE) * MAX_Q_SCALE;
             self.k = 1.0 / q;
             self.a1 = 1.0 / (1.0 + f * (f + self.k));
@@ -312,7 +312,7 @@ impl LadderFilter {
             self.cached_cutoff = cutoff_hz;
             self.cached_sr = sample_rate;
             let clamped_cutoff = cutoff_hz.clamp(MIN_CUTOFF_HZ, sample_rate * MAX_CUTOFF_RATIO);
-            let g = (clamped_cutoff * PI / sample_rate).tan();
+            let g = fast_tan(clamped_cutoff * PI / sample_rate);
             self.big_g = g / (1.0 + g);
             self.big_g2 = self.big_g * self.big_g;
             self.big_g3 = self.big_g2 * self.big_g;
