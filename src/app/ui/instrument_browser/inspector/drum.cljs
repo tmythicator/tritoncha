@@ -96,21 +96,42 @@
                           :label "Saturation Drive:" :min 0.5 :max 3.0 :step 0.05 :default 1.15 :decimals 2}]]])
 
 (defn- metallic-params-section
-  "Render metallic voice tuning parameters for cymbals, rides, and bells."
+  "Render metallic voice tuning parameters for cymbals, crashes, chinas, rides, and bells."
   [cur-sel-key cur-spec]
   [:div.inst-box
    [:div.inst-section-label "METALLIC CYMBAL + PERCUSSION PARAMETERS"]
    [:div.inst-grid-2col
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :pitch
-                          :label "Base Metallic Pitch (Hz):" :min 180.0 :max 1600.0 :step 10.0 :default 540.0 :unit "Hz" :decimals 0}]
+                          :label "Base Metallic Pitch (Hz):" :min 180.0 :max 1600.0 :step 10.0 :default 400.0 :unit "Hz" :decimals 0}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :modal-spread
+                          :label "Modal Spread (Inharmonicity):" :min 0.50 :max 2.60 :step 0.05 :default 1.55 :decimals 2}]]
+
+   [:div.inst-grid-2col
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :decay
+                          :label "Bronze Ring Decay (s):" :min 0.08 :max 3.00 :step 0.05 :default 1.05 :unit "s" :decimals 2}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :noise-decay
+                          :label "Wash Tail Decay (s):" :min 0.08 :max 3.00 :step 0.05 :default 1.15 :unit "s" :decimals 2}]]
+
+   [:div.inst-grid-2col
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :noise-mix
+                          :label "Wash / Noise Mix:" :min 0.0 :max 1.0 :step 0.02 :default 0.66 :pct? true}]
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :noise-cutoff
                           :label "Filter Cutoff (Hz):" :min 500.0 :max 10000.0 :step 100.0 :default 3200.0 :unit "Hz" :decimals 0}]]
 
-   [:div.inst-grid-2col-bottom
-    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :decay
-                          :label "Decay Ring Time (s):" :min 0.10 :max 3.00 :step 0.05 :default 1.20 :unit "s" :decimals 2}]
+   [:div.inst-grid-2col
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :noise-q
-                          :label "Filter Resonance:" :min 0.05 :max 0.95 :step 0.05 :default 0.30 :decimals 2}]]])
+                          :label "Filter Resonance (Q):" :min 0.05 :max 0.95 :step 0.02 :default 0.16 :decimals 2}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :drive
+                          :label "Saturation Drive:" :min 0.5 :max 4.0 :step 0.05 :default 1.15 :decimals 2}]]
+
+   [:div.inst-grid-2col-bottom
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :click
+                          :label "Stick Attack Level:" :min 0.0 :max 1.0 :step 0.02 :default 0.0 :pct? true}]
+    [comps/pill-selector
+     {:label     "NOISE FILTER MODE:"
+      :items     [:hp :bp :lp]
+      :current   (or (:noise-filter cur-spec) :hp)
+      :on-select #(state/patch-param! cur-sel-key :noise-filter % cur-spec)}]]])
 
 (defn- clap-params-section
   "Render clap synthesis parameters."
