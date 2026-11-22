@@ -13,5 +13,5 @@
   (testing "Configures drum character mode and returns keyword"
     (is (= :natural (transport/set-drum-mode! :natural)))
     (is (= :idm (transport/set-drum-mode! :idm)))
-    (is (= :analog (transport/mod! :analog)))
+    (is (= :natural (transport/mod! :natural)))
     (is (= :industrial (transport/mod! :industrial)))))

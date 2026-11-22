@@ -196,7 +196,7 @@
 
 (def drum-modes
   "Set of all supported drum character synthesis mode keywords."
-  #{:analog :natural :idm :industrial})
+  #{:natural :idm :industrial})
 
 (defn drum-mode?
   "Checks if a value represents a known drum character synthesis mode."

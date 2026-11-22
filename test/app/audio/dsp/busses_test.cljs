@@ -115,7 +115,6 @@
   (testing "Classifies valid drum character modes"
     (is (true? (catalog/drum-mode? :idm)))
     (is (true? (catalog/drum-mode? :natural)))
-    (is (true? (catalog/drum-mode? :analog)))
     (is (true? (catalog/drum-mode? :industrial)))
     (is (false? (catalog/drum-mode? :bass)))
     (is (false? (catalog/drum-mode? :kick)))

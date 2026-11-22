@@ -42,7 +42,7 @@
     (stacker/unstack! :kick))
 
   (testing "Supports :mod prefix pair"
-    (stacker/stack! :mod :analog [:snare {:notes ["D2"]}])
+    (stacker/stack! :mod :natural [:snare {:notes ["D2"]}])
     (is (contains? (:active-tracks @audio-state) :snare))
     (stacker/unstack! :snare))
 

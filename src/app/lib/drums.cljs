@@ -155,15 +155,15 @@
     :type         :membrane
     :bus          :bus/drums
     :body         :membrane
-    :pitch        195.0
-    :pitch-drop   72.0
-    :pitch-decay  0.100
-    :decay        0.54
-    :click        0.18
+    :pitch        168.0
+    :pitch-drop   42.0
+    :pitch-decay  0.022
+    :decay        0.62
+    :click        0.28
     :click-freq   2800.0
-    :fm-depth     0.20
+    :fm-depth     0.28
     :fm-ratio     1.594
-    :drive        1.15
+    :drive        1.35
     :vel->pitch   0.18
     :variation    0.08}
 
@@ -174,15 +174,15 @@
     :type         :membrane
     :bus          :bus/drums
     :body         :membrane
-    :pitch        138.0
-    :pitch-drop   56.0
-    :pitch-decay  0.115
-    :decay        0.72
-    :click        0.16
-    :click-freq   2400.0
-    :fm-depth     0.18
+    :pitch        118.0
+    :pitch-drop   34.0
+    :pitch-decay  0.026
+    :decay        0.82
+    :click        0.25
+    :click-freq   2300.0
+    :fm-depth     0.26
     :fm-ratio     1.594
-    :drive        1.15
+    :drive        1.40
     :vel->pitch   0.18
     :variation    0.08}
 
@@ -193,15 +193,15 @@
     :type         :membrane
     :bus          :bus/drums
     :body         :membrane
-    :pitch        92.0
-    :pitch-drop   42.0
-    :pitch-decay  0.135
-    :decay        0.96
-    :click        0.14
+    :pitch        78.0
+    :pitch-drop   26.0
+    :pitch-decay  0.032
+    :decay        1.08
+    :click        0.22
     :click-freq   1900.0
-    :fm-depth     0.16
+    :fm-depth     0.24
     :fm-ratio     1.594
-    :drive        1.20
+    :drive        1.45
     :vel->pitch   0.16
     :variation    0.08}
 
@@ -224,7 +224,6 @@
     :noise-filter :bp
     :drive        1.35
     :fold         0.36
-    :crush        0.58
     :vel->tone    0.55
     :variation    0.70}
 
@@ -268,7 +267,6 @@
     :noise-filter :bp
     :drive        1.35
     :fold         0.62
-    :crush        0.36
     :vel->tone    0.45
     :variation    0.10}
 
@@ -291,7 +289,6 @@
     :noise-filter :bp
     :drive        1.35
     :fold         0.58
-    :crush        0.34
     :vel->tone    0.45
     :variation    0.10}
 
@@ -314,7 +311,6 @@
     :noise-filter :bp
     :drive        1.35
     :fold         0.55
-    :crush        0.32
     :vel->tone    0.45
     :variation    0.10}
 

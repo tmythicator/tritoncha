@@ -11,7 +11,7 @@
 ;;   :figures - Optional map of named 3D figures in scene: {:core {:geom ... :pos [...] :scale ... :colors ...}}
 ;;   :colors  - Vector of two hex colors [background-hex mesh-hex] (e.g. ["#080412" "#00ffaa"])
 ;;   :routing - Audio routing topology preset key (e.g. :default, :studio-master, :ambient-prism, :crematorium)
-;;   :mod     - Drum character synthesis mode override (:natural, :analog, :idm, :industrial)
+;;   :mod     - Drum character synthesis mode override (:natural, :idm, :industrial)
 ;;   :tracks  - Map of quantized track loops launched simultaneously:
 ;;              {:drums {:pattern (pat "k . . .  s . . .  . . k .  s . . g") :step "16n"}
 ;;               :cymb  {:pattern (pat "rd . . .  rb . . .  . . sp .  ch . . .") :step "16n"}
@@ -68,7 +68,7 @@
 
    [:orbital-matrix
     {:name    "Orbital Breaking Bits"
-     :mod     :analog
+     :mod     :natural
      :bpm     168
      :scale   [:e :phrygian 1]
      :colors  ["#050410" "#00ffcc"]
@@ -154,7 +154,7 @@
 
    [:acid-roller
     {:name    "Deck 2016"
-     :mod     :analog
+     :mod     :natural
      :bpm     130
      :scale   [:a :aeolian 1]
      :geom    :octahedron
@@ -221,7 +221,7 @@
 
    [:glow-dub
     {:name   "Glowing Cavern"
-     :mod    :analog
+     :mod    :natural
      :bpm    130
      :scale  [:c :minor 1]
      :geom   :icosahedron
@@ -244,7 +244,7 @@
 
    [:laser-turret
     {:name   "Laser Turret"
-     :mod    :analog
+     :mod    :natural
      :bpm    126
      :scale  [:d :dorian 1]
      :geom   :octahedron
@@ -262,7 +262,7 @@
 
    [:synthwave-run
     {:name   "Neon Highway Pursuit"
-     :mod    :analog
+     :mod    :natural
      :bpm    124
      :scale  [:a :minor 1]
      :geom   :torus-knot
@@ -289,7 +289,7 @@
 
    [:electro-break
     {:name   "Cyborg Factory"
-     :mod    :analog
+     :mod    :natural
      :bpm    134
      :scale  [:e :phrygian 1]
      :geom   :dodecahedron
@@ -400,7 +400,7 @@
 
    [:chiptune-odyssey
     {:name   "Pixelated Joy"
-     :mod    :analog
+     :mod    :natural
      :bpm    150
      :scale  [:c :major 1]
      :geom   :octahedron
@@ -420,7 +420,7 @@
 
    [:psy-trance
     {:name   "Warp Speed Vortex"
-     :mod    :analog
+     :mod    :natural
      :bpm    145
      :scale  [:f :phrygian 1]
      :geom   :icosahedron

@@ -327,11 +327,11 @@
   (drop!)   ;; Seismic sub-bass drop
 
   ;; Rust WASM Audio Core sound modes + Composable Genre Styles
-  (mod! :idm)                                ;; Built-in style (:natural, :analog, :idm, :industrial)
+  (mod! :idm)                                ;; Built-in style (:natural, :idm, :industrial)
   (mod! {:natural 0.7 :industrial 0.3})      ;; Weighted style blend
   (defstyle! :gabber {:all {:drive [:* 1.6]} :kick {:fold 0.75 :pitch [:+ 6.0]}})
   (mod! :gabber)
-  (mod! :analog)
+  (mod! :natural)
   (drive-mode! :adaa)  ;; ADAA anti-aliased saturation (:tan-h, :soft, :adaa)
   (reverb-mode! :fdn)   ;; Feedback Delay Network reverb (:fdn, :freeverb)
 

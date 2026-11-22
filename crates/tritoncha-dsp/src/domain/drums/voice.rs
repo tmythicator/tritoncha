@@ -360,7 +360,10 @@ impl PercVoice {
 
         // Stage 3: Composable Shaper & Equal-Loudness Headroom
         let shaped = self.shaper.process(body_sig + noise_sig + click_sig);
-        let level_trim = if self.body_type == PercBodyType::Membrane && self.base_pitch_hz < 100.0 {
+        let level_trim = if self.body_type == PercBodyType::Membrane
+            && self.base_pitch_hz < 220.0
+            && self.noise_mix < 0.35
+        {
             1.0
         } else {
             0.72

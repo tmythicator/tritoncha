@@ -172,11 +172,11 @@
   [cur-sel-key cur-spec]
   (let [drum-type   (or (:type cur-spec) cur-sel-key)
         user-styles (keys (:styles @repl-registry))
-        style-items (vec (distinct (concat [:analog :natural :idm :industrial] user-styles)))
+        style-items (vec (distinct (concat [:natural :idm :industrial] user-styles)))
         global-mod  (:drum-mode @audio-state)
         active-mod  (or (:mod cur-spec)
                         (when (keyword? global-mod) (styles/normalize-style-key global-mod))
-                        :analog)]
+                        :natural)]
     [:div.inst-section
      [:div.inst-spec-header
       [:div.inst-section-label "DRUM SYNTHESIS PARAMETERS"]

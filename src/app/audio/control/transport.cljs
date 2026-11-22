@@ -16,14 +16,14 @@
 
 (defn set-drum-mode!
   "Configures the global percussion genre style across all active drum tracks.
-  Accepts a style keyword (:analog, :natural, :idm, :industrial, or custom defstyle!)
+  Accepts a style keyword (:natural, :idm, :industrial, or custom defstyle!)
   or a weighted style blend map (e.g. {:natural 0.7 :industrial 0.3}).
   Examples: (set-drum-mode! :idm), (mod! {:natural 0.7 :industrial 0.3})."
   [style-spec]
   (let [m (cond
             (map? style-spec) style-spec
             (some? style-spec) (keyword style-spec)
-            :else :analog)]
+            :else :natural)]
     (swap! audio-state assoc :drum-mode m)
     (doseq [[tk tr] (:active-tracks @audio-state)]
       (let [pat-atom (:pattern tr)
@@ -34,7 +34,7 @@
 
 (def mod!
   "Shortcut for set-drum-mode!. Configures drum character mode.
-  Examples: (mod! :idm), (mod! :analog), (mod! :natural)."
+  Examples: (mod! :natural), (mod! :idm), (mod! :industrial)."
   set-drum-mode!)
 
 (defn clear-loops!

@@ -5,8 +5,8 @@
             [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest test-builtin-styles-exist
-  (testing "Built-in genre styles :analog, :natural, :idm, :industrial exist"
-    (doseq [s [:analog :natural :idm :industrial]]
+  (testing "Built-in genre styles :natural, :idm, :industrial exist"
+    (doseq [s [:natural :idm :industrial]]
       (is (map? (styles/resolve-style s)) (str "Style " s " must be defined")))))
 
 (deftest test-apply-single-style-by-role
@@ -44,16 +44,15 @@
       (is (= 58.0 (:pitch out))))))
 
 (deftest test-mode-switching-is-idempotent
-  (testing "Switching :china through :natural -> :idm -> :industrial -> :analog restores exact initial analog params"
+  (testing "Switching :china through :idm -> :industrial -> :natural restores exact initial natural params"
     (instruments/reset-instrument! :china)
     (let [initial-spec   (instruments/resolve-instrument-spec :china)
-          initial-params (vec (compiler/compile-perc-params (styles/apply-style initial-spec :analog)))]
-      (instruments/patch! :china :mod :natural)
+          initial-params (vec (compiler/compile-perc-params (styles/apply-style initial-spec :natural)))]
       (instruments/patch! :china :mod :idm)
       (instruments/patch! :china :mod :industrial)
-      (instruments/patch! :china :mod :analog)
+      (instruments/patch! :china :mod :natural)
       (let [final-spec   (instruments/resolve-instrument-spec :china)
             final-params (vec (compiler/compile-perc-params (styles/apply-style final-spec (:mod final-spec))))]
         (is (= initial-params final-params)
-            "Returning to :analog must produce bit-for-bit identical 24-float PercPatch")
+            "Returning to :natural must produce bit-for-bit identical 24-float PercPatch")
         (instruments/reset-instrument! :china)))))

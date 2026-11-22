@@ -16,7 +16,7 @@ pub fn render_membrane(
     sample_rate: f32,
 ) -> f32 {
     let fm = if fm_depth > 0.0 {
-        let f = sin_phase(*fm_phase) * fm_depth * body_env;
+        let f = sin_phase(*fm_phase) * fm_depth * body_env * body_env;
         *fm_phase = wrap_phase(*fm_phase + (cur_freq_hz * fm_ratio) / sample_rate);
         f
     } else {

@@ -4,10 +4,7 @@
   (:require [app.state :refer [repl-registry]]))
 
 (def style-aliases
-  {:classic    :analog
-   :808        :analog
-   :909        :analog
-   :acoustic   :natural
+  {:acoustic   :natural
    :organic    :natural
    :wood       :natural
    :glitch     :idm
@@ -18,20 +15,14 @@
    :crush      :industrial})
 
 (def builtin-styles
-  "Built-in genre style transforms targeting drum roles."
-  {:analog
-   {:all   {:variation 0.08 :vel->tone 0.30 :vel->pitch 0.10}
-    :kick  {:body :membrane :drive [:* 1.05] :fold 0.0}
-    :snare {:drive [:* 1.0] :fold 0.0}
-    :hat   {:body :cymbal :crush 0.0}}
-
-   :natural
-   {:all    {:variation 0.32 :vel->tone 0.65 :vel->pitch 0.25 :fold 0.0 :crush 0.0}
-    :kick   {:body :membrane :fm-depth [:+ 0.14] :fm-ratio 1.594 :pitch-drop [:* 0.72] :decay [:* 0.85] :drive [:* 0.72] :click [:* 0.80]}
-    :snare  {:body :shell :modal-spread 1.15 :noise-mix [:* 0.95] :drive [:* 0.80]}
+  "Built-in genre style transforms targeting drum roles (:natural, :idm, :industrial)."
+  {:natural
+   {:all    {:variation 0.28 :vel->tone 0.65 :vel->pitch 0.25 :fold 0.0 :crush 0.0}
+    :kick   {:body :membrane :fm-depth [:+ 0.14] :fm-ratio 1.594 :pitch-drop [:* 0.72] :decay [:* 0.85] :drive [:* 0.78] :click [:* 0.85]}
+    :snare  {:body :shell :modal-spread 1.15 :noise-mix [:* 0.95] :drive [:* 0.82]}
     :hat    {:noise-mix [:* 0.90] :drive [:* 0.80]}
     :cymbal {:body :cymbal :modal-spread 1.65 :drive [:* 0.85]}
-    :tom    {:body :shell :modal-spread 1.05 :drive [:* 0.85]}}
+    :tom    {:body :membrane :fm-depth [:+ 0.14] :fm-ratio 1.594 :decay [:* 1.15] :noise-mix 0.10 :noise-decay 0.045 :noise-cutoff 1400.0 :noise-filter :bp :drive [:* 0.92]}}
 
    :idm
    {:all    {:crush 0.22 :vel->pitch 0.35 :variation 0.22}
