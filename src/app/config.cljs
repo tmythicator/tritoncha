@@ -1,7 +1,7 @@
 (ns app.config
   "System configuration, audio/visual buffer parameters and runtime constants.")
 
-(def app-version "1.7.0")
+(def app-version "1.8.0")
 
 (def default-bpm 168)
 (def min-bpm 40)

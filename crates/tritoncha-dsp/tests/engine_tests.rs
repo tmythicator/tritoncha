@@ -798,7 +798,7 @@ fn test_dsp_version_and_build_info() {
         TRITONCHA_DSP_VERSION,
     };
 
-    assert_eq!(TRITONCHA_DSP_VERSION, "1.7.0");
+    assert_eq!(TRITONCHA_DSP_VERSION, "1.8.0");
 
     let ptr = tritoncha_dsp_version_ptr();
     let len = tritoncha_dsp_version_len();
@@ -807,7 +807,7 @@ fn test_dsp_version_and_build_info() {
 
     let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
     let text = std::str::from_utf8(slice).expect("Must be valid UTF-8");
-    assert!(text.contains("1.7.0"));
+    assert!(text.contains("1.8.0"));
     assert!(text.contains("Alexandr Timchenko"));
     assert!(text.contains("AGPL-3.0-or-later"));
 }

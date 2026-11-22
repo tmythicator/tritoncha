@@ -50,7 +50,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
 
             this.ensureMemoryViews();
 
-            let wasmVersion = '1.7.0';
+            let wasmVersion = '1.8.0';
             try {
               const ptr = this.wasmExports.tritoncha_dsp_version_ptr();
               const len = this.wasmExports.tritoncha_dsp_version_len();

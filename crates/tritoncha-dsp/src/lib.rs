@@ -393,7 +393,7 @@ ffi_engine_fn! {
 
 pub const TRITONCHA_DSP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const TRITONCHA_DSP_BUILD_INFO: &str =
-    "tritoncha-dsp 1.7.0 (Alexandr Timchenko <tmythicator>, AGPL-3.0-or-later)";
+    "tritoncha-dsp 1.8.0 (Alexandr Timchenko <tmythicator>, AGPL-3.0-or-later)";
 
 /// Returns a pointer to the static DSP engine build info string.
 #[no_mangle]
