@@ -11,6 +11,7 @@
             [app.audio.dsp.fx :as fx]
             [app.audio.dsp.instruments :as inst]
             [app.audio.dsp.routing :as routing]
+            [app.audio.dsp.styles :as styles]
             [app.audio.dsp.telemetry :as telemetry]
             [app.audio.dsp.worklet.transport :as worklet-transport]
             [app.audio.theory.harmony :as harmony]
@@ -51,6 +52,7 @@
 (def unstack! stacker/unstack!)
 (def set-drum-mode! transport/set-drum-mode!)
 (def mod! transport/mod!)
+(def defstyle! styles/defstyle!)
 (def drum-mode? inst/drum-mode?)
 (def composite-drums? inst/composite-drums?)
 (def individual-drum? inst/individual-drum?)

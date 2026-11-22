@@ -26,7 +26,11 @@
   {:bass :bass-analog
    :sub  :sub-pure
    :pad  :pad-cinema
-   :lead :lead-pluck})
+   :lead :lead-pluck
+   :tom  :tom-mid
+   :hh-c :hat-closed
+   :hh-o :hat-open
+   :sn   :snare})
 
 (def instrument-aliases
   {;; Generic shortcuts
@@ -119,9 +123,9 @@
 
 (def drum-keywords
   "Unified set of all drum instrument keywords."
-  (into #{:drum :drums :kick :kicks :snare :snares :sn :hat :hats :hat-closed :hat-open :hh-c :hh-o :hh-clk
+  (into #{:drum :drums :kick :kicks :snare :snares :sn :hat :hats :hat-closed :hat-open :hh-c :hh-o
           :tom :toms :tom-high :tom-mid :tom-low :cymb :cymbal :cymbals :ride :ride-bell :crash :crash-16 :crash-18
-          :splash :china :clap :claps :cowbell :rim :sn-rs :sn-clk :sn-gh :sn-roll :perc :percs :percussion
+          :splash :china :clap :claps :cowbell :perc :percs :percussion
           :shaker :tamb :tambourine :break}
         (concat (keys core-drums)
                 (keys user-drums))))
@@ -192,7 +196,7 @@
 
 (def drum-modes
   "Set of all supported drum character synthesis mode keywords."
-  #{:analog :natural :idm :industrial})
+  #{:natural :idm :industrial})
 
 (defn drum-mode?
   "Checks if a value represents a known drum character synthesis mode."

@@ -1,6 +1,6 @@
 /**
- * Tritoncha Master AudioWorklet & WebAssembly Engine
- * High-performance 128-sample real-time DSP audio processor driving the pure Rust WASM engine.
+ * Tritoncha Master AudioWorklet & WebAssembly Engine Bridge
+ * 128-sample real-time DSP audio processor forwarding messages to the Rust WASM engine.
  */
 
 class TritonchaDSPProcessor extends AudioWorkletProcessor {
@@ -8,8 +8,6 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
     super();
 
     this.sampleRate = sampleRate || 48000.0;
-    this.useWasm = false;
-    this.wasmInstance = null;
     this.wasmExports = null;
     this.wasmEnginePtr = 0;
     this.pendingMessages = [];
@@ -36,10 +34,9 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
       if (!data) return;
 
       if (data.type === 'initWasm') {
-        const wasmBuf = data.wasmBinary || data.wasmBytes;
+        const wasmBuf = data.wasmBinary;
         if (wasmBuf) {
           WebAssembly.instantiate(wasmBuf).then((result) => {
-            this.wasmInstance = result.instance;
             this.wasmExports = result.instance.exports;
             this.wasmEnginePtr = this.wasmExports.tritoncha_dsp_create(this.sampleRate);
 
@@ -53,16 +50,12 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
 
             this.ensureMemoryViews();
 
-            this.useWasm = true;
-            let wasmVersion = '1.7.0';
-            if (this.wasmExports.tritoncha_dsp_version_ptr && this.wasmExports.tritoncha_dsp_version_len) {
-              try {
-                const ptr = this.wasmExports.tritoncha_dsp_version_ptr();
-                const len = this.wasmExports.tritoncha_dsp_version_len();
-                wasmVersion = new TextDecoder('utf-8').decode(new Uint8Array(this.wasmExports.memory.buffer, ptr, len));
-              } catch (_) {}
-            }
-            this.wasmVersion = wasmVersion;
+            let wasmVersion = '1.8.0';
+            try {
+              const ptr = this.wasmExports.tritoncha_dsp_version_ptr();
+              const len = this.wasmExports.tritoncha_dsp_version_len();
+              wasmVersion = new TextDecoder('utf-8').decode(new Uint8Array(this.wasmExports.memory.buffer, ptr, len));
+            } catch (_) {}
             this.port.postMessage({ type: 'ready', version: wasmVersion });
 
             if (this.pendingMessages.length > 0) {
@@ -76,7 +69,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
             console.error('WASM instantiate error in AudioWorklet:', err);
           });
         }
-      } else if (!this.useWasm) {
+      } else if (!this.wasmEnginePtr) {
         this.pendingMessages.push(data);
       } else {
         this.handleMessage(data);
@@ -98,442 +91,298 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
       this.notesBufferView = new Int16Array(wasmMemory.buffer, this.notesBufferPtr, 128);
       this.velsBufferView = new Float32Array(wasmMemory.buffer, this.velsBufferPtr, 128);
       this.dursBufferView = new Float32Array(wasmMemory.buffer, this.dursBufferPtr, 128);
-      if (this.patchParamsPtr) {
-        this.patchParamsView = new Float32Array(wasmMemory.buffer, this.patchParamsPtr, 22);
-      }
+      this.patchParamsView = new Float32Array(wasmMemory.buffer, this.patchParamsPtr, 24);
+    }
+  }
+
+  writePatchParams(params, maxLen) {
+    this.ensureMemoryViews();
+    const n = Math.min(params.length, maxLen);
+    for (let i = 0; i < n; i++) {
+      this.patchParamsView[i] = params[i];
+    }
+    return n;
+  }
+
+  applyBusProcessor(fnPrefix, busIdx, p) {
+    const e = this.wasmExports;
+    const ptr = this.wasmEnginePtr;
+    switch (p.type || p.processor) {
+      case 'filter':
+        e[`${fnPrefix}_filter`](
+          ptr,
+          busIdx,
+          p.cutoffHz !== undefined ? p.cutoffHz : 18000.0,
+          p.resonance !== undefined ? p.resonance : 0.0
+        );
+        break;
+      case 'delay':
+        e[`${fnPrefix}_delay`](
+          ptr,
+          busIdx,
+          p.timeS !== undefined ? p.timeS : 0.35,
+          p.feedback !== undefined ? p.feedback : 0.4,
+          p.wet !== undefined ? p.wet : 0.3
+        );
+        break;
+      case 'distort':
+        e[`${fnPrefix}_distort`](
+          ptr,
+          busIdx,
+          p.drive !== undefined ? p.drive : 0.0,
+          p.bits !== undefined ? p.bits : 16.0,
+          p.sampleHold !== undefined ? p.sampleHold : 1.0
+        );
+        break;
+      case 'chorus':
+        e[`${fnPrefix}_chorus`](
+          ptr,
+          busIdx,
+          p.rateHz !== undefined ? p.rateHz : 0.8,
+          p.depth !== undefined ? p.depth : 0.4,
+          p.mix !== undefined ? p.mix : 0.3
+        );
+        break;
+      case 'reverb':
+        e[`${fnPrefix}_reverb`](
+          ptr,
+          busIdx,
+          p.roomSize !== undefined ? p.roomSize : 0.7,
+          p.wet !== undefined ? p.wet : 0.3
+        );
+        break;
+      case 'compressor':
+        e[`${fnPrefix}_compressor`](
+          ptr,
+          busIdx,
+          p.thresholdDb !== undefined ? p.thresholdDb : -12.0,
+          p.ratio !== undefined ? p.ratio : 4.0,
+          p.attackS !== undefined ? p.attackS : 0.010,
+          p.releaseS !== undefined ? p.releaseS : 0.100,
+          p.makeupDb !== undefined ? p.makeupDb : 2.5,
+          p.mix !== undefined ? p.mix : 1.0
+        );
+        break;
     }
   }
 
   handleMessage(data) {
+    if (!this.wasmExports || !this.wasmEnginePtr) return;
+    const e = this.wasmExports;
+    const ptr = this.wasmEnginePtr;
+
     switch (data.type) {
+      case 'setBpm':
+        e.tritoncha_dsp_set_bpm(ptr, data.bpm || 168.0);
+        break;
 
-        case 'setBpm':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_bpm(this.wasmEnginePtr, data.bpm || 168.0);
+      case 'setPlaying':
+        e.tritoncha_dsp_set_playing(ptr, data.playing ? 1 : 0);
+        break;
+
+      case 'setTrack':
+        if (data.notes && data.vels) {
+          this.ensureMemoryViews();
+          const len = Math.min(128, data.notes.length);
+          for (let i = 0; i < len; i++) {
+            this.instIdsBufferView[i] = data.instIds ? data.instIds[i] : -1;
+            this.notesBufferView[i] = data.notes[i];
+            this.velsBufferView[i] = typeof data.vels[i] === 'number' ? data.vels[i] : 0.9;
+            this.dursBufferView[i] = data.durs
+              ? (typeof data.durs[i] === 'number' ? data.durs[i] : 0.2)
+              : (data.dur || 0.2);
           }
-          break;
+          e.tritoncha_dsp_set_track(
+            ptr,
+            data.trackIdx || 0,
+            this.instIdsBufferPtr,
+            this.notesBufferPtr,
+            this.velsBufferPtr,
+            this.dursBufferPtr,
+            len,
+            data.stepMult || 1
+          );
+        }
+        break;
 
-        case 'setPlaying':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_playing(this.wasmEnginePtr, data.playing ? 1 : 0);
+      case 'deactivateTrack':
+        e.tritoncha_dsp_deactivate_track(ptr, data.trackIdx || 0);
+        break;
+
+      case 'clearTracks':
+        e.tritoncha_dsp_clear_tracks(ptr);
+        break;
+
+      case 'muteTrack':
+        e.tritoncha_dsp_mute_track(ptr, data.trackIdx || 0, data.muted ? 1 : 0);
+        break;
+
+      case 'soloTrack':
+        e.tritoncha_dsp_solo_track(ptr, data.trackIdx || 0, data.solo ? 1 : 0);
+        break;
+
+      case 'setTrackPatch':
+        if (data.params) {
+          const n = this.writePatchParams(data.params, 22);
+          e.tritoncha_dsp_set_track_patch(
+            ptr,
+            data.trackIdx !== undefined ? data.trackIdx : 0,
+            this.patchParamsPtr,
+            n
+          );
+        }
+        break;
+
+      case 'setTrackKitSlot':
+        if (data.params) {
+          const n = this.writePatchParams(data.params, 24);
+          e.tritoncha_dsp_set_track_kit_slot(
+            ptr,
+            data.trackIdx !== undefined ? data.trackIdx : 0,
+            data.slotIdx !== undefined ? data.slotIdx : 0,
+            this.patchParamsPtr,
+            n
+          );
+        }
+        break;
+
+      case 'noteOn':
+        if (data.percParams) {
+          const n = this.writePatchParams(data.percParams, 24);
+          e.tritoncha_dsp_trigger_one_shot_perc(
+            ptr,
+            this.patchParamsPtr,
+            n,
+            data.freq || 0.0,
+            data.velocity || 0.9
+          );
+        } else if (data.params) {
+          const n = this.writePatchParams(data.params, 22);
+          e.tritoncha_dsp_trigger_one_shot_synth(
+            ptr,
+            this.patchParamsPtr,
+            n,
+            data.freq || 440.0,
+            data.velocity || 0.9,
+            data.dur || 0.0
+          );
+        }
+        break;
+
+      case 'setBusParams':
+        e.tritoncha_dsp_set_bus_params(
+          ptr,
+          data.busIdx !== undefined ? data.busIdx : 0,
+          data.gainDb !== undefined ? data.gainDb : 0.0,
+          data.muted ? 1 : 0,
+          data.sendDelay !== undefined ? data.sendDelay : 0.0,
+          data.sendReverb !== undefined ? data.sendReverb : 0.0,
+          data.bypassMasterFx ? 1 : 0
+        );
+        break;
+
+      case 'setBusChain': {
+        const busIdx = data.busIdx !== undefined ? data.busIdx : 0;
+        e.tritoncha_dsp_clear_bus_chain(ptr, busIdx);
+        e.tritoncha_dsp_set_bus_target_out(ptr, busIdx, data.targetOut ? 1 : 0);
+        if (Array.isArray(data.inserts)) {
+          for (const ins of data.inserts) {
+            this.applyBusProcessor('tritoncha_dsp_add_bus', busIdx, ins);
           }
-          break;
-
-        case 'setTrack':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && data.notes && data.vels) {
-            this.ensureMemoryViews();
-            const len = Math.min(128, data.notes.length);
-            for (let i = 0; i < len; i++) {
-              this.instIdsBufferView[i] = data.instIds ? data.instIds[i] : (data.instId || 4);
-              this.notesBufferView[i] = data.notes[i];
-              this.velsBufferView[i] = (typeof data.vels[i] === 'number') ? data.vels[i] : 0.9;
-              this.dursBufferView[i] = data.durs ? ((typeof data.durs[i] === 'number') ? data.durs[i] : 0.2) : (data.dur || 0.2);
-            }
-            this.wasmExports.tritoncha_dsp_set_track(
-              this.wasmEnginePtr,
-              data.trackIdx || 0,
-              this.instIdsBufferPtr,
-              this.notesBufferPtr,
-              this.velsBufferPtr,
-              this.dursBufferPtr,
-              len,
-              data.stepMult || 1
-            );
-          }
-          break;
-
-        case 'deactivateTrack':
-        case 'stopTrack':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_deactivate_track) {
-            this.wasmExports.tritoncha_dsp_deactivate_track(this.wasmEnginePtr, data.trackIdx || 0);
-          }
-          break;
-
-        case 'clearTracks':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_clear_tracks(this.wasmEnginePtr);
-          }
-          break;
-
-        case 'muteTrack':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_mute_track(
-              this.wasmEnginePtr,
-              data.trackIdx || 0,
-              data.muted ? 1 : 0
-            );
-          }
-          break;
-
-        case 'soloTrack':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_solo_track(
-              this.wasmEnginePtr,
-              data.trackIdx || 0,
-              data.solo ? 1 : 0
-            );
-          }
-          break;
-
-        case 'setBusParams':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_bus_params(
-              this.wasmEnginePtr,
-              data.busIdx !== undefined ? data.busIdx : 0,
-              data.gainDb !== undefined ? data.gainDb : 0.0,
-              data.muted ? 1 : 0,
-              data.sendDelay !== undefined ? data.sendDelay : 0.0,
-              data.sendReverb !== undefined ? data.sendReverb : 0.0,
-              data.bypassMasterFx ? 1 : 0
-            );
-          }
-          break;
-
-        case 'setBusChain':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            const busIdx = data.busIdx !== undefined ? data.busIdx : 0;
-            this.wasmExports.tritoncha_dsp_clear_bus_chain(this.wasmEnginePtr, busIdx);
-            this.wasmExports.tritoncha_dsp_set_bus_target_out(
-              this.wasmEnginePtr,
-              busIdx,
-              data.targetOut ? 1 : 0
-            );
-            if (Array.isArray(data.inserts)) {
-              for (const ins of data.inserts) {
-                switch (ins.type) {
-                  case 'filter':
-                    this.wasmExports.tritoncha_dsp_add_bus_filter(
-                      this.wasmEnginePtr,
-                      busIdx,
-                      ins.cutoffHz !== undefined ? ins.cutoffHz : 18000.0,
-                      ins.resonance !== undefined ? ins.resonance : 0.0
-                    );
-                    break;
-                  case 'delay':
-                    this.wasmExports.tritoncha_dsp_add_bus_delay(
-                      this.wasmEnginePtr,
-                      busIdx,
-                      ins.timeS !== undefined ? ins.timeS : 0.35,
-                      ins.feedback !== undefined ? ins.feedback : 0.4,
-                      ins.wet !== undefined ? ins.wet : 0.3
-                    );
-                    break;
-                  case 'distort':
-                    this.wasmExports.tritoncha_dsp_add_bus_distort(
-                      this.wasmEnginePtr,
-                      busIdx,
-                      ins.drive !== undefined ? ins.drive : 0.0,
-                      ins.bits !== undefined ? ins.bits : 16.0,
-                      ins.sampleHold !== undefined ? ins.sampleHold : 1.0
-                    );
-                    break;
-                  case 'chorus':
-                    this.wasmExports.tritoncha_dsp_add_bus_chorus(
-                      this.wasmEnginePtr,
-                      busIdx,
-                      ins.rateHz !== undefined ? ins.rateHz : 0.8,
-                      ins.depth !== undefined ? ins.depth : 0.4,
-                      ins.mix !== undefined ? ins.mix : 0.3
-                    );
-                    break;
-                  case 'reverb':
-                    this.wasmExports.tritoncha_dsp_add_bus_reverb(
-                      this.wasmEnginePtr,
-                      busIdx,
-                      ins.roomSize !== undefined ? ins.roomSize : 0.7,
-                      ins.wet !== undefined ? ins.wet : 0.3
-                    );
-                    break;
-                  case 'compressor':
-                    this.wasmExports.tritoncha_dsp_add_bus_compressor(
-                      this.wasmEnginePtr,
-                      busIdx,
-                      ins.thresholdDb !== undefined ? ins.thresholdDb : -12.0,
-                      ins.ratio !== undefined ? ins.ratio : 4.0,
-                      ins.attackS !== undefined ? ins.attackS : 0.010,
-                      ins.releaseS !== undefined ? ins.releaseS : 0.100,
-                      ins.makeupDb !== undefined ? ins.makeupDb : 2.5,
-                      ins.mix !== undefined ? ins.mix : 1.0
-                    );
-                    break;
-                }
-              }
-            }
-          }
-          break;
-
-        case 'updateBusProcessor':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            const busIdx = data.busIdx !== undefined ? data.busIdx : -1;
-            switch (data.processor) {
-              case 'filter':
-                this.wasmExports.tritoncha_dsp_update_bus_filter(
-                  this.wasmEnginePtr,
-                  busIdx,
-                  data.cutoffHz !== undefined ? data.cutoffHz : 18000.0,
-                  data.resonance !== undefined ? data.resonance : 0.0
-                );
-                break;
-              case 'delay':
-                this.wasmExports.tritoncha_dsp_update_bus_delay(
-                  this.wasmEnginePtr,
-                  busIdx,
-                  data.timeS !== undefined ? data.timeS : 0.35,
-                  data.feedback !== undefined ? data.feedback : 0.4,
-                  data.wet !== undefined ? data.wet : 0.3
-                );
-                break;
-              case 'distort':
-                this.wasmExports.tritoncha_dsp_update_bus_distort(
-                  this.wasmEnginePtr,
-                  busIdx,
-                  data.drive !== undefined ? data.drive : 0.0,
-                  data.bits !== undefined ? data.bits : 16.0,
-                  data.sampleHold !== undefined ? data.sampleHold : 1.0
-                );
-                break;
-              case 'chorus':
-                this.wasmExports.tritoncha_dsp_update_bus_chorus(
-                  this.wasmEnginePtr,
-                  busIdx,
-                  data.rateHz !== undefined ? data.rateHz : 0.8,
-                  data.depth !== undefined ? data.depth : 0.4,
-                  data.mix !== undefined ? data.mix : 0.3
-                );
-                break;
-              case 'reverb':
-                this.wasmExports.tritoncha_dsp_update_bus_reverb(
-                  this.wasmEnginePtr,
-                  busIdx,
-                  data.roomSize !== undefined ? data.roomSize : 0.7,
-                  data.wet !== undefined ? data.wet : 0.3
-                );
-                break;
-              case 'compressor':
-                this.wasmExports.tritoncha_dsp_update_bus_compressor(
-                  this.wasmEnginePtr,
-                  busIdx,
-                  data.thresholdDb !== undefined ? data.thresholdDb : -12.0,
-                  data.ratio !== undefined ? data.ratio : 4.0,
-                  data.attackS !== undefined ? data.attackS : 0.010,
-                  data.releaseS !== undefined ? data.releaseS : 0.100,
-                  data.makeupDb !== undefined ? data.makeupDb : 2.5,
-                  data.mix !== undefined ? data.mix : 1.0
-                );
-                break;
-            }
-          }
-          break;
-
-        case 'noteOn':
-
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_note_on(
-              this.wasmEnginePtr,
-              data.instId || 0,
-              data.freq || 440.0,
-              data.velocity || 0.9,
-              data.dur || 0.0
-            );
-          }
-          break;
-
-        case 'setFilter':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_master_filter(
-              this.wasmEnginePtr,
-              data.cutoffHz !== undefined ? data.cutoffHz : 12000.0,
-              data.resonance !== undefined ? data.resonance : 0.0
-            );
-          }
-          break;
-
-        case 'sweepFilter':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_sweep_master_filter) {
-            this.wasmExports.tritoncha_dsp_sweep_master_filter(
-              this.wasmEnginePtr,
-              data.fromHz !== undefined ? data.fromHz : 400.0,
-              data.toHz !== undefined ? data.toHz : 12000.0,
-              data.durationSecs !== undefined ? data.durationSecs : 4.0
-            );
-          }
-          break;
-
-        case 'setDriveBitcrush':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_drive_bitcrush(
-              this.wasmEnginePtr,
-              data.drive !== undefined ? data.drive : 0.0,
-              data.bitDepth !== undefined ? data.bitDepth : 16.0,
-              data.sampleHold !== undefined ? data.sampleHold : 1.0
-            );
-          }
-          break;
-
-        case 'setChorus':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_chorus(
-              this.wasmEnginePtr,
-              data.rateHz !== undefined ? data.rateHz : 0.8,
-              data.depth !== undefined ? data.depth : 0.4,
-              data.mix !== undefined ? data.mix : 0.0
-            );
-          }
-          break;
-
-        case 'setSidechain':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_sidechain(
-              this.wasmEnginePtr,
-              data.amount !== undefined ? data.amount : 0.0
-            );
-          }
-          break;
-
-        case 'setCompressor':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_master_compressor) {
-            this.wasmExports.tritoncha_dsp_set_master_compressor(
-              this.wasmEnginePtr,
-              data.enabled ? 1 : 0,
-              data.thresholdDb !== undefined ? data.thresholdDb : -12.0,
-              data.ratio !== undefined ? data.ratio : 4.0,
-              data.attackS !== undefined ? data.attackS : 0.010,
-              data.releaseS !== undefined ? data.releaseS : 0.100,
-              data.makeupDb !== undefined ? data.makeupDb : 2.5,
-              data.mix !== undefined ? data.mix : 1.0
-            );
-          }
-          break;
-
-        case 'setVolume':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_master_volume) {
-            this.wasmExports.tritoncha_dsp_set_master_volume(
-              this.wasmEnginePtr,
-              data.gainDb !== undefined ? data.gainDb : 0.0
-            );
-          }
-          break;
-
-        case 'setVoicePatch':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.ensureMemoryViews();
-            if (data.params && this.patchParamsView && this.wasmExports.tritoncha_dsp_set_voice_patch_packed) {
-              const n = Math.min(data.params.length, 22);
-              for (let i = 0; i < n; i++) {
-                this.patchParamsView[i] = data.params[i];
-              }
-              this.wasmExports.tritoncha_dsp_set_voice_patch_packed(
-                this.wasmEnginePtr,
-                data.patchId !== undefined ? data.patchId : 4,
-                this.patchParamsPtr,
-                n
-              );
-            } else if (this.wasmExports.tritoncha_dsp_set_voice_patch) {
-              this.wasmExports.tritoncha_dsp_set_voice_patch(
-                this.wasmEnginePtr,
-                data.patchId !== undefined ? data.patchId : 4,
-                data.oscType !== undefined ? data.oscType : 0,
-                data.subLevel !== undefined ? data.subLevel : 0.0,
-                data.pulseWidth !== undefined ? data.pulseWidth : 0.5,
-                data.filterType !== undefined ? data.filterType : 0,
-                data.cutoffBase !== undefined ? data.cutoffBase : 1200.0,
-                data.cutoffEnvAmt !== undefined ? data.cutoffEnvAmt : 3000.0,
-                data.cutoffKeyTrack !== undefined ? data.cutoffKeyTrack : 2.0,
-                data.resonance !== undefined ? data.resonance : 0.4,
-                data.attack !== undefined ? data.attack : 0.005,
-                data.decay !== undefined ? data.decay : 0.2,
-                data.sustain !== undefined ? data.sustain : 0.3,
-                data.release !== undefined ? data.release : 0.2,
-                data.modAttack !== undefined ? data.modAttack : 0.005,
-                data.modDecay !== undefined ? data.modDecay : 0.2,
-                data.busId !== undefined ? data.busId : 3,
-                data.polyphony !== undefined ? data.polyphony : 8,
-                data.glide !== undefined ? data.glide : 0.0,
-                data.filterDrive !== undefined ? data.filterDrive : 0.0,
-                data.noiseLevel !== undefined ? data.noiseLevel : 0.0,
-                data.pitchEnvAmt !== undefined ? data.pitchEnvAmt : 0.0,
-                data.pitchEnvDecay !== undefined ? data.pitchEnvDecay : 0.015,
-                data.analogDrift !== undefined ? data.analogDrift : 0.0
-              );
-            }
-          }
-          break;
-
-        case 'setDrumPatch':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drum_patch) {
-            this.wasmExports.tritoncha_dsp_set_drum_patch(
-              this.wasmEnginePtr,
-              data.drumId !== undefined ? data.drumId : 0,
-              data.p0 !== undefined ? data.p0 : 0.0,
-              data.p1 !== undefined ? data.p1 : 0.0,
-              data.p2 !== undefined ? data.p2 : 0.0,
-              data.p3 !== undefined ? data.p3 : 0.0,
-              data.p4 !== undefined ? data.p4 : 0.0,
-              data.p5 !== undefined ? data.p5 : 0.0,
-              data.p6 !== undefined ? data.p6 : 0.0
-            );
-          }
-          break;
-
-        case 'setDrumMode':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drum_mode) {
-            this.wasmExports.tritoncha_dsp_set_drum_mode(
-              this.wasmEnginePtr,
-              data.mode !== undefined ? data.mode : 0.0
-            );
-          }
-          break;
-
-        case 'setDelay':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_delay(
-              this.wasmEnginePtr,
-              data.timeS !== undefined ? data.timeS : 0.35,
-              data.feedback !== undefined ? data.feedback : 0.4,
-              data.wet !== undefined ? data.wet : 0.25
-            );
-          }
-          break;
-
-        case 'setReverb':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
-            this.wasmExports.tritoncha_dsp_set_reverb(
-              this.wasmEnginePtr,
-              data.roomSize !== undefined ? data.roomSize : 0.75,
-              data.wet !== undefined ? data.wet : 0.2
-            );
-          }
-          break;
-
-        case 'setDriveMode':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_drive_mode) {
-            this.wasmExports.tritoncha_dsp_set_drive_mode(
-              this.wasmEnginePtr,
-              data.mode !== undefined ? data.mode : 1
-            );
-          }
-          break;
-
-        case 'setReverbMode':
-          if (this.useWasm && this.wasmExports && this.wasmEnginePtr && this.wasmExports.tritoncha_dsp_set_reverb_mode) {
-            this.wasmExports.tritoncha_dsp_set_reverb_mode(
-              this.wasmEnginePtr,
-              data.mode !== undefined ? data.mode : 1
-            );
-          }
-          break;
-
-        case 'getVersion':
-          this.port.postMessage({
-            type: 'version',
-            reqId: data.reqId,
-            version: this.wasmVersion || '1.7.0'
-          });
-          break;
+        }
+        break;
       }
+
+      case 'updateBusProcessor': {
+        const busIdx = data.busIdx !== undefined ? data.busIdx : -1;
+        this.applyBusProcessor('tritoncha_dsp_update_bus', busIdx, data);
+        break;
+      }
+
+      case 'setFilter':
+        e.tritoncha_dsp_set_master_filter(
+          ptr,
+          data.cutoffHz !== undefined ? data.cutoffHz : 12000.0,
+          data.resonance !== undefined ? data.resonance : 0.0
+        );
+        break;
+
+      case 'sweepFilter':
+        e.tritoncha_dsp_sweep_master_filter(
+          ptr,
+          data.fromHz !== undefined ? data.fromHz : 400.0,
+          data.toHz !== undefined ? data.toHz : 12000.0,
+          data.durationSecs !== undefined ? data.durationSecs : 4.0
+        );
+        break;
+
+      case 'setDriveBitcrush':
+        e.tritoncha_dsp_set_drive_bitcrush(
+          ptr,
+          data.drive !== undefined ? data.drive : 0.0,
+          data.bitDepth !== undefined ? data.bitDepth : 16.0,
+          data.sampleHold !== undefined ? data.sampleHold : 1.0
+        );
+        break;
+
+      case 'setChorus':
+        e.tritoncha_dsp_set_chorus(
+          ptr,
+          data.rateHz !== undefined ? data.rateHz : 0.8,
+          data.depth !== undefined ? data.depth : 0.4,
+          data.mix !== undefined ? data.mix : 0.0
+        );
+        break;
+
+      case 'setSidechain':
+        e.tritoncha_dsp_set_sidechain(ptr, data.amount !== undefined ? data.amount : 0.0);
+        break;
+
+      case 'setCompressor':
+        e.tritoncha_dsp_set_master_compressor(
+          ptr,
+          data.enabled ? 1 : 0,
+          data.thresholdDb !== undefined ? data.thresholdDb : -12.0,
+          data.ratio !== undefined ? data.ratio : 4.0,
+          data.attackS !== undefined ? data.attackS : 0.010,
+          data.releaseS !== undefined ? data.releaseS : 0.100,
+          data.makeupDb !== undefined ? data.makeupDb : 2.5,
+          data.mix !== undefined ? data.mix : 1.0
+        );
+        break;
+
+      case 'setVolume':
+        e.tritoncha_dsp_set_master_volume(ptr, data.gainDb !== undefined ? data.gainDb : 0.0);
+        break;
+
+      case 'setDelay':
+        e.tritoncha_dsp_set_delay(
+          ptr,
+          data.timeS !== undefined ? data.timeS : 0.35,
+          data.feedback !== undefined ? data.feedback : 0.4,
+          data.wet !== undefined ? data.wet : 0.25
+        );
+        break;
+
+      case 'setReverb':
+        e.tritoncha_dsp_set_reverb(
+          ptr,
+          data.roomSize !== undefined ? data.roomSize : 0.75,
+          data.wet !== undefined ? data.wet : 0.2
+        );
+        break;
+
+      case 'setDriveMode':
+        e.tritoncha_dsp_set_drive_mode(ptr, data.mode !== undefined ? data.mode : 1);
+        break;
+
+      case 'setReverbMode':
+        e.tritoncha_dsp_set_reverb_mode(ptr, data.mode !== undefined ? data.mode : 1);
+        break;
+    }
   }
 
-  process(inputs, outputs, parameters) {
+  process(inputs, outputs) {
     const output = outputs[0];
     if (!output || output.length === 0) return true;
 
@@ -541,7 +390,7 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
     const channelRight = output.length > 1 ? output[1] : null;
     const blockSize = channelLeft.length; // 128 samples
 
-    if (this.useWasm && this.wasmExports && this.wasmEnginePtr) {
+    if (this.wasmExports && this.wasmEnginePtr) {
       try {
         this.ensureMemoryViews();
 
@@ -559,11 +408,9 @@ class TritonchaDSPProcessor extends AudioWorkletProcessor {
           channelRight.set(this.outRightView);
         }
 
-        if (this.wasmExports.tritoncha_dsp_take_trigger_mask) {
-          const triggerMask = this.wasmExports.tritoncha_dsp_take_trigger_mask(this.wasmEnginePtr);
-          if (triggerMask > 0) {
-            this.port.postMessage({ type: 'triggers', mask: triggerMask });
-          }
+        const triggerMask = this.wasmExports.tritoncha_dsp_take_trigger_mask(this.wasmEnginePtr);
+        if (triggerMask > 0) {
+          this.port.postMessage({ type: 'triggers', mask: triggerMask });
         }
       } catch (err) {
         console.error('Error in TritonchaDSPProcessor process():', err);

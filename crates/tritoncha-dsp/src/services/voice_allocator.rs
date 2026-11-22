@@ -1,7 +1,7 @@
-//! Voice allocation and polyphony voice-stealing strategies.
+//! Voice allocation and polyphony voice-stealing strategies per track.
 
 use crate::domain::synth::SynthVoice;
-use crate::domain::{GlideTime, PatchId, Polyphony};
+use crate::domain::{GlideTime, Polyphony, TrackId};
 
 pub const MIN_LEGATO_GLIDE_SEC: f32 = 0.001;
 
@@ -14,24 +14,24 @@ pub enum VoiceAllocation {
     Trigger { voice_idx: usize },
 }
 
-/// Zero-allocation voice allocator implementing monophonic legato, per-patch polyphony limits,
+/// Zero-allocation voice allocator implementing monophonic legato, per-track polyphony limits,
 /// and deterministic Least-Recently-Used (LRU) global voice stealing.
 pub struct VoiceAllocator;
 
 impl VoiceAllocator {
-    /// Determines the voice index and allocation strategy for a new note event.
+    /// Determines the voice index and allocation strategy for a new note event on `track_id`.
     pub fn allocate<const N: usize>(
         voices: &[SynthVoice; N],
-        patch_id: impl Into<PatchId>,
+        track_id: impl Into<TrackId>,
         polyphony: impl Into<Polyphony>,
         glide_time: impl Into<GlideTime>,
     ) -> VoiceAllocation {
-        let pid = patch_id.into();
+        let tid = track_id.into();
         let poly = *polyphony.into();
         let glide = *glide_time.into();
         if poly <= 1 {
-            // 1. Monophonic mode: find existing active voice for this patch
-            if let Some(i) = voices.iter().position(|v| v.active && v.patch_id == pid) {
+            // 1. Monophonic mode: find existing active voice owned by this track
+            if let Some(i) = voices.iter().position(|v| v.active && v.track_id == tid) {
                 return if glide > MIN_LEGATO_GLIDE_SEC {
                     VoiceAllocation::LegatoGlide { voice_idx: i }
                 } else {
@@ -39,20 +39,20 @@ impl VoiceAllocator {
                 };
             }
         } else {
-            // 2. Polyphonic mode: enforce max polyphony for this specific patch
-            let mut patch_count = 0;
+            // 2. Polyphonic mode: enforce max polyphony for this specific track
+            let mut track_count = 0;
             let mut oldest: Option<(usize, u32)> = None;
             for (i, v) in voices
                 .iter()
                 .enumerate()
-                .filter(|(_, v)| v.active && v.patch_id == pid)
+                .filter(|(_, v)| v.active && v.track_id == tid)
             {
-                patch_count += 1;
+                track_count += 1;
                 if oldest.is_none_or(|(_, max_age)| v.age > max_age) {
                     oldest = Some((i, v.age));
                 }
             }
-            if patch_count >= poly as usize {
+            if track_count >= poly as usize {
                 if let Some((oldest_idx, _)) = oldest {
                     return VoiceAllocation::Trigger {
                         voice_idx: oldest_idx,
@@ -88,7 +88,7 @@ mod tests {
     fn test_monophonic_legato_glide_vs_retrigger() {
         let mut voices: [SynthVoice; 4] = std::array::from_fn(|_| SynthVoice::new());
         voices[1].active = true;
-        voices[1].patch_id = PatchId(2);
+        voices[1].track_id = TrackId(2);
 
         // With glide > 0.001 -> Legato
         let alloc_glide = VoiceAllocator::allocate(&voices, 2, 1, 0.05);
@@ -100,17 +100,17 @@ mod tests {
     }
 
     #[test]
-    fn test_per_patch_polyphony_stealing() {
+    fn test_per_track_polyphony_stealing() {
         let mut voices: [SynthVoice; 4] = std::array::from_fn(|_| SynthVoice::new());
         voices[0].active = true;
-        voices[0].patch_id = PatchId(1);
+        voices[0].track_id = TrackId(1);
         voices[0].age = 100;
 
         voices[1].active = true;
-        voices[1].patch_id = PatchId(1);
-        voices[1].age = 500; // Oldest for patch 1
+        voices[1].track_id = TrackId(1);
+        voices[1].age = 500; // Oldest for track 1
 
-        // Polyphony limit is 2 for patch 1 -> should steal voice 1 (age 500)
+        // Polyphony limit is 2 for track 1 -> should steal voice 1 (age 500)
         let alloc = VoiceAllocator::allocate(&voices, 1, 2, 0.0);
         assert_eq!(alloc, VoiceAllocation::Trigger { voice_idx: 1 });
     }
@@ -120,12 +120,11 @@ mod tests {
         let mut voices: [SynthVoice; 4] = std::array::from_fn(|_| SynthVoice::new());
         for (i, v) in voices.iter_mut().enumerate() {
             v.active = true;
-            v.patch_id = PatchId(i);
-            v.age = (i as u32 + 1) * 100;
+            v.track_id = TrackId(i);
+            v.age = (i as u32) * 100;
         }
-        voices[2].age = 1000; // Globally oldest
-
-        let alloc = VoiceAllocator::allocate(&voices, 5, 8, 0.0);
-        assert_eq!(alloc, VoiceAllocation::Trigger { voice_idx: 2 });
+        // Voice 3 has highest age (300)
+        let alloc = VoiceAllocator::allocate(&voices, 7, 4, 0.0);
+        assert_eq!(alloc, VoiceAllocation::Trigger { voice_idx: 3 });
     }
 }

@@ -1,14 +1,14 @@
 (ns app.demo.tutorial
   "Live-coding audio + visuals tutorial for Tritoncha."
   (:require [app.api :refer [_ arp b! c! chord clear-loops! comp! d definst!
-                             defroute! defscene! deftrack! demo! demo-stop!
-                             drive-mode! drop! euc every-n f! fast fb! g! hud!
-                             inst! jam! jams! l! m! mod! mod-all! next-jam!
-                             pat patch! prev-jam! prog pulse! q! rebass!
-                             redrum! relead! repad! rev reverb-mode! rfx! rot
-                             route! s! scale scene! set-key! shift slow
-                             so! sometimes sometimes-by stack! stats! stop!
-                             stop-loop! sw! take-steps toggle-bass!
+                             defroute! defscene! defstyle! deftrack! demo!
+                             demo-stop! drive-mode! drop! euc every-n f! fast
+                             fb! g! hud! inst! jam! jams! l! m! mod! mod-all!
+                             next-jam! pat patch! prev-jam! prog pulse! q!
+                             rebass! redrum! relead! repad! rev reverb-mode!
+                             rfx! rot route! s! scale scene! set-key! shift
+                             slow so! sometimes sometimes-by stack! stats!
+                             stop! stop-loop! sw! take-steps toggle-bass!
                              toggle-click! toggle-drums! toggle-leads!
                              toggle-pads! tr-all! u! unbass! undrum! unlead!
                              unpad! unso! unstack! v! w! wet!]]))
@@ -65,9 +65,8 @@
   ;;   . or _ (standalone) -> Musical rest (nil)
   ;;
   ;; Expanded drum palette tokens:
-  ;;   k (kick)           s (snare)          rs (rimshot)        clk (snare click)
-  ;;   ck (snare crack)   g (snare ghost)    roll (snare roll)
-  ;;   h (hat closed)     o (hat open)       hc (hat click)      cp (clap)
+  ;;   k (kick)           s (snare)          g (snare ghost)     cp (clap)
+  ;;   h (hat closed)     o (hat open)
   ;;   th (tom high)      tm (tom mid)       tl (tom low)
   ;;   rd (ride cymbal)   rb (ride bell)
   ;;   cr16 / cr17 / cr18 (crashes)          sp (splash)         ch (china)
@@ -177,9 +176,9 @@
        :dur "16n"
        :vel 0.95})
 
-  ;; Breakbeat transformation pipeline with snare ghost rolls and rimshots
+  ;; Breakbeat transformation pipeline with snare ghost rolls
   (l! :snare
-      {:pattern (->> "s! s_ . s_  . s_ s! .  s_ s! s_ s_  rs! . . ."
+      {:pattern (->> "s! s_ . s_  . s_ s! .  s_ s! s_ s_  s! . . ."
                      (pat)
                      (fast 2)
                      (shift 4))
@@ -254,7 +253,7 @@
 
   ;; Modular DSP Routing Graph DSL + FX Chains
   ;; Switch built-in routing topologies
-  (route! :cyber-dub)          ;; Sub-heavy dub delay and distorted bass
+  (route! :dub-echo)           ;; Sub-heavy dub delay and distorted bass
   (route! :ambient-prism)      ;; Wide FDN reverb diffusion on space bus
   (route! :industrial-crush)   ;; Distorted drums and bitcrushed lead
   (route! :crematorium)        ;; Resonant bandpass filter sweeps
@@ -327,8 +326,12 @@
   (s!)      ;; Dub laser siren
   (drop!)   ;; Seismic sub-bass drop
 
-  ;; Rust WASM Audio Core sound modes
-  (mod! :idm)          ;; Drum synthesis mode (:natural, :analog, :idm, :industrial)
+  ;; Rust WASM Audio Core sound modes + Composable Genre Styles
+  (mod! :idm)                                ;; Built-in style (:natural, :idm, :industrial)
+  (mod! {:natural 0.7 :industrial 0.3})      ;; Weighted style blend
+  (defstyle! :gabber {:all {:drive [:* 1.6]} :kick {:fold 0.75 :pitch [:+ 6.0]}})
+  (mod! :gabber)
+  (mod! :natural)
   (drive-mode! :adaa)  ;; ADAA anti-aliased saturation (:tan-h, :soft, :adaa)
   (reverb-mode! :fdn)   ;; Feedback Delay Network reverb (:fdn, :freeverb)
 
@@ -395,7 +398,7 @@
      :colors  ["#080412" "#00ffaa"]
      :routing :ambient-prism
      :tracks
-     {:drums {:pattern (pat "k . g g  rs! . . .  . . k .  s . . g") :step "16n"}
+     {:drums {:pattern (pat "k . g g  s! . . .  . . k .  s . . g") :step "16n"}
       :cymb  {:pattern (pat "rd . . .  rb . . .  . . sp .  ch . . .") :step "16n"}
       :hat   {:inst :hat-closed :mask (euc 11 16) :step "16n" :dur "32n" :vel [0.3 0.7 0.4 0.9]}
       :bass  {:inst :bass-liquid :notes (d [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _]) :step "16n" :dur "16n" :vel 0.95}

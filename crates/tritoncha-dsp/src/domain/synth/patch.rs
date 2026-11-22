@@ -1,36 +1,6 @@
-//! Modular synthesizer voice patch definitions and presets.
+//! Modular synthesizer voice patch definitions.
 
-pub const MAX_PATCHES: usize = 64;
 pub const VOICE_PATCH_PARAM_COUNT: usize = 22;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PatchId(pub usize);
-
-impl PatchId {
-    pub const CLICK: Self = Self(11);
-
-    #[inline(always)]
-    pub const fn as_usize(self) -> usize {
-        self.0
-    }
-
-    #[inline(always)]
-    pub fn is_valid(self) -> bool {
-        self.0 < MAX_PATCHES
-    }
-
-    #[inline(always)]
-    pub fn clamped(self) -> Self {
-        Self(self.0.min(MAX_PATCHES - 1))
-    }
-}
-
-impl From<usize> for PatchId {
-    #[inline(always)]
-    fn from(val: usize) -> Self {
-        Self(val)
-    }
-}
 
 /// Strongly typed oscillator waveform selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -101,7 +71,7 @@ macro_rules! modular_patch {
     };
 }
 
-/// Modular sound design patch parameters.
+/// Modular sound design patch parameters owned by a sequencer track.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ModularPatch {
     pub osc_type: OscillatorType,
@@ -155,43 +125,6 @@ impl ModularPatch {
             analog_drift: 0.05,
         }
     }
-
-    pub fn default_click() -> Self {
-        modular_patch! {
-            osc_type: OscillatorType::Click,
-            sub_level: 0.0,
-            pulse_width: 0.5,
-            filter_type: FilterMode::Lowpass,
-            cutoff_base: 8000.0,
-            cutoff_env_amt: 0.0,
-            cutoff_key_track: 1.0,
-            resonance: 0.1,
-            attack: 0.001,
-            decay: 0.025,
-            sustain: 0.0,
-            release: 0.015,
-            mod_attack: 0.001,
-            mod_decay: 0.01,
-            bus_id: BusTarget::Direct,
-            polyphony: 2,
-            glide: 0.0,
-            filter_drive: 0.1,
-            noise_level: 0.0,
-            pitch_snap: 0.0,
-            pitch_snap_decay: DEFAULT_PITCH_SNAP_DECAY_SEC,
-            analog_drift: 0.0,
-        }
-    }
-
-    /// Returns default patch for a given patch identifier or index.
-    pub fn default_for(patch_id: impl Into<PatchId>) -> Self {
-        let pid = patch_id.into();
-        if pid == PatchId::CLICK {
-            Self::default_click()
-        } else {
-            Self::default_lead()
-        }
-    }
 }
 
 impl Default for ModularPatch {
@@ -230,10 +163,6 @@ impl From<[f32; VOICE_PATCH_PARAM_COUNT]> for ModularPatch {
     }
 }
 
-pub fn init_default_patches() -> [ModularPatch; MAX_PATCHES] {
-    std::array::from_fn(ModularPatch::default_for)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,25 +187,14 @@ mod tests {
     }
 
     #[test]
-    fn test_init_default_patches() {
-        let patches = init_default_patches();
-        assert_eq!(patches[4].osc_type, OscillatorType::Saw);
-        assert_eq!(
-            patches[PatchId::CLICK.as_usize()].osc_type,
-            OscillatorType::Click
-        );
-        assert_eq!(patches[PatchId::CLICK.as_usize()].bus_id, BusTarget::Direct);
-    }
-
-    #[test]
     fn test_modular_patch_types_clamp_bounds() {
         let patch = ModularPatch {
-            cutoff_base: 50000.0.into(), // Above 20000.0
-            resonance: 5.0.into(),       // Above 0.98
-            sub_level: (-2.0).into(),    // Below 0.0
-            pulse_width: 0.01.into(),    // Below 0.05
-            polyphony: 99.into(),        // Above 16
-            glide: (-1.0).into(),        // Below 0.0
+            cutoff_base: 50000.0.into(),
+            resonance: 5.0.into(),
+            sub_level: (-2.0).into(),
+            pulse_width: 0.01.into(),
+            polyphony: 99.into(),
+            glide: (-1.0).into(),
             ..ModularPatch::default()
         };
 

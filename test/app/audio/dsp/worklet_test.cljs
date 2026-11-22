@@ -1,12 +1,8 @@
 (ns app.audio.dsp.worklet-test
-  (:require [app.audio.dsp.busses :as busses]
-            [app.audio.dsp.instruments.catalog :refer [drum-keywords find-instrument-spec]]
+  (:require [app.audio.dsp.instruments.catalog :refer [find-instrument-spec]]
             [app.audio.dsp.worklet :as worklet]
             [app.audio.dsp.worklet.compiler :as compiler]
-            [app.audio.dsp.worklet.protocol :as protocol]
-            [app.lib.synth :as synths]
             [app.utils.audio :as audio]
-            [clojure.set :as set]
             [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest test-worklet-parse-freq
@@ -17,15 +13,15 @@
     (is (= (audio/parse-freq 880.0) 880.0))))
 
 (deftest test-parse-step-hit-articulation
-  (testing "Normal, accent (!), and ghost (_) velocities on drum hits"
+  (testing "Normal, accent (!), and ghost (_) velocities and canonical drum keys on drum hits"
     (let [normal (compiler/parse-step-hit :snare :snare)
           accent (compiler/parse-step-hit :snare! :snare)
           ghost  (compiler/parse-step-hit :snare_ :snare)]
-      (is (= 1 (:inst-id normal)))
+      (is (= :snare (:inst-key normal)))
       (is (< (js/Math.abs (- (:vel normal) 0.9)) 0.01))
-      (is (= 1 (:inst-id accent)))
+      (is (= :snare (:inst-key accent)))
       (is (< (js/Math.abs (- (:vel accent) 1.15)) 0.01))
-      (is (= 1 (:inst-id ghost)))
+      (is (= :snare (:inst-key ghost)))
       (is (< (js/Math.abs (- (:vel ghost) 0.35)) 0.01)))
 
     (let [rb-accent (compiler/parse-step-hit :rb! :drums)
@@ -38,18 +34,18 @@
           sp-ghost  (compiler/parse-step-hit :sp_ :drums)
           ch-accent (compiler/parse-step-hit :ch! :drums)
           cb-hit    (compiler/parse-step-hit :cb :drums)]
-      (is (= 64 (:inst-id rb-accent)))
+      (is (= :ride-bell (:inst-key rb-accent)))
       (is (< (js/Math.abs (- (:vel rb-accent) 1.15)) 0.01))
-      (is (= 65 (:inst-id th-accent)))
-      (is (= 66 (:inst-id tm-ghost)))
+      (is (= :tom-high (:inst-key th-accent)))
+      (is (= :tom-mid (:inst-key tm-ghost)))
       (is (< (js/Math.abs (- (:vel tm-ghost) 0.35)) 0.01))
-      (is (= 67 (:inst-id tl-hit)))
-      (is (= 68 (:inst-id cr16-acc)))
-      (is (= 69 (:inst-id cr17-hit)))
-      (is (= 70 (:inst-id cr18-hit)))
-      (is (= 71 (:inst-id sp-ghost)))
-      (is (= 72 (:inst-id ch-accent)))
-      (is (= 73 (:inst-id cb-hit))))))
+      (is (= :tom-low (:inst-key tl-hit)))
+      (is (= :crash-16 (:inst-key cr16-acc)))
+      (is (= :crash-17 (:inst-key cr17-hit)))
+      (is (= :crash-18 (:inst-key cr18-hit)))
+      (is (= :splash (:inst-key sp-ghost)))
+      (is (= :china (:inst-key ch-accent)))
+      (is (= :cowbell (:inst-key cb-hit))))))
 
 (deftest test-parse-step-hit-custom-velocity
   (testing "Custom track velocity propagates to notes, chords, and accents"
@@ -90,58 +86,50 @@
     (is (= 4 (worklet/filter-type->id :ladder)))
     (is (= 4 (worklet/filter-type->id :ladder24)))))
 
-(deftest test-sound-registration-no-id-collisions
-  (testing "Zero ID collisions between drum voices and synthesizer voice patches"
-    (let [drum-ids #{0 1 2 3 18 20 21 22 23 24 25 26 64 65 66 67 68 69 70 71 72 73}
-          synth-keys (disj (set (keys synths/core-synths)) :click)
-          synth-ids (set (map protocol/inst-keyword->id synth-keys))]
-      ;; Ensure drums and synths have empty intersection
-      (is (empty? (set/intersection drum-ids synth-ids)))
-      ;; Moog instruments must have dedicated IDs without colliding with ride (20) or tom (21)
-      (is (= 42 (protocol/canonical-inst-ids :sub-moog)))
-      (is (= 43 (protocol/canonical-inst-ids :bass-moog)))
-      (is (= 42 (protocol/canonical-inst-ids :moog-sub)))
-      (is (= 43 (protocol/canonical-inst-ids :moog-bass)))
-      (is (= 20 (protocol/canonical-inst-ids :ride)))
-      (is (= 21 (protocol/canonical-inst-ids :tom)))
-      ;; Verify all drum keywords in the catalog resolve to valid drum IDs (or click)
-      (doseq [dk (disj drum-keywords :click)]
-        (when-let [id (protocol/canonical-inst-ids dk)]
-          (is (contains? drum-ids id))))
-      ;; Custom dynamic synth allocator must stay within the safe range 44..63
-      (let [custom-id (protocol/register-custom-patch-id! :test-user-synth)]
-        (is (<= 44 custom-id 63))
-        (is (not (contains? drum-ids custom-id)))
-        (is (not (contains? synth-ids custom-id)))))))
+(deftest test-per-track-kit-compilation
+  (testing "Track-local kit compiler assigns 0..N kit indices to drums and -1 to synths"
+    (let [drum-res  (compiler/compile-track-steps :drums ["k!" nil "s_" "rb!" "k"] (constantly 0.9))
+          synth-res (compiler/compile-track-steps :bass-analog [36 nil 43 48] (constantly 0.9))]
+      (is (= [:kick :snare :ride-bell] (:kit drum-res)))
+      (is (= [0 0 1 2 0] (:inst-ids drum-res)))
+      (is (empty? (:kit synth-res)))
+      (is (= [-1 -1 -1 -1] (:inst-ids synth-res))))))
 
-(deftest test-resolve-track-inst-bus-override
-  (testing "Resolves instrument without bus override"
-    (is (= :lead-8bit (worklet/resolve-track-inst :lead {:inst :lead-8bit}))))
+(deftest test-compile-perc-params-contract
+  (testing "Compiles drum spec into 24-float JS array with genuine 0.0 preservation"
+    (let [arr (compiler/compile-perc-params
+               {:body :shell :pitch 180.0 :decay 0.35 :click 0.0 :noise-mix 0.0 :fold 0.0
+                :burst-count 4 :choke-group 1})]
+      (is (= 24 (alength arr)))
+      (is (= 1.0 (aget arr 0)))   ;; :shell = 1
+      (is (= 180.0 (aget arr 1))) ;; pitch
+      (is (= 0.0 (aget arr 5)))   ;; genuine 0.0 click
+      (is (= 4.0 (aget arr 7)))   ;; burst-count
+      (is (= 0.0 (aget arr 11)))  ;; genuine 0.0 noise-mix
+      (is (= 0.0 (aget arr 18)))  ;; genuine 0.0 fold
+      (is (= 1.0 (aget arr 23)))))) ;; choke-group
 
-  (testing "Resolves instrument with matching default bus without generating custom patch"
-    (is (= :lead-8bit (worklet/resolve-track-inst :lead {:inst :lead-8bit :bus :bus/lead}))))
+(deftest test-resolve-track-patch-spec-bus-override
+  (testing "Resolves instrument spec without bus override"
+    (let [spec (worklet/resolve-track-patch-spec :lead {:inst :lead-8bit})]
+      (is (= :bus/lead (:bus spec)))))
 
-  (testing "Generates derived patch with custom bus override for synth"
-    (let [res (worklet/resolve-track-inst :bass {:inst :lead-8bit :bus :bus/bass})]
-      (is (= :lead-8bit--bass res))
-      (is (= :bus/bass (:bus (find-instrument-spec res))))
-      (is (= :bus/bass (busses/instrument-bus res)))
-      (let [patch-id (protocol/inst-keyword->id res)]
-        (is (<= 44 patch-id 63)))))
+  (testing "Applies custom bus override directly to track spec without mutating registry"
+    (let [spec (worklet/resolve-track-patch-spec :bass {:inst :lead-8bit :bus :bus/bass})]
+      (is (= :bus/bass (:bus spec)))
+      (is (nil? (find-instrument-spec :lead-8bit--bass)))))
 
-  (testing "Generates derived patch with custom bus override for pads"
-    (let [res (worklet/resolve-track-inst :echo {:inst :pad-strings :bus :bus/lead})]
-      (is (= :pad-strings--lead res))
-      (is (= :bus/lead (:bus (find-instrument-spec res))))
-      (is (= :bus/lead (busses/instrument-bus res)))))
+  (testing "Applies custom bus override for pads"
+    (let [spec (worklet/resolve-track-patch-spec :echo {:inst :pad-strings :bus :bus/lead})]
+      (is (= :bus/lead (:bus spec)))))
 
-  (testing "Does not create custom synth patch for drums with bus specified"
-    (is (= :kick (worklet/resolve-track-inst :kick {:inst :kick :bus :bus/direct})))))
+  (testing "Returns nil synth patch spec for drums"
+    (is (nil? (worklet/resolve-track-patch-spec :kick {:inst :kick :bus :bus/direct})))))
 
-(deftest test-compile-voice-patch-msg-packed-params
-  (testing "Compiles synth spec into packed 22-float :params vector in canonical ABI order"
-    (let [msg (compiler/compile-voice-patch-msg
-               4
+(deftest test-compile-track-patch-msg-packed-params
+  (testing "Compiles synth spec into setTrackPatch with 22-float :params vector"
+    (let [msg (compiler/compile-track-patch-msg
+               3
                {:type :mono
                 :bus :bus/bass
                 :glide 0.035
@@ -151,6 +139,8 @@
                 :mod-env {:attack 0.005 :decay 0.22}
                 :pitch-env {:amount 12 :decay 0.020}})
           params (.-params msg)]
+      (is (= "setTrackPatch" (.-type msg)))
+      (is (= 3 (.-trackIdx msg)))
       (is (some? params) "Message must include packed :params array")
       (is (= 22 (alength params)) "Packed :params array must have exactly 22 floats")
       (is (= 4.0 (aget params 0)))    ;; oscType (:supersaw = 4)

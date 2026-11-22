@@ -15,18 +15,26 @@
     clamped-bpm))
 
 (defn set-drum-mode!
-  "Configures the character synthesis mode across all drum voices in Rust WASM.
-  Supported modes: :natural, :analog, :idm, :industrial.
-  Examples: (set-drum-mode! :idm), (set-drum-mode! :natural)."
-  [mode-kw]
-  (let [m (keyword (or mode-kw :analog))]
+  "Configures the global percussion genre style across all active drum tracks.
+  Accepts a style keyword (:natural, :idm, :industrial, or custom defstyle!)
+  or a weighted style blend map (e.g. {:natural 0.7 :industrial 0.3}).
+  Examples: (set-drum-mode! :idm), (mod! {:natural 0.7 :industrial 0.3})."
+  [style-spec]
+  (let [m (cond
+            (map? style-spec) style-spec
+            (some? style-spec) (keyword style-spec)
+            :else :natural)]
     (swap! audio-state assoc :drum-mode m)
-    (worklet/set-drum-mode! m)
+    (doseq [[tk tr] (:active-tracks @audio-state)]
+      (let [pat-atom (:pattern tr)
+            pat-data (if (satisfies? IDeref pat-atom) @pat-atom pat-atom)]
+        (when pat-data
+          (worklet/sync-track-to-worklet! tk pat-data))))
     m))
 
 (def mod!
   "Shortcut for set-drum-mode!. Configures drum character mode.
-  Examples: (mod! :idm), (mod! :analog), (mod! :natural)."
+  Examples: (mod! :natural), (mod! :idm), (mod! :industrial)."
   set-drum-mode!)
 
 (defn clear-loops!

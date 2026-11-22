@@ -6,93 +6,63 @@
     (str "   :title       " (pr-str t) "\n")
     ""))
 
+(def ^:private drum-export-keys
+  "Canonical display order and formatting for 24-param PercPatch fields in definst! export."
+  [[:body          :kw]
+   [:pitch         1]
+   [:pitch-drop    1]
+   [:pitch-decay   3]
+   [:decay         2]
+   [:click         2]
+   [:click-freq    0]
+   [:burst-count   0]
+   [:burst-spacing 3]
+   [:fm-depth      2]
+   [:fm-ratio      3]
+   [:noise-mix     2]
+   [:noise-decay   2]
+   [:noise-cutoff  0]
+   [:noise-q       2]
+   [:noise-filter  :kw]
+   [:modal-spread  2]
+   [:drive         2]
+   [:fold          2]
+   [:crush         2]
+   [:vel->pitch    2]
+   [:vel->tone     2]
+   [:variation     2]
+   [:choke-group   0]])
+
+(defn- format-param-val [v fmt]
+  (cond
+    (= fmt :kw)   (str v)
+    (zero? fmt)   (str (Math/round v))
+    (number? v)   (.toFixed (js/parseFloat v) fmt)
+    :else         (pr-str v)))
+
 (defn format-drum-spec-map
-  "Generate ClojureScript definst! map for drum voices."
+  "Generate ClojureScript definst! map for layered parametric percussion voices."
   [inst-key spec]
-  (let [bus     (or (:bus spec) :bus/drums)
-        mod-val (or (:mod spec) :natural)
-        t-line  (title-line spec)]
-    (case (:type spec)
-      :kick
-      (str "(definst! " inst-key "\n"
-           "  {" (if (seq t-line) (subs t-line 3) ":category    :drums\n")
-           (when (seq t-line) "   :category    :drums\n")
-           "   :type        :kick\n"
-           "   :bus         " bus "\n"
-           "   :mod         " mod-val "\n"
-           "   :base-pitch  " (.toFixed (or (:base-pitch spec) 48.0) 1) "\n"
-           "   :pitch-drop  " (.toFixed (or (:pitch-drop spec) 180.0) 1) "\n"
-           "   :pitch-decay " (.toFixed (or (:pitch-decay spec) 0.040) 3) "\n"
-           "   :decay       " (.toFixed (or (:decay spec) 0.28) 2) "\n"
-           "   :click       " (.toFixed (or (:click spec) 0.35) 2) "\n"
-           "   :drive       " (.toFixed (or (:drive spec) 1.6) 2) "})")
-
-      :snare
-      (str "(definst! " inst-key "\n"
-           "  {" (if (seq t-line) (subs t-line 3) ":category    :drums\n")
-           (when (seq t-line) "   :category    :drums\n")
-           "   :type        :snare\n"
-           "   :bus         " bus "\n"
-           "   :mod         " mod-val "\n"
-           "   :base-freq   " (.toFixed (or (:base-freq spec) 185.0) 1) "\n"
-           "   :tone-decay  " (.toFixed (or (:tone-decay spec) 0.9985) 4) "\n"
-           "   :noise-decay " (.toFixed (or (:noise-decay spec) 0.9991) 4) "\n"
-           "   :cutoff      " (Math/round (or (:cutoff spec) 2400.0)) "\n"
-           "   :snappy      " (.toFixed (or (:snappy spec) 0.85) 2) "})")
-
-      :hat
-      (str "(definst! " inst-key "\n"
-           "  {" (if (seq t-line) (subs t-line 3) ":category     :drums\n")
-           (when (seq t-line) "   :category     :drums\n")
-           "   :type         :hat\n"
-           "   :bus          " bus "\n"
-           "   :mod          " mod-val "\n"
-           "   :cutoff       " (Math/round (or (:cutoff spec) 7200.0)) "\n"
-           "   :decay-closed " (.toFixed (or (:decay-closed spec) 0.04) 2) "\n"
-           "   :decay-open   " (.toFixed (or (:decay-open spec) 0.24) 2) "})")
-
-      :membrane
-      (str "(definst! " inst-key "\n"
-           "  {" (if (seq t-line) (subs t-line 3) ":category    :drums\n")
-           (when (seq t-line) "   :category    :drums\n")
-           "   :type        :membrane\n"
-           "   :bus         " bus "\n"
-           "   :mod         " mod-val "\n"
-           "   :start-pitch " (.toFixed (or (:start-pitch spec) 180.0) 1) "\n"
-           "   :min-pitch   " (.toFixed (or (:min-pitch spec) 105.0) 1) "\n"
-           "   :pitch-decay " (.toFixed (or (:pitch-decay spec) 0.015) 3) "\n"
-           "   :decay       " (.toFixed (or (:decay spec) 0.40) 2) "\n"
-           "   :drive       " (.toFixed (or (:drive spec) 1.10) 2) "})")
-
-      :metallic
-      (str "(definst! " inst-key "\n"
-           "  {" (if (seq t-line) (subs t-line 3) ":category  :drums\n")
-           (when (seq t-line) "   :category  :drums\n")
-           "   :type      :metallic\n"
-           "   :bus       " bus "\n"
-           "   :mod       " mod-val "\n"
-           "   :cutoff    " (Math/round (or (:cutoff spec) 3500.0)) "\n"
-           "   :resonance " (.toFixed (or (:resonance spec) 0.35) 2) "\n"
-           "   :decay     " (.toFixed (or (:decay spec) 0.85) 2) "\n"
-           (if (:bandpass spec)
-             "   :bandpass  true\n"
-             "")
-           "   :drive     " (.toFixed (or (:drive spec) 1.0) 2) "})")
-
-      :clap
-      (str "(definst! " inst-key "\n"
-           "  {" (if (seq t-line) (subs t-line 3) ":category  :drums\n")
-           (when (seq t-line) "   :category  :drums\n")
-           "   :type      :clap\n"
-           "   :bus       " bus "\n"
-           "   :mod       " mod-val "\n"
-           "   :cutoff    " (Math/round (or (:cutoff spec) 1200.0)) "\n"
-           "   :resonance " (.toFixed (or (:resonance spec) 0.70) 2) "\n"
-           "   :decay     " (.toFixed (or (:decay spec) 0.28) 2) "\n"
-           "   :drive     " (.toFixed (or (:drive spec) 1.0) 2) "})")
-
-      (str "(definst! " inst-key "\n"
-           "  " (pr-str spec) ")"))))
+  (let [bus      (or (:bus spec) :bus/drums)
+        mod-val  (:mod spec)
+        header   (cond-> []
+                   (:title spec) (conj (str "   :title         " (pr-str (:title spec))))
+                   true          (conj "   :category      :drums")
+                   (:role spec)  (conj (str "   :role          " (:role spec)))
+                   (:type spec)  (conj (str "   :type          " (:type spec)))
+                   true          (conj (str "   :bus           " bus))
+                   mod-val       (conj (str "   :mod           " mod-val)))
+        params   (keep (fn [[k fmt]]
+                         (when-some [v (get spec k)]
+                           (let [k-str (str k)
+                                 pad   (apply str (repeat (max 1 (- 14 (count k-str))) " "))]
+                             (str "   " k-str pad (format-param-val v fmt)))))
+                       drum-export-keys)
+        all-lines (concat header params)]
+    (str "(definst! " inst-key "\n"
+         "  {" (subs (first all-lines) 3) "\n"
+         (apply str (interpose "\n" (rest all-lines)))
+         "})")))
 
 (defn format-spec-map
   "Generate ClojureScript definst! map matching instrument definitions."

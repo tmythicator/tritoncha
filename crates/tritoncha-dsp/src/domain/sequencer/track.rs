@@ -28,7 +28,7 @@ impl From<usize> for TrackId {
 }
 pub const DEFAULT_TRACK_LENGTH: usize = 16;
 pub const DEFAULT_STEP_MULTIPLIER: usize = 4;
-pub const DEFAULT_SYNTH_PATCH_ID: i16 = 4;
+pub const SYNTH_TRACK_SENTINEL: i16 = -1;
 pub const REST_NOTE: i16 = -1;
 pub const DEFAULT_STEP_VELOCITY: f32 = 0.9;
 pub const DEFAULT_STEP_DURATION_S: f32 = 0.2;
@@ -53,7 +53,7 @@ impl TrackPattern {
             active: false,
             muted: false,
             solo: false,
-            inst_kinds: [DEFAULT_SYNTH_PATCH_ID; MAX_STEPS],
+            inst_kinds: [SYNTH_TRACK_SENTINEL; MAX_STEPS],
             notes: [REST_NOTE; MAX_STEPS],
             velocities: [DEFAULT_STEP_VELOCITY; MAX_STEPS],
             durations: [DEFAULT_STEP_DURATION_S; MAX_STEPS],
@@ -90,7 +90,7 @@ impl TrackPattern {
         self.active = false;
         self.length = 0;
         self.notes.fill(REST_NOTE);
-        self.inst_kinds.fill(DEFAULT_SYNTH_PATCH_ID);
+        self.inst_kinds.fill(SYNTH_TRACK_SENTINEL);
     }
 }
 

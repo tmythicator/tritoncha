@@ -31,7 +31,7 @@
   []
   [{:id :kick   :notes (patterns/pattern "k! . . k_  k! . . .  . . k! .  . k_ . .") :step "16n"}
    {:id :snare  :notes (patterns/pattern ". . . .  s! . . .  . . . .  s! . s_ .") :step "16n"}
-   {:id :sn-gh  :notes (patterns/euclid 11 16 "G3") :step "16n"}
+   {:id :clap   :notes (patterns/euclid 11 16 "G3") :step "16n"}
    {:id :hh-c   :notes (harmony/deg :e :phrygian [1 _ 1 _ 1 _ 1 _ 1 _ 1 _ 1 _ 1 _] {:octave 4}) :step "16n"}
    {:id :hh-o   :notes (patterns/pattern ". . h .  . . h .  . . h .  . . h .") :step "16n"}
    {:id :bass   :notes (patterns/fast 2 (harmony/deg :e :phrygian [1 _ 1 2 _ 1 4 3  1 _ 5 4 _ 2 1 _] {:octave 1})) :step "16n"}

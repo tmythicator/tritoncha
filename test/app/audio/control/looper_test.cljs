@@ -59,7 +59,7 @@
   (testing "Configures drum character mode and returns keyword"
     (is (= :natural (looper/set-drum-mode! :natural)))
     (is (= :idm (looper/set-drum-mode! :idm)))
-    (is (= :analog (looper/mod! :analog)))
+    (is (= :natural (looper/mod! :natural)))
     (is (= :industrial (looper/mod! :industrial))))
 
   (testing "Global drum mode persists across track loops without per-loop :mod override"

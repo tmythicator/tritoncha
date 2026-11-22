@@ -22,11 +22,6 @@
         (when (contains? #{:click :metronome} tk)
           (get @track-slot-assignments :click)))))
 
-(defn all-track-slots
-  "Returns the complete map of track keyword to hardware slot assignments."
-  []
-  @track-slot-assignments)
-
 (defn track-slots-for
   "Returns all sequencer slot indices assigned to a track keyword, including chord voice sub-slots."
   [track-key]

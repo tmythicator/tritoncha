@@ -11,7 +11,7 @@
 ;;   :figures - Optional map of named 3D figures in scene: {:core {:geom ... :pos [...] :scale ... :colors ...}}
 ;;   :colors  - Vector of two hex colors [background-hex mesh-hex] (e.g. ["#080412" "#00ffaa"])
 ;;   :routing - Audio routing topology preset key (e.g. :default, :studio-master, :ambient-prism, :crematorium)
-;;   :mod     - Drum character synthesis mode override (:natural, :analog, :idm, :industrial)
+;;   :mod     - Drum character synthesis mode override (:natural, :idm, :industrial)
 ;;   :tracks  - Map of quantized track loops launched simultaneously:
 ;;              {:drums {:pattern (pat "k . . .  s . . .  . . k .  s . . g") :step "16n"}
 ;;               :cymb  {:pattern (pat "rd . . .  rb . . .  . . sp .  ch . . .") :step "16n"}
@@ -32,7 +32,7 @@
      :routing :default
      :tracks
      {:kick      {:notes (pat "k_ . . .  . . k_ .  . . k_ .  . . . .") :step "16n"}
-      :snare     {:notes (pat ". . . .  s . . .  . . . .  s . g_ .") :step "16n"}
+      :snare     {:notes (pat ". . . .  s . . .  . . . .  s . s_ .") :step "16n"}
       :hats      {:notes (pat "h_ . h_ .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
       :sub       {:inst :sub-pure
                   :notes (deg [1 _ _ _ _ _ _ _ 6 _ _ _ _ _ _ _ 4 _ _ _ _ _ _ _ 7 _ _ _ _ _ _ _] 1)
@@ -54,8 +54,8 @@
      :routing :crematorium
      :tracks
      {:kick    {:notes (pat "k . . .  . . k .  . . k .  . . . .") :step "16n"}
-      :snare   {:notes (pat ". . . .  s! . . .  . . . .  s! g_ g_ g_") :step "16n"}
-      :hats    {:notes (pat "h_ . hc .  . . o_ .  h_ . hc .  . . o_ .") :step "16n"}
+      :snare   {:notes (pat ". . . .  s! . . .  . . . .  s! s_ s_ s_") :step "16n"}
+      :hats    {:notes (pat "h_ . h .  . . o_ .  h_ . h .  . . o_ .") :step "16n"}
       :sub     {:inst :bass-liquid
                 :notes (deg [1 1 _ 1  3 _ 5 _  1 _ 7 1  _ 6 _ 5] 1)
                 :step "16n" :dur "8n" :vel 0.55}
@@ -68,7 +68,7 @@
 
    [:orbital-matrix
     {:name    "Orbital Breaking Bits"
-     :mod     :analog
+     :mod     :natural
      :bpm     168
      :scale   [:e :phrygian 1]
      :colors  ["#050410" "#00ffcc"]
@@ -85,12 +85,12 @@
                              k_ . . .  . . k_ .  . . k_ .  . . . k_")
                 :step "16n"}
       :snare   {:figure :halo
-                :notes (pat ". . . .  s . . .  . . . .  s . g_ .
-                             . . . .  s . . g_  . . . .  s . clk_ .")
+                :notes (pat ". . . .  s . . .  . . . .  s . s_ .
+                             . . . .  s . . s_  . . . .  s . s! .")
                 :step "16n"}
       :hats    {:figure :ring
-                :notes (pat "hc_ . h_ .  hc_ . o_ .  hc_ . h_ hc_  hc_ . o_ .
-                             hc_ . h_ .  hc_ . o_ .  hc_ hc_ h_ .  hc_ . o_ .")
+                :notes (pat "h_ . h .  h_ . o_ .  h_ . h h_  h_ . o_ .
+                             h_ . h .  h_ . o_ .  h_ h_ h .  h_ . o_ .")
                 :step "16n"}
       :bass    {:figure :pillar
                 :inst :bass-liquid
@@ -113,14 +113,14 @@
      :routing :industrial-crush
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
-      :perc  {:notes (pat "s . . ch  s . . .  . cb . .  s_ s_ s_ ck") :step "16n"}
+      :hats  {:notes (pat ". . o_ .  . . o_ .  . . o_ .  . . o_ .") :step "16n"}
+      :perc  {:notes (pat "s . . ch  s . . .  . cb . .  s_ s_ s_ s!") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [1 1 1 1 1 1 1 1 2 2 2 2 1 1 1 1] 1)
-              :step "16n" :dur "32n" :vel 0.45}
+              :step "16n" :dur "16n" :vel 0.78}
       :sub   {:inst :sub-pure
               :notes (deg [1 _ _ _ 1 _ _ _ 1 _ _ _ 2 _ _ _] 1)
-              :step "16n" :dur "8n" :vel 0.7}
+              :step "16n" :dur "8n" :vel 0.80}
       :drone {:inst :lead-fm
               :notes (deg [1 _ _ _ _ _ _ _ 2 _ _ _ _ _ _ _] 2)
               :step "16n" :dur "8n" :vel 0.4}}}]
@@ -134,10 +134,10 @@
      :colors  ["#120c08" "#ffaa77"]
      :routing :vintage-schroeder
      :tracks
-     {:drums   {:notes [[:kick 0.95 "C1"] [:hh-clk 0.3] [:hh-c 0.35] [:hh-clk 0.25]
-                        [:snare 0.85 "C3"] [:sn-gh 0.25] [:hh-c 0.35] [:hh-o 0.45]
-                        [:tom-low 0.65 "D2"] [:kick 0.85 "C1"] [:hh-clk 0.3] [:sn-clk 0.4]
-                        [:snare 0.85 "C3"] [:splash 0.5] [:hh-c 0.3] [:sn-gh 0.3]]
+     {:drums   {:notes [[:kick 0.95] [:hat-closed 0.3] [:hat-closed 0.35] [:hat-closed 0.25]
+                        [:snare 0.85] [:snare_ 0.25] [:hat-closed 0.35] [:hat-open 0.45]
+                        [:tom-low 0.65 "D2"] [:kick 0.85] [:hat-closed 0.3] [:snare! 0.9]
+                        [:snare 0.85] [:splash 0.5] [:hat-closed 0.3] [:snare_ 0.3]]
                 :step "16n"}
       :sub     {:inst :sub-moog
                 :notes (deg [1 _ _ _ 3 _ _ _ 4 _ _ _ 5 _ _ _] 3)
@@ -154,16 +154,16 @@
 
    [:acid-roller
     {:name    "Deck 2016"
-     :mod     :analog
+     :mod     :natural
      :bpm     130
      :scale   [:a :aeolian 1]
      :geom    :octahedron
      :colors  ["#140404" "#ff3300"]
      :routing :crematorium
      :tracks
-     {:kick  {:notes (pat "k_ . . .  . . . k_  . . k_ .  . . . .") :step "16n"}
-      :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . g_ .") :step "16n"}
-      :hats  {:notes (pat "h_ . hc .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
+     {:kick  {:notes (pat "k . . .  . . . k_  . . k .  . . . .") :step "16n"}
+      :snare {:notes (pat ". . . .  s! . . .  . . . .  s! . s_ .") :step "16n"}
+      :hats  {:notes (pat "h_ . h_ .  . . o_ .  h_ . h_ .  . . o_ .") :step "16n"}
       :bass  {:inst :bass-303
               :notes (deg [1 _ _ 3 1 _ 4 _ 1 _ :b7 1 _ _ 5 _] 1)
               :step "16n" :dur "16n" :vel 0.70}
@@ -181,7 +181,7 @@
      :routing :liminal-prison
      :tracks
      {:kick    {:notes (pat "k_ . . .  . . . .  k_ . . .  . . k_ .") :step "16n"}
-      :snare   {:notes (pat ". . s! .  ck_ . . .  . . sp_ .  s! . g_ .") :step "16n"}
+      :snare   {:notes (pat ". . s! .  s! . . .  . . sp_ .  s! . s_ .") :step "16n"}
       :bass    {:inst :bass-liquid
                 :notes (deg [1 _ _ _ _ _ 2 _ 1 _ _ _ :b5 _ _ _] 1)
                 :step "16n" :dur "8n" :vel 0.65}
@@ -204,10 +204,10 @@
      :colors ["#020402" "#00ff33"]
      :routing :void-chamber
      :tracks
-     {:drums {:notes [[:kick 1.0 "F1"] nil [:hh-c 0.45] nil
-                      [:sn-crack 1.0 "F3"] nil nil [:hh-c 0.4]
-                      [:kick 0.95 "F1"] nil nil [:hh-c 0.4]
-                      [:sn-crack 1.0 "F3"] nil [:hh-o 0.6] nil]
+     {:drums {:notes [[:kick 1.0] nil [:hat-closed 0.45] nil
+                      [:snare! 1.0] nil nil [:hat-closed 0.4]
+                      [:kick 0.95] nil nil [:hat-closed 0.4]
+                      [:snare! 1.0] nil [:hat-open 0.6] nil]
               :step "16n"}
       :bass  {:inst :bass-neuro
               :notes (deg [1 1 _ 2 _ 1 _ :b5 1 _ :b7 1 _ 3 2 _] 1)
@@ -221,7 +221,7 @@
 
    [:glow-dub
     {:name   "Glowing Cavern"
-     :mod    :analog
+     :mod    :natural
      :bpm    130
      :scale  [:c :minor 1]
      :geom   :icosahedron
@@ -229,8 +229,8 @@
      :routing :dub-echo
      :tracks
      {:kick   {:notes (pat "k . . .  . . . .  k . . .  . . . .") :step "16n"}
-      :snare  {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
-      :hats   {:notes (pat "h . hc .  h . o .  h . sp .  h . o .") :step "16n"}
+      :snare  {:notes (pat ". . . .  s! . . .  . . . .  s! . . .") :step "16n"}
+      :hats   {:notes (pat "h . h_ .  h . o .  h . sp .  h . o .") :step "16n"}
       :bass   {:inst :sub-808
                :notes (deg [1 _ _ _ 1 _ _ _ 1 _ _ _ :b7 _ 5 _] 1)
                :step "16n" :dur "8n" :vel 0.78}
@@ -244,7 +244,7 @@
 
    [:laser-turret
     {:name   "Laser Turret"
-     :mod    :analog
+     :mod    :natural
      :bpm    126
      :scale  [:d :dorian 1]
      :geom   :octahedron
@@ -252,7 +252,7 @@
      :routing :crematorium
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! .") :step "16n"}
+      :hats  {:notes (pat ". . o_ .  . . o_ .  . . o_ .  . . o_ .") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [_ 1 _ 1  _ 1 _ 1  _ 1 _ 1  _ :b7 _ 1] 1)
               :step "16n" :dur "16n" :vel 0.82}
@@ -262,16 +262,16 @@
 
    [:synthwave-run
     {:name   "Neon Highway Pursuit"
-     :mod    :analog
+     :mod    :natural
      :bpm    124
      :scale  [:a :minor 1]
      :geom   :torus-knot
      :colors ["#12031a" "#ff00aa"]
      :routing :void-chamber
      :tracks
-     {:drums   {:notes [[:kick 1.0 "A1"] [:hh-c 0.4] [:hh-c 0.4] [:hh-c 0.4]
-                        [:clap 0.95] [:hh-c 0.4] [:kick 0.85 "A1"] [:hh-c 0.4]
-                        [:kick 0.95 "A1"] [:hh-c 0.4] [:hh-c 0.4] [:hh-c 0.4]
+     {:drums   {:notes [[:kick 1.0] [:hat-closed 0.4] [:hat-closed 0.4] [:hat-closed 0.4]
+                        [:clap 0.95] [:hat-closed 0.4] [:kick 0.85] [:hat-closed 0.4]
+                        [:kick 0.95] [:hat-closed 0.4] [:hat-closed 0.4] [:hat-closed 0.4]
                         [:clap 0.95] [:tom-high 0.8 "D3"] [:tom-mid 0.85 "A2"] [:tom-low 0.9 "D2"]]
                 :step "16n"}
       :bass    {:inst :bass-moog
@@ -289,7 +289,7 @@
 
    [:electro-break
     {:name   "Cyborg Factory"
-     :mod    :analog
+     :mod    :natural
      :bpm    134
      :scale  [:e :phrygian 1]
      :geom   :dodecahedron
@@ -297,8 +297,8 @@
      :routing :liminal-prison
      :tracks
      {:kick  {:notes (pat "k! . . .  . . k_ .  . . k! .  k . . .") :step "16n"}
-      :snare {:notes (pat ". . . .  cp! . . .  . . . .  cp! . clk_ .") :step "16n"}
-      :hats  {:notes (pat "h . cb .  . . o! .  h . cb .  . hc o! .") :step "16n"}
+      :snare {:notes (pat ". . . .  cp! . . .  . . . .  cp! . s! .") :step "16n"}
+      :hats  {:notes (pat "h . cb .  . . o! .  h . cb .  . h_ o! .") :step "16n"}
       :bass  {:inst :bass-slap
               :notes (deg [1 _ 1 _ 2 _ 1 _ _ 1 _ 3 2 _ 1 _] 1)
               :step "16n" :dur "16n" :vel 0.76}
@@ -337,10 +337,10 @@
      :colors ["#0a0212" "#bb00ff"]
      :routing :dub-echo
      :tracks
-     {:drums   {:notes [[:kick 1.0 "D1"] [:hh-c 0.4] [:hh-c 0.35] [:hh-clk 0.3]
-                        [:sn-crack 1.0 "D3"] [:hh-c 0.4] [:hh-o 0.6] [:hh-c 0.35]
-                        [:kick 0.8 "D1"] [:hh-c 0.4] [:kick 0.9 "D1"] [:hh-clk 0.35]
-                        [:sn-crack 1.0 "D3"] [:splash 0.65] [:sn-gh 0.35] [:hh-o 0.55]]
+     {:drums   {:notes [[:kick 1.0] [:hat-closed 0.4] [:hat-closed 0.35] [:hat-closed 0.3]
+                        [:snare! 1.0] [:hat-closed 0.4] [:hat-open 0.6] [:hat-closed 0.35]
+                        [:kick 0.8] [:hat-closed 0.4] [:kick 0.9] [:hat-closed 0.35]
+                        [:snare! 1.0] [:splash 0.65] [:snare_ 0.35] [:hat-open 0.55]]
                 :step "16n"}
       :sub     {:inst :sub-pure
                 :notes (deg [1 _ _ _ 1 _ _ _ 7 _ _ _ 5 _ 4 _] 1)
@@ -362,10 +362,10 @@
      :colors ["#030a08" "#d4af37"]
      :routing :ambient-prism
      :tracks
-     {:drums   {:notes [[:tom-low 0.75 "E2"] [:ride-bell 0.6] nil [:hh-clk 0.3]
-                        [:sn-gh 0.25] nil [:hh-c 0.3] [:splash 0.55]
-                        [:tom-mid 0.8 "A2"] nil [:hh-c 0.25] nil
-                        [:sn-clk 0.35] nil [:hh-o 0.35] nil]
+     {:drums   {:notes [[:tom-low 0.75 "E2"] [:ride-bell 0.6] nil [:hat-closed 0.3]
+                        [:snare_ 0.25] nil [:hat-closed 0.3] [:splash 0.55]
+                        [:tom-mid 0.8 "A2"] nil [:hat-closed 0.25] nil
+                        [:snare! 0.85] nil [:hat-open 0.35] nil]
                 :step "16n"}
       :bells   {:inst :pad-glass
                 :notes (deg [1 _ 2 _ 3 _ 5 _ 4 _ 3 _ 2 _ 1 _] 3)
@@ -386,7 +386,7 @@
      :colors ["#120814" "#00ffb7"]
      :routing :cyber-glitch
      :tracks
-     {:drums   {:notes (pat "k! hc_ cb k_  s! hc_ h g_  sp k_ ck clk_  s! o_ roll clk!")
+     {:drums   {:notes (pat "k! h_ cb k_  s! h_ h s_  sp k_ s! s!  s! o_ s_ s!")
                 :step "16n"}
       :bass    {:inst :bass-slap
                 :notes (deg [1 _ 1 _ 3 _ 3 _ 4 _ 5 _ 5 _ 1 _] 1)
@@ -400,7 +400,7 @@
 
    [:chiptune-odyssey
     {:name   "Pixelated Joy"
-     :mod    :analog
+     :mod    :natural
      :bpm    150
      :scale  [:c :major 1]
      :geom   :octahedron
@@ -420,7 +420,7 @@
 
    [:psy-trance
     {:name   "Warp Speed Vortex"
-     :mod    :analog
+     :mod    :natural
      :bpm    145
      :scale  [:f :phrygian 1]
      :geom   :icosahedron
@@ -428,7 +428,7 @@
      :routing :crematorium
      :tracks
      {:kick  {:notes (pat "k . . .  k . . .  k . . .  k . . .") :step "16n"}
-      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! ck") :step "16n"}
+      :hats  {:notes (pat ". . o! .  . . o! .  . . o! .  . . o! s!") :step "16n"}
       :bass  {:inst :bass-analog
               :notes (deg [_ 1 1 1 _ 1 1 1 _ 1 1 1 _ 2 2 1] 1)
               :step "16n" :dur "32n" :vel 0.78}
@@ -446,8 +446,8 @@
      :routing :tape-lofi
      :tracks
      {:kick  {:notes (pat "k . . .  . . . .  . . k .  . . . .") :step "16n"}
-      :snare {:notes (pat ". . . .  rs . . .  . . . .  rs . . .") :step "16n"}
-      :hats  {:notes (pat "hc . h .  . . h .  sp o . .  h . hc .") :step "16n"}
+      :snare {:notes (pat ". . . .  s! . . .  . . . .  s! . . .") :step "16n"}
+      :hats  {:notes (pat "h_ . h .  . . h .  sp o . .  h . h_ .") :step "16n"}
       :bass    {:inst :bass-organ
                 :notes (deg [1 _ _ 1 _ _ :b7 _ _ 5 _ _ 4 _ _ _] 1)
                 :step "16n" :dur "8n" :vel 0.9}

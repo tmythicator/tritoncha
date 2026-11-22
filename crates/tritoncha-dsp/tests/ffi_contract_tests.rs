@@ -2,11 +2,10 @@ use tritoncha_dsp::domain::effects::FilterMode;
 use tritoncha_dsp::domain::synth::{ModularPatch, OscillatorType, VOICE_PATCH_PARAM_COUNT};
 use tritoncha_dsp::domain::BusTarget;
 use tritoncha_dsp::{
-    tritoncha_dsp_create, tritoncha_dsp_destroy, tritoncha_dsp_note_on, tritoncha_dsp_out_l_ptr,
-    tritoncha_dsp_out_r_ptr, tritoncha_dsp_patch_params_ptr, tritoncha_dsp_process,
-    tritoncha_dsp_set_voice_patch_packed, tritoncha_dsp_track_durs_ptr,
-    tritoncha_dsp_track_inst_ids_ptr, tritoncha_dsp_track_notes_ptr, tritoncha_dsp_track_vels_ptr,
-    DEFAULT_SAMPLE_RATE,
+    tritoncha_dsp_create, tritoncha_dsp_destroy, tritoncha_dsp_out_l_ptr, tritoncha_dsp_out_r_ptr,
+    tritoncha_dsp_patch_params_ptr, tritoncha_dsp_process, tritoncha_dsp_set_track_patch,
+    tritoncha_dsp_track_durs_ptr, tritoncha_dsp_track_inst_ids_ptr, tritoncha_dsp_track_notes_ptr,
+    tritoncha_dsp_track_vels_ptr, tritoncha_dsp_trigger_one_shot_synth, DEFAULT_SAMPLE_RATE,
 };
 
 #[test]
@@ -119,7 +118,7 @@ fn test_engine_owned_ffi_buffer_pointers_and_packed_patch_render() {
         assert!(tritoncha_dsp_out_l_ptr(std::ptr::null_mut()).is_null());
         assert!(tritoncha_dsp_patch_params_ptr(std::ptr::null_mut()).is_null());
 
-        // Write a packed patch into engine-owned patch_params buffer and apply to slot 4
+        // Write a packed patch into engine-owned patch_params buffer and apply to Track 0
         let raw_patch: [f32; 22] = [
             0.0, 0.4, 0.5, 0.0, 1800.0, 2400.0, 1.0, 0.4, 0.002, 0.15, 0.5, 0.1, 0.002, 0.15, 1.0,
             1.0, 0.0, 0.2, 0.0, 0.0, 0.015, 0.02,
@@ -127,15 +126,15 @@ fn test_engine_owned_ffi_buffer_pointers_and_packed_patch_render() {
         let param_slice = std::slice::from_raw_parts_mut(patch_params, 22);
         param_slice.copy_from_slice(&raw_patch);
 
-        tritoncha_dsp_set_voice_patch_packed(engine, 4, patch_params, 22);
-        tritoncha_dsp_note_on(engine, 4, 110.0, 0.9, 0.2);
+        tritoncha_dsp_set_track_patch(engine, 0, patch_params, 22);
+        tritoncha_dsp_trigger_one_shot_synth(engine, patch_params, 22, 110.0, 0.9, 0.2);
         tritoncha_dsp_process(engine, out_l, out_r, 128);
 
         let left_slice = std::slice::from_raw_parts(out_l, 128);
         let peak = left_slice.iter().fold(0.0_f32, |m, &s| m.max(s.abs()));
         assert!(
             peak > 0.01,
-            "Packed voice patch on slot 4 must produce audible output, got peak {peak}"
+            "Packed voice patch on Track 0 must produce audible output, got peak {peak}"
         );
 
         tritoncha_dsp_destroy(engine);

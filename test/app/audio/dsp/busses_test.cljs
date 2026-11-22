@@ -43,7 +43,7 @@
   (testing "Classifies instruments from keyword, track map, and explicit :bus in spec map"
     ;; Drums
     (is (true? (catalog/drum? :kick)))
-    (is (true? (catalog/drum? :snare-wire)))
+    (is (true? (catalog/drum? :snare)))
     (is (true? (catalog/drum? :hat)))
     (is (true? (catalog/drum? :hats)))
     (is (true? (catalog/drum? :cymb)))
@@ -115,7 +115,6 @@
   (testing "Classifies valid drum character modes"
     (is (true? (catalog/drum-mode? :idm)))
     (is (true? (catalog/drum-mode? :natural)))
-    (is (true? (catalog/drum-mode? :analog)))
     (is (true? (catalog/drum-mode? :industrial)))
     (is (false? (catalog/drum-mode? :bass)))
     (is (false? (catalog/drum-mode? :kick)))

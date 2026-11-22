@@ -115,7 +115,11 @@
                   (= clean "b") (keyword (str "bass" suffix))
                   :else
                   (if-let [alias-kw (get drum-remaps clean)]
-                    (keyword (str (name alias-kw) suffix))
+                    (let [alias-name (name alias-kw)]
+                      (if (or (str/ends-with? alias-name "!")
+                              (str/ends-with? alias-name "_"))
+                        alias-kw
+                        (keyword (str alias-name suffix))))
                     (keyword tok)))))
             tokens))))
 

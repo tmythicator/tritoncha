@@ -2,7 +2,6 @@
   "State management and live patch mutations for Instrument Studio."
   (:require
    [app.audio.dsp.instruments :as instruments]
-   [app.audio.dsp.worklet :as worklet]
    [app.custom.drums :refer [user-drums]]
    [app.custom.synth :refer [user-synths]]
    [app.lib.drums :refer [core-drums]]
@@ -51,9 +50,6 @@
   "Select instrument and update audition loop if currently running."
   [inst-key]
   (reset! selected-inst inst-key)
-  (let [spec (instruments/resolve-instrument-spec inst-key)]
-    (when (instruments/drum? (or spec inst-key))
-      (worklet/set-worklet-drum-patch! inst-key spec)))
   (when @audition/audition-loop-active?
     (audition/start-audition-loop! inst-key)))
 

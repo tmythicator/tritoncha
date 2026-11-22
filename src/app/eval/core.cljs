@@ -36,6 +36,7 @@
    'unstack!            api/unstack!
    'set-drum-mode!      api/set-drum-mode!
    'mod!                api/mod!
+   'defstyle!           api/defstyle!
    'set-track-vel!      api/set-track-vel!
    'vel!                api/vel!
 

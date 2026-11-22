@@ -1,5 +1,6 @@
 (ns app.audio.control.tracker-test
   (:require [app.audio.control.looper :as looper]
+            [app.audio.control.mixer :as mixer]
             [app.audio.control.tracker :as tracker]
             [app.audio.dsp.fx :as fx]
             [app.audio.dsp.routing :as routing]
@@ -55,3 +56,20 @@
     (is (= 2800.0 (:cutoff (fx/get-filter-state))))
     (looper/stop!)
     (routing/set-routing! :default)))
+
+(deftest tracker-preserves-section-mute-state-across-track-swap-test
+  (testing "Swapping tracks while drumless (:drums-muted? true) keeps new drum tracks muted in UI and WASM"
+    (mixer/undrum!)
+    (is (true? (:drums-muted? @audio-state)))
+    (tracker/play-preset! :orbital-roller)
+    (let [tracks (:active-tracks @audio-state)
+          kick   @(:pattern (:kick tracks))
+          snare  @(:pattern (:snare tracks))
+          hats   @(:pattern (:hats tracks))
+          sub    @(:pattern (:sub tracks))]
+      (is (true? (:muted? kick)) "Kick track must start muted when drumless mode is active")
+      (is (true? (:muted? snare)) "Snare track must start muted when drumless mode is active")
+      (is (true? (:muted? hats)) "Hats track must start muted when drumless mode is active")
+      (is (false? (:muted? sub)) "Non-drum tracks must remain unmuted when only drumless mode is active"))
+    (mixer/redrum!)
+    (looper/stop!)))
