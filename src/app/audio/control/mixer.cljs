@@ -184,6 +184,17 @@
   (let [{:keys [flag]} (get section-controllers section)]
     (set-section-mute! section (not (get @audio-state flag false)))))
 
+(defn reapply-section-mutes!
+  "Re-applies active section mute flags (:drums-muted?, :bass-muted?, :leads-muted?, :pads-muted?)
+  onto currently active tracks so UI badges and track mute states stay in sync after track swaps."
+  []
+  (let [st @audio-state]
+    (doseq [[_ {:keys [pred flag]}] section-controllers
+            :when (get st flag false)]
+      (doseq [[k tr] (:active-tracks st)
+              :when (track-in-category? pred k tr)]
+        (set-track-mute! k true)))))
+
 (defn undrum!
   "Mutes all drum and percussion tracks, keeping bass, pads, leads and click intact."
   []

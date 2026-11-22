@@ -1,6 +1,7 @@
 (ns app.audio.control.tracker
   "Track presets registry, playback orchestrator, and instrument preview demos."
   (:require [app.audio.control.looper :refer [loop! set-bpm! set-drum-mode! stop! stop-loop!]]
+            [app.audio.control.mixer :as mixer]
             [app.audio.control.session :as session]
             [app.audio.dsp.engine :refer [init-audio!]]
             [app.audio.dsp.instruments :as inst]
@@ -99,6 +100,7 @@
 
     (doseq [[track-name track-opts] tracks]
       (loop! track-name (resolve-track-scale-notes track-opts scale)))
+    (mixer/reapply-section-mutes!)
     preset-key))
 
 (defn play-track-at!

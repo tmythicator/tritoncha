@@ -1,7 +1,9 @@
 (ns app.ui.instrument-browser.inspector.drum
-  "Drum synthesis parameter studio, character mode selector, and mini-notation generator."
+  "Drum synthesis parameter studio, physical body selector, character style selector, and mini-notation generator."
   (:require
    [app.audio.dsp.instruments :as instruments]
+   [app.audio.dsp.styles :as styles]
+   [app.state :refer [audio-state repl-registry]]
    [app.ui.instrument-browser.audition :as audition]
    [app.ui.instrument-browser.components :as comps]
    [app.ui.instrument-browser.inspector.shared :as shared]
@@ -127,10 +129,33 @@
     [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :drive
                           :label "Saturation Drive:" :min 0.5 :max 3.0 :step 0.1 :default 1.45 :decimals 2}]]])
 
-(defn drum-inspector
-  "Render drum voice parameter studio, reset controls, and mini-notation generator."
+(defn- shaper-and-dynamics-section
+  "Render wavefolder, bitcrusher, humanization variation, and velocity dynamics controls."
   [cur-sel-key cur-spec]
-  (let [drum-type (or (:type cur-spec) cur-sel-key)]
+  [:div.inst-box
+   [:div.inst-section-label "SHAPER + VELOCITY DYNAMICS"]
+   [:div.inst-grid-2col
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :fold
+                          :label "Wavefolder:" :min 0.0 :max 1.0 :step 0.02 :default 0.0 :pct? true}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :crush
+                          :label "Bitcrush:" :min 0.0 :max 1.0 :step 0.02 :default 0.0 :pct? true}]]
+
+   [:div.inst-grid-2col-bottom
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :vel->tone
+                          :label "Vel -> Tone:" :min 0.0 :max 1.0 :step 0.05 :default 0.35 :pct? true}]
+    [shared/patch-slider {:inst-key cur-sel-key :spec cur-spec :param-key :variation
+                          :label "Hit Variation:" :min 0.0 :max 1.0 :step 0.02 :default 0.08 :pct? true}]]])
+
+(defn drum-inspector
+  "Render drum voice parameter studio, physical body and style selectors, reset controls, and mini-notation generator."
+  [cur-sel-key cur-spec]
+  (let [drum-type   (or (:type cur-spec) cur-sel-key)
+        user-styles (keys (:styles @repl-registry))
+        style-items (vec (distinct (concat [:analog :natural :idm :industrial] user-styles)))
+        global-mod  (:drum-mode @audio-state)
+        active-mod  (or (:mod cur-spec)
+                        (when (keyword? global-mod) (styles/normalize-style-key global-mod))
+                        :analog)]
     [:div.inst-section
      [:div.inst-spec-header
       [:div.inst-section-label "DRUM SYNTHESIS PARAMETERS"]
@@ -140,11 +165,19 @@
        "↺ RESET"]]
 
      [:div.inst-box
-      [:div.inst-section-label "DRUM SYNTHESIS MODEL (:mod)"]
+      [:div.inst-section-label "PHYSICAL BODY + GENRE STYLE (:body / :mod)"]
       [comps/pill-selector
-       {:label    "CHARACTER MODE:"
-        :items    [:analog :natural :idm :industrial]
-        :current  (or (:mod cur-spec) :analog)
+       {:label    "PHYSICAL BODY:"
+        :items    [:membrane :shell :cymbal :idiophone :burst]
+        :current  (or (:body cur-spec) :membrane)
+        :on-select (fn [body]
+                     (instruments/patch! cur-sel-key :body body)
+                     (when-not @audition/audition-loop-active?
+                       (audition/play-test-note! cur-sel-key)))}]
+      [comps/pill-selector
+       {:label    "GENRE STYLE:"
+        :items    style-items
+        :current  active-mod
         :on-select (fn [mode]
                      (instruments/patch! cur-sel-key :mod mode)
                      (when-not @audition/audition-loop-active?
@@ -158,8 +191,9 @@
        :metallic [metallic-params-section cur-sel-key cur-spec]
        :clap     [clap-params-section cur-sel-key cur-spec]
        [:div.inst-drum-notice
-        "Analog Drum voice runs on dedicated physical models in Rust WASM with sample-accurate transient punch."])
+        "Layered percussion voice runs on 5 physical body models in Rust WASM with sample-accurate transient punch."])
 
+     [shaper-and-dynamics-section cur-sel-key cur-spec]
      [shared/bus-section cur-sel-key cur-spec]
      [shared/code-spec-section cur-sel-key cur-spec]
      [:div.inst-spec-container
