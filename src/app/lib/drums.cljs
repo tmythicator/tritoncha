@@ -212,19 +212,21 @@
     :type         :metallic
     :bus          :bus/drums
     :body         :cymbal
-    :pitch        580.0
-    :decay        1.70
-    :click        0.34
-    :click-freq   6200.0
-    :modal-spread 1.75
-    :noise-mix    0.42
-    :noise-decay  1.40
-    :noise-cutoff 5200.0
-    :noise-q      0.26
-    :noise-filter :hp
-    :drive        1.10
+    :pitch        780.0
+    :decay        2.53
+    :click        0.60
+    :click-freq   6800.0
+    :modal-spread 1.15
+    :noise-mix    0.38
+    :noise-decay  0.18
+    :noise-cutoff 4100.0
+    :noise-q      0.11
+    :noise-filter :bp
+    :drive        1.35
+    :fold         0.36
+    :crush        0.58
     :vel->tone    0.55
-    :variation    0.10}
+    :variation    0.70}
 
    :ride-bell
    {:title        "Ride Bell"
@@ -254,18 +256,20 @@
     :type         :metallic
     :bus          :bus/drums
     :body         :cymbal
-    :pitch        460.0
-    :decay        0.18
+    :pitch        490.0
+    :decay        2.35
     :click        0.0
     :click-freq   6200.0
-    :modal-spread 1.65
-    :noise-mix    0.90
-    :noise-decay  1.70
+    :modal-spread 1.95
+    :noise-mix    0.78
+    :noise-decay  1.95
     :noise-cutoff 3600.0
-    :noise-q      0.12
-    :noise-filter :hp
-    :drive        1.15
-    :vel->tone    0.50
+    :noise-q      0.18
+    :noise-filter :bp
+    :drive        1.35
+    :fold         0.62
+    :crush        0.36
+    :vel->tone    0.45
     :variation    0.10}
 
    :crash-17
@@ -275,18 +279,20 @@
     :type         :metallic
     :bus          :bus/drums
     :body         :cymbal
-    :pitch        400.0
-    :decay        0.20
+    :pitch        410.0
+    :decay        2.55
     :click        0.0
     :click-freq   5600.0
-    :modal-spread 1.68
-    :noise-mix    0.90
-    :noise-decay  2.05
+    :modal-spread 1.98
+    :noise-mix    0.78
+    :noise-decay  2.20
     :noise-cutoff 3000.0
-    :noise-q      0.12
-    :noise-filter :hp
-    :drive        1.15
-    :vel->tone    0.50
+    :noise-q      0.18
+    :noise-filter :bp
+    :drive        1.35
+    :fold         0.58
+    :crush        0.34
+    :vel->tone    0.45
     :variation    0.10}
 
    :crash-18
@@ -297,17 +303,19 @@
     :bus          :bus/drums
     :body         :cymbal
     :pitch        340.0
-    :decay        0.22
+    :decay        2.75
     :click        0.0
     :click-freq   4900.0
-    :modal-spread 1.72
-    :noise-mix    0.92
-    :noise-decay  2.40
+    :modal-spread 2.02
+    :noise-mix    0.80
+    :noise-decay  2.45
     :noise-cutoff 2400.0
-    :noise-q      0.12
-    :noise-filter :hp
-    :drive        1.15
-    :vel->tone    0.50
+    :noise-q      0.18
+    :noise-filter :bp
+    :drive        1.35
+    :fold         0.55
+    :crush        0.32
+    :vel->tone    0.45
     :variation    0.10}
 
    :splash
@@ -317,18 +325,18 @@
     :type         :metallic
     :bus          :bus/drums
     :body         :cymbal
-    :pitch        580.0
-    :decay        0.12
+    :pitch        620.0
+    :decay        0.23
     :click        0.0
     :click-freq   7400.0
-    :modal-spread 1.55
-    :noise-mix    0.88
-    :noise-decay  0.65
+    :modal-spread 1.48
+    :noise-mix    0.76
+    :noise-decay  0.88
     :noise-cutoff 5000.0
     :noise-q      0.14
     :noise-filter :hp
-    :drive        1.08
-    :vel->tone    0.50
+    :drive        1.10
+    :vel->tone    0.45
     :variation    0.10}
 
    :china
@@ -339,17 +347,17 @@
     :bus          :bus/drums
     :body         :cymbal
     :pitch        380.0
-    :decay        0.24
+    :decay        0.26
     :click        0.0
     :click-freq   5200.0
-    :modal-spread 2.10
-    :noise-mix    0.86
-    :noise-decay  1.45
-    :noise-cutoff 2500.0
-    :noise-q      0.22
+    :modal-spread 2.20
+    :noise-mix    0.88
+    :noise-decay  1.10
+    :noise-cutoff 2600.0
+    :noise-q      0.26
     :noise-filter :hp
-    :drive        1.35
-    :fold         0.16
+    :drive        1.45
+    :fold         0.22
     :vel->tone    0.50
     :variation    0.12}
 
