@@ -1,6 +1,7 @@
 (ns app.audio.dsp.worklet.transport
   "Low-level WebAudio AudioWorklet transport and WASM binary loader."
-  (:require [app.config :as config]))
+  (:require [app.config :as config]
+            [app.utils.dom :refer [mobile?]]))
 
 (defonce ^:private worklet-state
   (atom {:ctx nil :node nil :ready? false}))
@@ -100,10 +101,13 @@
   (:wasm-version @worklet-state config/app-version))
 
 (defn- create-audio-context
-  "Instantiates and stores the native WebAudio context, resuming immediately if suspended."
+  "Instantiates and stores the native WebAudio context, resuming immediately if suspended.
+  Uses :playback latencyHint on mobile devices to give the OS audio thread headroom alongside WebGL."
   []
   (let [AudioCtx (or (.-AudioContext js/window) (.-webkitAudioContext js/window))
-        ctx      (or (:ctx @worklet-state) (AudioCtx.))]
+        opts     (when (mobile?) #js {:latencyHint "playback"})
+        ctx      (or (:ctx @worklet-state)
+                     (if opts (AudioCtx. opts) (AudioCtx.)))]
     (swap! worklet-state assoc :ctx ctx)
     (when (= (.-state ctx) "suspended")
       (.resume ctx))

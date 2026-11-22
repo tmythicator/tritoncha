@@ -59,27 +59,43 @@ pub struct PercShaper {
     pub drive: f32,
     pub fold: f32,
     pub crush: f32,
+    drive_comp: f32,
+    crush_steps: f32,
+    inv_crush_steps: f32,
 }
 
 impl Default for PercShaper {
     fn default() -> Self {
-        Self {
-            drive: 1.0,
-            fold: 0.0,
-            crush: 0.0,
-        }
+        Self::new(1.0, 0.0, 0.0)
     }
 }
 
 impl PercShaper {
     #[inline(always)]
-    pub fn process(&self, mut sig: f32) -> f32 {
-        if self.crush > 0.0 {
-            let steps = 2.0_f32.powf(SHAPER_CRUSH_MAX_BITS - SHAPER_CRUSH_SPAN_BITS * self.crush);
-            sig = (sig * steps).round() / steps;
+    pub fn new(drive: f32, fold: f32, crush: f32) -> Self {
+        let drive_comp = 1.0 / (1.0 + (drive - 1.0).max(0.0) * SHAPER_DRIVE_COMP_SLOPE);
+        let (crush_steps, inv_crush_steps) = if crush > 0.0 {
+            let steps = 2.0_f32.powf(SHAPER_CRUSH_MAX_BITS - SHAPER_CRUSH_SPAN_BITS * crush);
+            (steps, 1.0 / steps)
+        } else {
+            (0.0, 0.0)
+        };
+        Self {
+            drive,
+            fold,
+            crush,
+            drive_comp,
+            crush_steps,
+            inv_crush_steps,
         }
-        let drive_comp = 1.0 / (1.0 + (self.drive - 1.0).max(0.0) * SHAPER_DRIVE_COMP_SLOPE);
-        let driven = soft_clip(sig * self.drive) * drive_comp;
+    }
+
+    #[inline(always)]
+    pub fn process(&self, mut sig: f32) -> f32 {
+        if self.crush_steps > 0.0 {
+            sig = (sig * self.crush_steps).round() * self.inv_crush_steps;
+        }
+        let driven = soft_clip(sig * self.drive) * self.drive_comp;
         if self.fold > 0.0 {
             let folded = sin_phase(sig * self.drive * SHAPER_FOLD_PHASE_SCALE) * driven.abs();
             driven * (1.0 - self.fold) + folded * self.fold
@@ -221,11 +237,7 @@ impl PercVoice {
             q: *patch.noise_q,
             mode: patch.noise_filter_mode,
         };
-        self.shaper = PercShaper {
-            drive: *patch.drive,
-            fold: *patch.fold,
-            crush: *patch.crush,
-        };
+        self.shaper = PercShaper::new(*patch.drive, *patch.fold, *patch.crush);
         self.vel = v;
 
         self.phase = 0.12;

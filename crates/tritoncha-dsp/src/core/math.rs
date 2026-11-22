@@ -63,6 +63,14 @@ pub fn soft_clip(x: f32) -> f32 {
     tanh_approx(x)
 }
 
+/// Fast rational approximation of `tan(x)` for TPT filter frequency warping (`0 <= x <= 1.42`,
+/// covering 20 Hz .. 0.45 * sample_rate with < 0.5% error and zero libm overhead).
+#[inline(always)]
+pub fn fast_tan(x: f32) -> f32 {
+    let x2 = x * x;
+    x * (105.0 - 10.0 * x2) / (105.0 - 45.0 * x2 + x2 * x2)
+}
+
 /// PolyBLEP residual for bandlimited anti-aliasing step discontinuities.
 #[inline(always)]
 pub fn poly_blep(t: f32, dt: f32) -> f32 {
@@ -87,16 +95,20 @@ pub fn midi_to_freq(midi_pitch: f32) -> f32 {
 pub const TAU: f32 = std::f32::consts::TAU;
 pub const LN_MIN_60DB: f32 = -6.907755; // ln(0.001) for standard T60 decay
 
-/// Returns sine for a normalized phase [0.0, 1.0) using tau = 2 * pi.
+/// Fast polynomial sine for a normalized phase in `[0.0, 1.0)`
+/// (< 0.0012 max error, exact at 0/0.25/0.5/0.75, zero libm `sinf()` overhead).
 #[inline(always)]
 pub fn sin_phase(phase: f32) -> f32 {
-    (phase * TAU).sin()
+    let p = phase - phase.floor();
+    let x = if p < 0.5 { p * 2.0 } else { (p - 1.0) * 2.0 };
+    let y = 4.0 * x * (1.0 - x.abs());
+    y * (0.775 + 0.225 * y.abs())
 }
 
-/// Returns cosine for a normalized phase [0.0, 1.0) using tau = 2 * pi.
+/// Fast cosine for a normalized phase in `[0.0, 1.0)` via quarter-cycle shift.
 #[inline(always)]
 pub fn cos_phase(phase: f32) -> f32 {
-    (phase * TAU).cos()
+    sin_phase(phase + 0.25)
 }
 
 /// Computes the per-sample multiplier for exponential decay reaching -60dB (0.001) in `decay_sec`.
@@ -207,5 +219,32 @@ mod tests {
 
         let samples = time_to_samples(0.05, DEFAULT_SAMPLE_RATE, 0.01, 1.0);
         assert_eq!(samples, 2400);
+    }
+
+    #[test]
+    fn test_fast_tan_accuracy_across_audio_band() {
+        for hz in [20.0_f32, 100.0, 1000.0, 5000.0, 12000.0, 18000.0, 21600.0] {
+            let x = hz * std::f32::consts::PI / DEFAULT_SAMPLE_RATE;
+            let exact = x.tan();
+            let approx = fast_tan(x);
+            let rel_err = (exact - approx).abs() / exact.abs().max(1e-6);
+            assert!(
+                rel_err < 0.005,
+                "fast_tan rel_err={rel_err} at {hz} Hz (exact={exact}, approx={approx})"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sin_phase_accuracy() {
+        for step in 0..32 {
+            let p = step as f32 / 32.0;
+            let exact = (p * TAU).sin();
+            let approx = sin_phase(p);
+            assert!(
+                (exact - approx).abs() < 0.002,
+                "sin_phase error at p={p}: exact={exact}, approx={approx}"
+            );
+        }
     }
 }

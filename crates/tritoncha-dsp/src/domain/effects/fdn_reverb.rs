@@ -4,9 +4,8 @@
 //! delay lines, per-line one-pole high-frequency damping, and quadrature LFO read-head
 //! modulation for modal density and smooth spatial decay without metallic comb flutter.
 
-use crate::core::math::lerp;
+use crate::core::math::{lerp, sin_phase};
 use crate::domain::{Normalized, Resonance};
-use std::f32::consts::PI;
 
 /// Number of parallel delay lines in the FDN topology.
 pub const FDN_CHANNELS: usize = 8;
@@ -15,8 +14,9 @@ pub const FDN_CHANNELS: usize = 8;
 /// Mutually prime lengths avoid modal phase alignment and eliminate harmonic ringing.
 pub const FDN_BASE_DELAYS: [usize; FDN_CHANNELS] = [1051, 1223, 1453, 1693, 1987, 2333, 2741, 3217];
 
-/// Maximum buffer allocation capacity per delay line (accommodates 2x room scaling + modulation headroom).
+/// Maximum buffer allocation capacity per delay line (power of 2 for branchless bitmask wrapping).
 pub const MAX_FDN_DELAY: usize = 16384;
+const FDN_DELAY_MASK: usize = MAX_FDN_DELAY - 1;
 
 /// Minimum safety delay length for delay lines in samples.
 pub const MIN_DELAY_LINE_LENGTH: usize = 64;
@@ -96,35 +96,18 @@ impl FdnDelayLine {
     #[inline(always)]
     pub fn write(&mut self, sample: f32) {
         self.buffer[self.write_pos] = sample;
-        self.write_pos += 1;
-        if self.write_pos >= MAX_FDN_DELAY {
-            self.write_pos = 0;
-        }
+        self.write_pos = (self.write_pos + 1) & FDN_DELAY_MASK;
     }
 
     /// Reads with fractional linear interpolation and modulation offset.
     #[inline(always)]
     pub fn read_interpolated(&self, current_delay: f32) -> f32 {
         let d = current_delay.clamp(1.0, (MAX_FDN_DELAY - 2) as f32);
-        let int_d = d.floor() as usize;
+        let int_d = d as usize;
         let frac = d - (int_d as f32);
-
-        let read_pos_0 = if self.write_pos >= int_d {
-            self.write_pos - int_d
-        } else {
-            (self.write_pos + MAX_FDN_DELAY) - int_d
-        };
-
-        let read_pos_1 = if read_pos_0 > 0 {
-            read_pos_0 - 1
-        } else {
-            MAX_FDN_DELAY - 1
-        };
-
-        let s0 = self.buffer[read_pos_0];
-        let s1 = self.buffer[read_pos_1];
-
-        lerp(s0, s1, frac)
+        let read_pos_0 = self.write_pos.wrapping_sub(int_d) & FDN_DELAY_MASK;
+        let read_pos_1 = read_pos_0.wrapping_sub(1) & FDN_DELAY_MASK;
+        lerp(self.buffer[read_pos_0], self.buffer[read_pos_1], frac)
     }
 
     /// Applies one-pole lowpass damping to simulate air absorption of high frequencies.
@@ -182,8 +165,8 @@ impl FdnReverb {
             wet: DEFAULT_FDN_WET,
             lfo_phase_1: 0.0,
             lfo_phase_2: LFO_QUADRATURE_PHASE_OFFSET,
-            lfo_inc_1: (2.0 * PI * LFO_RATE_1_HZ) / sr,
-            lfo_inc_2: (2.0 * PI * LFO_RATE_2_HZ) / sr,
+            lfo_inc_1: LFO_RATE_1_HZ / sr,
+            lfo_inc_2: LFO_RATE_2_HZ / sr,
         }
     }
 
@@ -218,19 +201,18 @@ impl FdnReverb {
             return (0.0, 0.0);
         }
 
-        // Advance dual quadrature LFOs
+        // Advance dual normalized quadrature LFOs [0.0, 1.0)
         self.lfo_phase_1 += self.lfo_inc_1;
-        if self.lfo_phase_1 >= 2.0 * PI {
-            self.lfo_phase_1 -= 2.0 * PI;
+        if self.lfo_phase_1 >= 1.0 {
+            self.lfo_phase_1 -= 1.0;
         }
-
         self.lfo_phase_2 += self.lfo_inc_2;
-        if self.lfo_phase_2 >= 2.0 * PI {
-            self.lfo_phase_2 -= 2.0 * PI;
+        if self.lfo_phase_2 >= 1.0 {
+            self.lfo_phase_2 -= 1.0;
         }
 
-        let mod_1 = self.lfo_phase_1.sin() * LFO_MODULATION_DEPTH_SAMPLES;
-        let mod_2 = self.lfo_phase_2.sin() * LFO_MODULATION_DEPTH_SAMPLES;
+        let mod_1 = sin_phase(self.lfo_phase_1) * LFO_MODULATION_DEPTH_SAMPLES;
+        let mod_2 = sin_phase(self.lfo_phase_2) * LFO_MODULATION_DEPTH_SAMPLES;
 
         // 1. Read delay line outputs with LFO modulation and physical room size scaling
         let size_scale = 0.65 + self.room_size * 1.35;
